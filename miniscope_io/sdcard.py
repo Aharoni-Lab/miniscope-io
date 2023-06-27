@@ -12,14 +12,16 @@ class SectorConfig(BaseModel):
 
     For each sector, one can retrieve the position with the attribute *_pos,
 
-    eg.
+    Examples:
 
-    >>> sectors = SectorConfig(header=1023, config=1024, data=1025, size=512)
-    >>> sectors.header
-    1023
-    >>> # should be 1023 * 512
-    >>> sectors.header_pos
-    523776
+        >>> sectors = SectorConfig(header=1023, config=1024, data=1025, size=512)
+        >>> sectors.header
+        1023
+        >>> # should be 1023 * 512
+        >>> sectors.header_pos
+        523776
+
+
     """
 
     header: int = 1023
