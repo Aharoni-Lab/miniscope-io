@@ -33,6 +33,10 @@ sphinx = "^6.2.1"
 furo = "^2023.5.20"
 myst-parser = "^2.0.0"
 
+[tool.poetry.extras]
+tests = ["pytest"]
+docs = ["sphinx", "furo", "myst-parser"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
