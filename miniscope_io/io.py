@@ -1,7 +1,7 @@
 """
 I/O functions for the SD card
 """
-from typing import Union, BinaryIO
+from typing import Union, BinaryIO, Optional
 from pathlib import Path
 import warnings
 
@@ -36,10 +36,29 @@ class SDCard:
         self.drive = Path(drive).resolve()
         self.layout = layout
 
-        self._config = None
+        # Private attributes used when the file reading context is entered
+        self._config = None  # type: Optional[SDConfig]
+        self._f = None  # type: Optional[BinaryIO]
+        self._frame = None  # type: Optional[int]
+        self._array = None  # type: Optional[np.ndarray]
+        """
+        n_pix x 1 array used to store pixels while reading buffers
+        """
+        self.positions = {}
+        """
+        A mapping between frame number and byte position in the video that makes for faster seeking :)
+        
+        As we read, we store the locations of each frame before reading it. Later, we can assign to
+        `frame` to seek back to those positions. Assigning to `frame` works without caching position, but
+        has to manually iterate through each frame.
+        """
 
-        if not self.check_valid():
-            raise InvalidSDException(f"The SD card at path {str(self.drive)} does not have the correct WRITEKEYs in its header!")
+
+
+        # this doesn't seem to be true anymore? but the WRITE_KEYs are still in
+        # both the firmware and reading code, just unused?
+        #if not self.check_valid():
+        #    raise InvalidSDException(f"The SD card at path {str(self.drive)} does not have the correct WRITEKEYs in its header!")
 
     # --------------------------------------------------
     # Properties
@@ -49,18 +68,78 @@ class SDCard:
     def config(self) -> SDConfig:
         if self._config is None:
             with open(self.drive, 'rb') as sd:
-                sd.seek(self.layout.config_pos, 0)
+                sd.seek(self.layout.sectors.config_pos, 0)
                 configSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
+
             self._config = SDConfig(
-                width  = configSectorData[self.layout.config.width],
-                height = configSectorData[self.layout.config.height],
-                fs     = configSectorData[self.layout.config.fs],
-                buffer_size = configSectorData[self.layout.config.buffer_size],
-                n_buffers_recorded =configSectorData[self.layout.config.n_buffers_recorded],
-                n_buffers_dropped=configSectorData[self.layout.config.n_buffers_dropped]
+                **{
+                    k: configSectorData[v]
+                    for k, v in self.layout.config.dict().items()
+                    if v is not None
+                }
             )
 
         return self._config
+
+    @property
+    def position(self) -> Optional[int]:
+        """
+        When entered as context manager, the current position of the internal file descriptor
+        """
+        if self._f is None:
+            return None
+
+        return self._f.tell()
+
+
+    @property
+    def frame(self) -> Optional[int]:
+        """
+        When reading, the number of the frame that would be read if we were to call :meth:`.read`
+        """
+        if self._f is None:
+            return None
+
+        return self._frame
+
+    @frame.setter
+    def frame(self, frame:int):
+        """
+        Seek to a specific frame
+
+        Arguments:
+            frame (int): The frame to seek to!
+        """
+        raise NotImplementedError("Havent implemented seek yet!")
+
+
+
+
+    # --------------------------------------------------
+    # Context Manager methods
+    # --------------------------------------------------
+
+    def __enter__(self):
+        if self._f is not None:
+            raise RuntimeError("Cant enter context, and open the file twice!")
+
+        # init private attrs
+        # create an empty frame to hold our data!
+        self._array = np.zeros(
+            (self.config.width * self.config.height, 1),
+            dtype=np.uint8
+        )
+        self._pixel_count = 0
+        self._last_buffer_n = 0
+        self._frame = 0
+
+        self._f = open(self.drive, 'rb')
+        # seek to the start of the data
+        self._f.seek(self.layout.sectors.data_pos, 0)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._f.close()
+        self._f = None
 
     # --------------------------------------------------
     # read methods
@@ -85,17 +164,39 @@ class SDCard:
         # use construct because we're already sure these are ints from the numpy casting
         #https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
         header = DataHeader.construct(
-            length = dataHeader[self.layout.buffer.length],
-            linked_list = dataHeader[self.layout.buffer.linked_list],
-            frame_num= dataHeader[self.layout.buffer.frame_num],
-            buffer_count= dataHeader[self.layout.buffer.buffer_count],
-            frame_buffer_count= dataHeader[self.layout.buffer.frame_buffer_count],
-            write_buffer_count= dataHeader[self.layout.buffer.write_buffer_count],
-            dropped_buffer_count= dataHeader[self.layout.buffer.dropped_buffer_count],
-            timestamp= dataHeader[self.layout.buffer.timestamp],
-            data_length= dataHeader[self.layout.buffer.data_length],
-        )
+            **{
+                k: dataHeader[v]
+                for k, v in self.layout.buffer.dict().items()
+                if v is not None
+            })
         return header
+
+    def _n_frame_blocks(self, header: DataHeader) -> int:
+        """
+        Compute the number of blocks for a given frame buffer
+
+        Not sure how this works!
+        """
+        n_blocks = int(
+            (
+                header.data_length +
+                (header.length * self.layout.word_size) +
+                (self.layout.sectors.size - 1)
+            ) / self.layout.sectors.size
+        )
+        return n_blocks
+
+    def _read_size(self, header: DataHeader) -> int:
+        """
+        Compute the number of bytes to read for a given buffer
+
+        Not sure how this works with :meth:`._n_frame_blocks`, but keeping
+        them separate in case they are separable actions for now
+        """
+        n_blocks = self._n_frame_blocks(header)
+        read_size = (n_blocks * self.layout.sectors.size) - \
+            (header.length * self.layout.word_size)
+        return read_size
 
     def _read_buffer(self, sd: BinaryIO, header: DataHeader) -> np.ndarray:
         """
@@ -103,83 +204,95 @@ class SDCard:
 
         Each frame has several buffers, so for a given frame we read them until we get another that's zero!
         """
-        # not sure whats goin on here!
-        numBlocks = int(
-            (
-                    header.data_length +
-                    (header.length * self.layout.word_size) +
-                    (self.layout.sectors.size - 1)
-            ) / self.layout.sectors.size
-        )
         data = np.frombuffer(
-            sd.read(numBlocks * 512 - header.length * 4),
+            sd.read(self._read_size(header)),
             dtype=np.uint8
         )
         return data
 
-    def reader(self):
+    def _trim(self, data:np.ndarray, expected_size:int) -> np.ndarray:
         """
-        Python generator that yields the next frame.
-
-        Examples:
-
-            # sd = SDCard(...)
-            reader = sd.reader()
-            frame = next(reader)
-
-            # or
-            for frame in sd.reader():
-                # do something...
-
+        Trim or pad an array to match an expected size
         """
-        with open(self.drive, 'rb') as sd:
-            # seek to the right position
-            sd.seek(self.layout.sectors.data_pos, 0)
+        if data.shape[0] != expected_size:
+            warnings.warn(
+                f"Expected buffer data length: {expected_size}, got data with shape {data.shape}. Padding to expected length")
 
-            # create an empty frame to hold our data!
-            frame = np.zeros(
-                (self.config.width * self.config.height, 1),
-                dtype=np.uint8
-            )
-            pixel_count = 0
-            last_buffer_n = 0
+            # trim if too long
+            if data.shape[0] > expected_size:
+                data = data[0:expected_size]
+            # pad if too short
+            else:
+                data = np.pad(data, (0, expected_size - data.shape[0]))
 
-            # iterate until we run out of data!
-            while True:
-                # read header and then buffers
-                # since each read operation advances the seek, each of these are private methods
-                # that should only be called here in order
-                header = self._read_data_header(sd)
+        return data
 
-                # if we are back at the zeroth buffer and have already looped through a frame,
-                # yield it before reading the next frame's buffer
-                if header.frame_buffer_count == 0 and last_buffer_n > 0:
-                    yield np.reshape(
-                        frame,
-                       (self.config.width, self.config.height)
-                    )
-                    # TODO: Check if we're copying or returning a view above, if we're returning a view then we need to make a new array
-                    frame[:] = 0
-                    pixel_count = 0
+    def read(self) -> np.ndarray:
+        """
+        Read a single frame
+        """
+        if self._f is None:
+            raise RuntimeError('File is not open! Try entering the reader context by using it like `with sdcard:`')
 
-                data = self._read_buffer(sd, header)
-                if data is None:
-                    # at the end of the file!
-                    break
+        self._array[:] = 0
+        pixel_count = 0
+        last_buffer_n = 0
+        while True:
+            # stash position before reading header
+            last_position = self._f.tell()
+            header = self._read_data_header(self._f)
+            if header is None:
+                # end of file!
+                raise StopIteration("Reached the end of the video!")
 
-                # warn if we didn't get the expected size of data
-                if data.shape[0] != header.data_length:
-                    warnings.warn(f"Expected buffer data length: {header.data_length}, got data with shape {data.shape}")
+            if header.frame_buffer_count == 0 and last_buffer_n > 0:
+                # we are in the next frame!
+                # rewind to the beginning of the header, and return
+                # the last_position is the start of the header for this frame
+                self._f.seek(last_position, 0)
+                self._frame += 1
+                self.positions[self._frame] = last_position
+                return np.reshape(self._array, (self.config.width, self.config.height))
 
-                # Put buffer data into the frame
-                # we use the actual data length rather than the expected length of the data to index
-                # so we may overrun the array and throw an error! the warning should let us know
-                # that something is wrong with how we're grabbing frames or how they're shaped
-                # so we know the problem is before here if the grabbed frame looks weird, but
-                # throwing the exception will be an even stronger reminder to handle inconsistencies in length
-                frame[pixel_count:pixel_count + data.shape[0], 0] = data
-                last_buffer_n = header.frame_buffer_count
-                pixel_count += data.shape[0]
+            # grab buffer data and stash
+            data = self._read_buffer(self._f, header)
+            data = self._trim(data, header.data_length)
+            self._array[pixel_count:pixel_count + header.data_length, 0] = data
+            pixel_count += header.data_length
+            last_buffer_n = header.frame_buffer_count
+
+    def skip(self):
+        """
+        Skip a frame
+
+        Read the buffer headers to determine buffer sizes and just seek ahead
+        """
+        if self._f is None:
+            raise RuntimeError('File is not open! Try entering the reader context by using it like `with sdcard:`')
+
+        last_position = self._f.tell()
+        header = self._read_data_header(self._f)
+
+        if header.frame_buffer_count != 0:
+            self._f.seek(last_position, 0)
+            raise RuntimeError("Did not start at the first buffer of a frame! Something is wrong with the way seeking is working. Rewound to where we started")
+
+        while True:
+            # jump ahead according to the last header we read
+            read_size = self._read_size(header)
+            self._f.seek(read_size, whence=1)
+
+            # stash position before reading next buffer header
+            last_position = self._f.tell()
+            header = self._read_data_header(self._f)
+
+            # if the frame is over, return to the start of the buffer and break,
+            # incrementing the current frame count
+            if header.frame_buffer_count == 0:
+                self._f.seek(last_position, 0)
+                self._frame += 1
+                self.positions[self.frame] = last_position
+                break
 
 
     # --------------------------------------------------

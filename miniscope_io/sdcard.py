@@ -3,6 +3,7 @@ Data model for configuring an SD card. Will be instantiated in the constants mod
 specific values. This allows for the model to be reused across different miniscopes, and
 for consuming code to use a consistent, introspectable API
 """
+from typing import Optional
 from pydantic import BaseModel
 
 class SectorConfig(BaseModel):
@@ -67,8 +68,6 @@ class ConfigPositions(BaseModel):
 class SDHeaderPositions(BaseModel):
     """
     Positions in the header for the whole SD card
-
-    (seemingly unused)
     """
     gain: int = 4
     led: int = 5
@@ -76,6 +75,8 @@ class SDHeaderPositions(BaseModel):
     record_length: int = 7
     fs: int = 8
     """Frame rate"""
+    delay_start: Optional[int] = None
+    battery_cutoff: Optional[int] = None
 
 
 class BufferHeaderPositions(BaseModel):
@@ -91,6 +92,7 @@ class BufferHeaderPositions(BaseModel):
     dropped_buffer_count: int = 6
     timestamp: int = 7
     data_length: int = 8
+    write_timestamp: Optional[int] = None
 
 class SDLayout(BaseModel):
     """
@@ -103,12 +105,14 @@ class SDLayout(BaseModel):
     write_key1: int = 0x0D7CBA17
     write_key2: int = 0x0D7CBA17
     write_key3: int = 0x0D7CBA17
+    """
+    These don't seem to actually be used in the existing reading/writing code, but we will leave them here for continuity's sake :)
+    """
     word_size: int = 4
     """
     I'm actually not sure what this is, but 4 is hardcoded a few times in the existing notebook and it
     appears to be used as a word size when reading from the SD card.
     """
-
 
     header: SDHeaderPositions = SDHeaderPositions()
     config: ConfigPositions = ConfigPositions()
@@ -144,6 +148,7 @@ class DataHeader(BaseModel):
     dropped_buffer_count: int
     timestamp: int
     data_length: int
+    write_timestamp: Optional[int] = None
 
 
 
