@@ -38,7 +38,7 @@ WireFreeSDLayout = SDLayout(
         n_buffers_dropped  = 5
     ),
     buffer = BufferHeaderPositions(
-        length               = 0,
+        length               = 10,
         linked_list          = 1,
         frame_num            = 2,
         buffer_count         = 3,
