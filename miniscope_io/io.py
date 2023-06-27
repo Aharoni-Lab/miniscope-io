@@ -11,7 +11,6 @@ from miniscope_io.sdcard import SDLayout, SDConfig, DataHeader
 from miniscope_io.exceptions import InvalidSDException
 
 
-
 class SDCard:
     """
     I/O for data on an SDCard
@@ -19,6 +18,11 @@ class SDCard:
     an instance of :class:`.sdcard.SDLayout` (typically in :mod:`.formats` ) configures how
     the data is laid out on the SD card. This class makes the i/o operations abstract over
     multiple layouts
+
+    Args:
+        drive (str, :class:`pathlib.Path`): Path to the SD card drive
+        layout (:class:`.sdcard.SDLayout`): A layout configuration for an SD card
+
     """
 
     def __init__(
@@ -27,12 +31,7 @@ class SDCard:
             layout: SDLayout
 
         ):
-        """
 
-        Args:
-            drive (str, :class:`pathlib.Path`): Path to the SD card drive
-            layout (:class:`.sdcard.SDLayout`): A layout configuration for an SD card
-        """
         self.drive = Path(drive).resolve()
         self.layout = layout
 
