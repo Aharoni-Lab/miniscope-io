@@ -16,7 +16,7 @@ class SectorConfig(BaseModel):
 
     >>> sectors = SectorConfig(header=1023, config=1024, data=1025, size=512)
     >>> sectors.header
-    1024
+    1023
     >>> # should be 1023 * 512
     >>> sectors.header_pos
     523776
