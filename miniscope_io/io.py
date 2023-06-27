@@ -110,10 +110,29 @@ class SDCard:
         Arguments:
             frame (int): The frame to seek to!
         """
-        raise NotImplementedError("Havent implemented seek yet!")
+        if self._f is None:
+            raise RuntimeError("Havent entered context manager yet! Cant change position without that!")
 
+        if frame == self.frame:
+            return
 
+        if frame in self.positions.keys():
+            self._f.seek(self.positions[frame], 0)
+            self._frame = frame
+            return
+        else:
+            # TODO find the nearest position we do have
+            pass
 
+        if frame < self.frame:
+            # hard to go back, esp if we haven't already been here (we should have stashed the position)
+            # just go to start of data and seek like normally (next case)
+            self._f.seek(self.layout.sectors.data_pos, 0)
+            self._frame = 0
+
+        if frame > self.frame:
+            for i in range(frame - self.frame):
+                self.skip()
 
     # --------------------------------------------------
     # Context Manager methods
@@ -280,7 +299,7 @@ class SDCard:
         while True:
             # jump ahead according to the last header we read
             read_size = self._read_size(header)
-            self._f.seek(read_size, whence=1)
+            self._f.seek(read_size, 1)
 
             # stash position before reading next buffer header
             last_position = self._f.tell()
