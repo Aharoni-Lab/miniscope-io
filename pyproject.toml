@@ -25,6 +25,14 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.4.0"
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^6.2.1"
+furo = "^2023.5.20"
+myst-parser = "^2.0.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
