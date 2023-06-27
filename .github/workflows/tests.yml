@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: pip install .[tests]
+        run: pip install .[tests] pytest
       - uses: pavelzw/pytest-action@v2
         with:
           emoji: true
