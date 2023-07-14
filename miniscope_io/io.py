@@ -1,14 +1,15 @@
 """
 I/O functions for the SD card
 """
-from typing import Union, BinaryIO, Optional
+from typing import Union, BinaryIO, Optional, Tuple, List
 from pathlib import Path
 import warnings
 
 import numpy as np
 
 from miniscope_io.sdcard import SDLayout, SDConfig, DataHeader
-from miniscope_io.exceptions import InvalidSDException
+from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
+
 
 
 class SDCard:
@@ -39,6 +40,7 @@ class SDCard:
         self._config = None  # type: Optional[SDConfig]
         self._f = None  # type: Optional[BinaryIO]
         self._frame = None  # type: Optional[int]
+        self._frame_count = None # type: Optional[int]
         self._array = None  # type: Optional[np.ndarray]
         """
         n_pix x 1 array used to store pixels while reading buffers
@@ -133,11 +135,44 @@ class SDCard:
             for i in range(frame - self.frame):
                 self.skip()
 
+    @property
+    def frame_count(self) -> int:
+        """
+        Total number of frames in recording.
+
+        Inferred from :class:`~.sdcard.SDConfig.n_buffers_recorded` and
+        reading a single frame to get the number of buffers per frame.
+        """
+        if self._frame_count is None:
+            if self._f is None:
+                with self as self_open:
+                    frame, headers = self_open.read(return_header=True)
+
+            else:
+                # If we're already open, great, just return to the last frame
+                last_frame = self.frame
+                frame, headers = self.read(return_header=True)
+                self.frame = last_frame
+
+            self._frame_count = int(np.ceil(
+                (self.config.n_buffers_recorded + self.config.n_buffers_dropped) / len(headers)
+            ))
+
+        # if we have since read more frames than should be there, we update the frame count with a warning
+        max_pos = np.max(list(self.positions.keys()))
+        if max_pos > self._frame_count:
+            warnings.warn(f'Got more frames than indicated in card header, expected {self._frame_count} but got {max_pos}')
+            self._frame_count = int(max_pos)
+
+        return self._frame_count
+
+
+
     # --------------------------------------------------
     # Context Manager methods
     # --------------------------------------------------
 
-    def __enter__(self):
+    def __enter__(self) -> 'SDCard':
         if self._f is not None:
             raise RuntimeError("Cant enter context, and open the file twice!")
 
@@ -154,10 +189,15 @@ class SDCard:
         self._f = open(self.drive, 'rb')
         # seek to the start of the data
         self._f.seek(self.layout.sectors.data_pos, 0)
+        # store the 0th frame position
+        self.positions[0] = self.layout.sectors.data_pos
+
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._f.close()
         self._f = None
+        self._frame = 0
 
     # --------------------------------------------------
     # read methods
@@ -245,9 +285,15 @@ class SDCard:
 
         return data
 
-    def read(self) -> np.ndarray:
+    def read(self, return_header:bool=False) -> Union[np.ndarray, Tuple[np.ndarray, List[DataHeader]]]:
         """
         Read a single frame
+
+        Arguments:
+            return_header (bool): If `True`, return headers from individual buffers (default `False`)
+
+        Return:
+            :class:`numpy.ndarray` , or a tuple(ndarray, List[:class:`~.DataHeader`]) if `return_header` is `True`
         """
         if self._f is None:
             raise RuntimeError('File is not open! Try entering the reader context by using it like `with sdcard:`')
@@ -255,13 +301,26 @@ class SDCard:
         self._array[:] = 0
         pixel_count = 0
         last_buffer_n = 0
+        headers = []
         while True:
             # stash position before reading header
             last_position = self._f.tell()
-            header = self._read_data_header(self._f)
-            if header is None:
-                # end of file!
-                raise StopIteration("Reached the end of the video!")
+            try:
+                header = self._read_data_header(self._f)
+            except ValueError as e:
+                if 'read length must be non-negative' in str(e):
+                    # end of file! Value error thrown because the dataHeader will be blank,
+                    # and thus have a value of 0 for the header size, and we can't read 0 from the card.
+                    self._f.seek(last_position, 0)
+                    raise EndOfRecordingException("Reached the end of the video!")
+                else:
+                    raise e
+            except IndexError as e:
+                if 'index 0 is out of bounds for axis 0 with size 0' in str(e):
+                    # end of file if we are reading from a disk image without any additional space on disk
+                    raise EndOfRecordingException("Reached the end of the video!")
+                else:
+                    raise e
 
             if header.frame_buffer_count == 0 and last_buffer_n > 0:
                 # we are in the next frame!
@@ -270,9 +329,14 @@ class SDCard:
                 self._f.seek(last_position, 0)
                 self._frame += 1
                 self.positions[self._frame] = last_position
-                return np.reshape(self._array, (self.config.width, self.config.height))
+                frame = np.reshape(self._array, (self.config.width, self.config.height))
+                if return_header:
+                    return frame, headers
+                else:
+                    return frame
 
             # grab buffer data and stash
+            headers.append(header)
             data = self._read_buffer(self._f, header)
             data = self._trim(data, header.data_length)
             self._array[pixel_count:pixel_count + header.data_length, 0] = data

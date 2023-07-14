@@ -10,6 +10,7 @@
 :caption: Contents:
 
 api/index
+changelog
 ```
 
 

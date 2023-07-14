@@ -4,6 +4,8 @@ from pathlib import Path
 
 from miniscope_io.io import SDCard
 from miniscope_io.formats import WireFreeSDLayout
+from miniscope_io.sdcard import DataHeader
+from miniscope_io.exceptions import EndOfRecordingException
 
 @pytest.fixture
 def wirefree():
@@ -49,8 +51,9 @@ def test_read(wirefree):
             assert frame.any()
 
             # we should have stashed frame start positions
-            # if we just read the 0th frame, we should have 1 position
-            assert len(wirefree.positions) == i + 1
+            # if we just read the 0th frame, we should have 2 positions
+            # for the 0th and 1st frame
+            assert len(wirefree.positions) == i + 2
 
     # after we exit the context manager, we should lose our current frame
     assert wirefree.frame is None
@@ -60,8 +63,29 @@ def test_read(wirefree):
     # and the file descriptor should also be gone
     assert wirefree._f is None
     # but we should keep our positions
-    assert len(wirefree.positions) == 20
+    assert len(wirefree.positions) == n_frames + 1
 
+def test_return_headers(wirefree):
+    """
+    We can return the headers for the individual buffers in a frame
+    """
+    with wirefree:
+        frame, buffers = wirefree.read(return_header=True)
+        assert len(buffers) == 5
+        assert all([isinstance(b, DataHeader) for b in buffers])
+
+def test_frame_count(wirefree):
+    """
+    We can infer the total number of frames in a recording from the data header
+    """
+    # known max frames given the data header in the example data
+    assert wirefree.frame_count == 388
+
+    # if we try and read past the end, we get an exception
+    with wirefree:
+        wirefree.frame = 389
+        with pytest.raises(EndOfRecordingException):
+            frame = wirefree.read()
 
 
 #
