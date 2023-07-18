@@ -8,12 +8,12 @@ import sys
 import time
 
 class uart_daq:
-    def __init__(self, frame_width = 304, frame_height = 304, preamble = b'\x34\x12'):
+    def __init__(self, frame_width: int = 304, frame_height: int = 304, preamble = b'\x34\x12'):
         self.frame_width = frame_width
         self.frame_height = frame_height
         self.preamble = preamble
 
-    def _uart_recv(self, serial_buffer_read, comport, baudrate):
+    def _uart_recv(self, serial_buffer_read, comport: str, baudrate: int):
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
@@ -24,11 +24,10 @@ class uart_daq:
 
         locallogs.addHandler(file)
         coloredlogs.install(level=logging.INFO, logger=locallogs)
-
         serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
         locallogs.info('Serial port: ' + str(serial_port.name))
 
-        for i in range(0,100): # how many buffers to see
+        while 1:
             log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
             serial_buffer_read.put(log_uart_buffer)            
 
@@ -54,6 +53,7 @@ class uart_daq:
         buffer_frame_index = 0
         frame_num = 0
         
+
         while 1:
             if (serial_buffer_read.qsize() > 1): # for safety
                 serial_buffer_copy = serial_buffer_read.get()
@@ -104,6 +104,7 @@ class uart_daq:
         buffer_numpixel_assert = [20440, 20440, 20440, 20440, 10656]
 
         HEADER_LENGTH = (10 - 1) * 4
+
         while 1:
             if(buffer_frame.qsize() > 0): # for safety
                 locallogs.info('Found frame in queue')
@@ -156,7 +157,7 @@ class uart_daq:
                 locallogs.info('FRAME: ' + str(int.from_bytes(plot_buffer_copy[0][4:8][::-1], "big")) + ' stored!')
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
-    def capture(self, comport = 'COM3', baudrate = 1200000):
+    def capture(self, comport:str = 'COM3', baudrate:int = 1200000):
         file = logging.FileHandler(datetime.now().strftime('log/logfile%Y_%m_%d_%H_%M.log'))
         file.setLevel(logging.DEBUG)
         fileformat = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",datefmt="%H:%M:%S")
@@ -174,7 +175,7 @@ class uart_daq:
         imagearray = multiprocessing.Queue(5)
         imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
 
-        p_uart_recv = multiprocessing.Process(target=self._uart_recv, args=(serial_buffer_read, comport, baudrate))
+        p_uart_recv = multiprocessing.Process(target=self._uart_recv, args=(serial_buffer_read, comport, baudrate, ))
         p_buffer_to_frame = multiprocessing.Process(target=self._buffer_to_frame, args=(serial_buffer_read, buffer_frame, ))
         p_format_frame = multiprocessing.Process(target=self._format_frame, args=(buffer_frame, imagearray, ))
         p_uart_recv.start()
@@ -194,6 +195,52 @@ class uart_daq:
                 break # esc to quit
         print('End capture')
 
+        while True:
+            print("[Terminating] uart_recv()")
+            p_uart_recv.terminate()
+            time.sleep(0.1)
+            if not p_uart_recv.is_alive():
+                p_uart_recv.join(timeout=1.0)
+                print("[Terminated] uart_recv()")
+                break # watchdog process daemon gets [Terminated]
+
+        while True:
+            print("[Terminating] buffer_to_frame()")
+            p_buffer_to_frame.terminate()
+            time.sleep(0.1)
+            if not p_buffer_to_frame.is_alive():
+                p_buffer_to_frame.join(timeout=1.0)
+                print("[Terminated] buffer_to_frame()")
+                break # watchdog process daemon gets [Terminated]
+
+        while True:
+            print("[Terminating] format_frame()")
+            p_format_frame.terminate()
+            time.sleep(0.1)
+            if not p_format_frame.is_alive():
+                p_format_frame.join(timeout=1.0)
+                print("[Terminated] format_frame()")
+                break # watchdog process daemon gets [Terminated]
+
 if __name__ == '__main__':
+    try:
+        assert len(sys.argv) == 3
+    except AssertionError as msg:
+        print(msg)
+        print("Usage: uart_daq.py [COM port] [baudrate]")
+        sys.exit(1)
+
+    try:
+        comport = str(sys.argv[1])
+    except (ValueError, IndexError) as e:
+        print(e)
+        sys.exit(1)
+
+    try:
+        baudrate = int(sys.argv[2])
+    except (ValueError, IndexError) as e:
+        print(e)
+        sys.exit(1)
+
     daq_inst = uart_daq()
-    daq_inst.capture(comport = 'COM3', baudrate = 1200000)
+    daq_inst.capture(comport = comport, baudrate = baudrate)
