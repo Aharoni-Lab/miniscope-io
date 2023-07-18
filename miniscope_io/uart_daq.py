@@ -8,8 +8,8 @@ import sys
 import time
 
 class uart_daq:
+    # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
     def __init__(self, frame_width = 304, frame_height = 304, preamble = b'\x34\x12', comport = 'COM3'):
-        # these
         self.frame_width = frame_width
         self.frame_height = frame_height
         self.num_pixel_assert = frame_width * frame_height
@@ -31,7 +31,7 @@ class uart_daq:
         serial_port = serial.Serial(self.comport, 1200000, timeout=5, stopbits=1)
         locallogs.info('Serial port: ' + str(serial_port.name))
 
-        for i in range(0,10): # how many buffers to see
+        for i in range(0,100): # how many buffers to see
             log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
             serial_buffer_read.put(log_uart_buffer)            
 
@@ -193,7 +193,7 @@ class uart_daq:
         p_buffer_to_frame.start()
         p_format_frame.start()
 
-        while 1: # GUI functions on main thread
+        while 1: # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
             if imagearray.qsize() > 0:
                 imagearray_plot = imagearray.get()
                 image = imagearray_plot.reshape(self.frame_width, self.frame_height)
