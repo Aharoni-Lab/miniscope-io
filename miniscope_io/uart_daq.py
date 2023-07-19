@@ -1,3 +1,4 @@
+import argparse
 import serial
 import multiprocessing
 import coloredlogs, logging
@@ -6,6 +7,10 @@ import numpy as np
 import cv2
 import sys
 import time
+
+parser = argparse.ArgumentParser("uart_image_capture")
+parser.add_argument('port', help="serial port")
+parser.add_argument('baudrate', help="baudrate")
 
 class uart_daq:
     def __init__(self, frame_width: int = 304, frame_height: int = 304, preamble = b'\x34\x12'):
@@ -223,21 +228,23 @@ class uart_daq:
                 break # watchdog process daemon gets [Terminated]
 
 def main():
+    args = parser.parse_args()
+
     try:
-        assert len(sys.argv) == 3
+        assert len(vars(args)) == 2
     except AssertionError as msg:
         print(msg)
         print("Usage: uart_daq.py [COM port] [baudrate]")
         sys.exit(1)
 
     try:
-        comport = str(sys.argv[1])
+        comport = str(args.port)
     except (ValueError, IndexError) as e:
         print(e)
         sys.exit(1)
 
     try:
-        baudrate = int(sys.argv[2])
+        baudrate = int(args.baudrate)
     except (ValueError, IndexError) as e:
         print(e)
         sys.exit(1)
