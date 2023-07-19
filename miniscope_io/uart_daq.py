@@ -222,7 +222,7 @@ class uart_daq:
                 print("[Terminated] format_frame()")
                 break # watchdog process daemon gets [Terminated]
 
-if __name__ == '__main__':
+def main():
     try:
         assert len(sys.argv) == 3
     except AssertionError as msg:
@@ -243,4 +243,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     daq_inst = uart_daq()
-    daq_inst.capture(comport = comport, baudrate = baudrate)
+    daq_inst.capture(comport = comport, baudrate = baudrate)    
+
+if __name__ == '__main__':
+    main()
