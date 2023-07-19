@@ -42,3 +42,6 @@ docs = ["sphinx", "furo", "myst-parser"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+uart_image_capture = "miniscope_io.uart_daq:main"
