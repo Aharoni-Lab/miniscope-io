@@ -1,3 +1,4 @@
+import os
 import argparse
 import serial
 import multiprocessing
@@ -163,6 +164,10 @@ class uart_daq:
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
     def capture(self, comport:str = 'COM3', baudrate:int = 1200000):
+        logdirectories = ['log', 'log/uart_recv', 'log/format_frame', 'log/buffer_to_frame']
+        for logpath in logdirectories:
+            if not os.path.exists(logpath):
+                os.makedirs(logpath)
         file = logging.FileHandler(datetime.now().strftime('log/logfile%Y_%m_%d_%H_%M.log'))
         file.setLevel(logging.DEBUG)
         fileformat = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",datefmt="%H:%M:%S")
@@ -248,6 +253,7 @@ def main():
     except (ValueError, IndexError) as e:
         print(e)
         sys.exit(1)
+
 
     daq_inst = uart_daq()
     daq_inst.capture(comport = comport, baudrate = baudrate)    
