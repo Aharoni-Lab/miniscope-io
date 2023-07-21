@@ -1,3 +1,4 @@
+import os
 import argparse
 import serial
 import multiprocessing
@@ -163,6 +164,10 @@ class uart_daq:
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
     def capture(self, comport:str = 'COM3', baudrate:int = 1200000):
+        logdirectories = ['log', 'log/uart_recv', 'log/format_frame', 'log/buffer_to_frame']
+        for logpath in logdirectories:
+            if not os.path.exists(logpath):
+                os.makedirs(logpath)
         file = logging.FileHandler(datetime.now().strftime('log/logfile%Y_%m_%d_%H_%M.log'))
         file.setLevel(logging.DEBUG)
         fileformat = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s",datefmt="%H:%M:%S")
@@ -175,9 +180,10 @@ class uart_daq:
         coloredlogs.install(level=logging.DEBUG, logger=globallogs)
 
         #Queue size is hard coded
-        serial_buffer_read = multiprocessing.Queue(10) # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        buffer_frame = multiprocessing.Queue(5) #[b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
-        imagearray = multiprocessing.Queue(5)
+        queue_manager = multiprocessing.Manager()
+        serial_buffer_read = queue_manager.Queue(10) # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
+        buffer_frame = queue_manager.Queue(5) #[b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
+        imagearray = queue_manager.Queue(5)
         imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
 
         p_uart_recv = multiprocessing.Process(target=self._uart_recv, args=(serial_buffer_read, comport, baudrate, ))
@@ -248,6 +254,7 @@ def main():
     except (ValueError, IndexError) as e:
         print(e)
         sys.exit(1)
+
 
     daq_inst = uart_daq()
     daq_inst.capture(comport = comport, baudrate = baudrate)    
