@@ -180,9 +180,10 @@ class uart_daq:
         coloredlogs.install(level=logging.DEBUG, logger=globallogs)
 
         #Queue size is hard coded
-        serial_buffer_read = multiprocessing.Queue(10) # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        buffer_frame = multiprocessing.Queue(5) #[b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
-        imagearray = multiprocessing.Queue(5)
+        queue_manager = multiprocessing.Manager()
+        serial_buffer_read = queue_manager.Queue(10) # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
+        buffer_frame = queue_manager.Queue(5) #[b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
+        imagearray = queue_manager.Queue(5)
         imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
 
         p_uart_recv = multiprocessing.Process(target=self._uart_recv, args=(serial_buffer_read, comport, baudrate, ))
