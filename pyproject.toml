@@ -48,3 +48,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 uart_image_capture = "miniscope_io.uart_daq:main"
+updateLED = "miniscope_io.uart_daq:updateLED"

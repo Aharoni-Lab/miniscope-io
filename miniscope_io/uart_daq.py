@@ -9,10 +9,16 @@ import cv2
 import sys
 import time
 
-# Parsers for inputs
-parser = argparse.ArgumentParser("uart_image_capture")
-parser.add_argument('port', help="serial port")
-parser.add_argument('baudrate', help="baudrate")
+# Parsers for daq inputs
+daqParser = argparse.ArgumentParser("uart_image_capture")
+daqParser.add_argument('port', help="serial port")
+daqParser.add_argument('baudrate', help="baudrate")
+
+# Parsers for update LED
+updateLEDParser = argparse.ArgumentParser("update_EXLED")
+updateLEDParser.add_argument('port', help="serial port")
+updateLEDParser.add_argument('baudrate', help="baudrate")
+updateLEDParser.add_argument('value', help="LED value")
 
 class uart_daq:
     def __init__(self, frame_width: int = 304, frame_height: int = 304, preamble = b'\x78\x56\x34\x12'):
@@ -254,14 +260,67 @@ class uart_daq:
                 print("[Terminated] format_frame()")
                 break # watchdog process daemon gets [Terminated]
 
+def updateLED():
+    args = updateLEDParser.parse_args()
+    uartRepeat = 5
+
+    try:
+        assert len(vars(args)) == 3
+    except AssertionError as msg:
+        print(msg)
+        print("Usage: updateLED [COM port] [baudrate] [value]")
+        sys.exit(1)
+
+    try:
+        comport = str(args.port)
+    except (ValueError, IndexError) as e:
+        print(e)
+        sys.exit(1)
+
+    try:
+        baudrate = int(args.baudrate)
+    except (ValueError, IndexError) as e:
+        print(e)
+        sys.exit(1)
+
+    try:
+        value = int(args.value)
+        assert (value <= 100 and value >= 0)
+    except AssertionError as msg:
+        print(msg)
+        print("value need to be a integer within 0-100")
+        sys.exit(1)
+    
+    command = [b'\x00', b'\x00']
+
+    command[0] = int(128 + np.floor(value/8)).to_bytes(1, 'big')
+    command[1] = int(64 + np.floor(value%8)).to_bytes(1, 'big')
+
+    #set up serial port
+    serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
+
+    for i in range(uartRepeat):
+        # read UART data until preamble and put into queue
+        serial_port.write(command[0])
+        time.sleep(0.01)
+        
+    for i in range(uartRepeat):
+        # read UART data until preamble and put into queue
+        serial_port.write(command[1])
+        time.sleep(0.01)
+    
+    serial_port.close()
+    print('Close serial port')
+    sys.exit(1)
+
 def main():
-    args = parser.parse_args()
+    args = daqParser.parse_args()
 
     try:
         assert len(vars(args)) == 2
     except AssertionError as msg:
         print(msg)
-        print("Usage: uart_daq.py [COM port] [baudrate]")
+        print("Usage: uart_image_capture [COM port] [baudrate]")
         sys.exit(1)
 
     try:
