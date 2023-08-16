@@ -9,17 +9,27 @@ import cv2
 import sys
 import time
 
-parser = argparse.ArgumentParser("uart_image_capture")
-parser.add_argument('port', help="serial port")
-parser.add_argument('baudrate', help="baudrate")
+# Parsers for daq inputs
+daqParser = argparse.ArgumentParser("uart_image_capture")
+daqParser.add_argument('port', help="serial port")
+daqParser.add_argument('baudrate', help="baudrate")
+
+# Parsers for update LED
+updateDeviceParser = argparse.ArgumentParser("updateDevice")
+updateDeviceParser.add_argument('port', help="serial port")
+updateDeviceParser.add_argument('baudrate', help="baudrate")
+updateDeviceParser.add_argument('module', help="module to update")
+updateDeviceParser.add_argument('value', help="LED value")
 
 class uart_daq:
-    def __init__(self, frame_width: int = 304, frame_height: int = 304, preamble = b'\x34\x12'):
+    def __init__(self, frame_width: int = 304, frame_height: int = 304, preamble = b'\x78\x56\x34\x12'):
         self.frame_width = frame_width
         self.frame_height = frame_height
         self.preamble = preamble
 
-    def _uart_recv(self, serial_buffer_read, comport: str, baudrate: int):
+    # Receive buffers and push into serial_buffer_queue
+    def _uart_recv(self, serial_buffer_queue, comport: str, baudrate: int):
+        #set up logger
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
@@ -30,19 +40,28 @@ class uart_daq:
 
         locallogs.addHandler(file)
         coloredlogs.install(level=logging.INFO, logger=locallogs)
+
+        #set up serial port
         serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
-        locallogs.info('Serial port: ' + str(serial_port.name))
+        locallogs.info('Serial port open: ' + str(serial_port.name))
+        
+        # Throw away the first buffer because it won't fully come in
+        log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
 
         while 1:
+            # read UART data until preamble and put into queue
             log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
-            serial_buffer_read.put(log_uart_buffer)            
+            serial_buffer_queue.put(log_uart_buffer)            
 
-        time.sleep(2) #time for ending other process 2sec
+        time.sleep(1) #time for ending other process
         serial_port.close()
         print('Close serial port')
         sys.exit(1)
 
-    def _buffer_to_frame(self, serial_buffer_read, buffer_frame):
+    # Pull out data buffers from serial_buffer_queue
+    # Make a list of buffers forming a frame and push into frame_buffer_queue
+    def _buffer_to_frame(self, serial_buffer_queue, frame_buffer_queue):
+        #set up logger
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
@@ -54,47 +73,56 @@ class uart_daq:
         locallogs.addHandler(file)
         coloredlogs.install(level=logging.INFO, logger=locallogs)
 
+        # List for containing buffer data for a frame. Number of element shouldn't be hard coded.
+        frame_buffer = [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00']
 
-        buffer_frame_copy = [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00']
-        buffer_frame_index = 0
-        frame_num = 0
-        
+        frame_buffer_index = 0 # Index of buffer within frame
+        frame_num = 0 # Frame number
 
         while 1:
-            if (serial_buffer_read.qsize() > 1): # for safety
-                serial_buffer_copy = serial_buffer_read.get()
+            if (serial_buffer_queue.qsize() > 0): # Higher is safe but lower should be faster.
+                serial_buffer = serial_buffer_queue.get() # grab one buffer from queue
                 
-                locallogs.info('UART_RECV, FRAME_NUM, ' + str(int.from_bytes(serial_buffer_copy[4:8][::-1], "big")) + \
-                    ', BUFFER_COUNT, ' + str(int.from_bytes(serial_buffer_copy[8:12][::-1], "big")) + \
-                    ', LINKED_LIST, ' + str(int.from_bytes(serial_buffer_copy[0:4][::-1], "big")) + \
-                    ', FRAME_BUFFER_COUNT, ' + str(int.from_bytes(serial_buffer_copy[12:16][::-1], "big")) + \
-                    ', PIXEL_COUNT, ' + str(int.from_bytes(serial_buffer_copy[28:32][::-1], "big")) + \
-                    ', TIMESTAMP, ' + str(int.from_bytes(serial_buffer_copy[24:28][::-1], "big")) + \
-                    ', UART_recv_len, ' + str(len(serial_buffer_copy)))
+                #log metadata
+                locallogs.debug('UART_RECV, FRAME_NUM, ' + str(int.from_bytes(serial_buffer[4:8][::-1], "big")) + \
+                    ', BUFFER_COUNT, ' + str(int.from_bytes(serial_buffer[8:12][::-1], "big")) + \
+                    ', LINKED_LIST, ' + str(int.from_bytes(serial_buffer[0:4][::-1], "big")) + \
+                    ', FRAME_BUFFER_COUNT, ' + str(int.from_bytes(serial_buffer[12:16][::-1], "big")) + \
+                    ', PIXEL_COUNT, ' + str(int.from_bytes(serial_buffer[28:32][::-1], "big")) + \
+                    ', TIMESTAMP, ' + str(int.from_bytes(serial_buffer[24:28][::-1], "big")) + \
+                    ', UART_recv_len, ' + str(len(serial_buffer)))
 
-                # if first buffer of the frame
-                if int.from_bytes(serial_buffer_copy[4:8][::-1], "big") > frame_num and int.from_bytes(serial_buffer_copy[12:16][::-1], "big") == 0:
+                # if first buffer of a frame
+                if int.from_bytes(serial_buffer[4:8][::-1], "big") != frame_num:
+
+                    # push frame_buffer into frame_buffer queue
+                    if frame_num != 0:
+                        frame_buffer_queue.put(frame_buffer)
+                        frame_buffer_index = 0
+
                     # update frame_num
-                    frame_num = int.from_bytes(serial_buffer_copy[4:8][::-1], "big")
-                    buffer_frame_copy[0] = serial_buffer_copy
-                    buffer_frame_index += 1
+                    frame_num = int.from_bytes(serial_buffer[4:8][::-1], "big")
+                    # init frame_buffer
+                    frame_buffer = [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00']
+
+                    if int.from_bytes(serial_buffer[12:16][::-1], "big") == 0:
+                        frame_buffer[0] = serial_buffer
+
+                    frame_buffer_index += 1
                     
-                # if same frame_num with previous buffer
-                elif int.from_bytes(serial_buffer_copy[4:8][::-1], "big") == frame_num and int.from_bytes(serial_buffer_copy[12:16][::-1], "big") == buffer_frame_index:
-                    buffer_frame_copy[buffer_frame_index] = serial_buffer_copy
-                    locallogs.info('----buffer #' + str(buffer_frame_index) + "stored")
-                    buffer_frame_index += 1
-                    if buffer_frame_index == 5:
-                        # full frame received
-                        buffer_frame.put(buffer_frame_copy)
-                        buffer_frame_index = 0
-                        locallogs.info('----frame #' + str(frame_num) + " stored")
-
-                # lost buffer -> reset index
+                # if same frame_num with previous buffer.
+                elif int.from_bytes(serial_buffer[4:8][::-1], "big") == frame_num and int.from_bytes(serial_buffer[12:16][::-1], "big") >= frame_buffer_index:
+                    if int.from_bytes(serial_buffer[12:16][::-1], "big") > frame_buffer_index:
+                        frame_buffer_index = int.from_bytes(serial_buffer[12:16][::-1], "big")
+                    frame_buffer[frame_buffer_index] = serial_buffer
+                    locallogs.debug('----buffer #' + str(frame_buffer_index) + " stored")
+                    frame_buffer_index += 1
+                    
+                # if lost frame from buffer -> reset index
                 else:
-                    buffer_frame_index = 0
+                    frame_buffer_index = 0
 
-    def _format_frame(self, buffer_frame, imagearray):
+    def _format_frame(self, frame_buffer_queue, imagearray):
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
@@ -112,58 +140,58 @@ class uart_daq:
         HEADER_LENGTH = (10 - 1) * 4
 
         while 1:
-            if(buffer_frame.qsize() > 0): # for safety
-                locallogs.info('Found frame in queue')
+            if(frame_buffer_queue.qsize() > 0): # Higher is safe but lower is fast.
+                locallogs.debug('Found frame in queue')
 
-                plot_buffer_copy = buffer_frame.get()
+                frame_data = frame_buffer_queue.get() # pixel data for single frame
 
-                num_frame_pixel = 0
-                num_buffer_pixel = 0
-                lost_frame_pixel = 0
+                num_pixel_in_frame = 0 #total number of pixels in frame
+                num_pixel_in_buffer = 0 #number of pixels in frame (Metadata)
+                num_pixel_lost_in_frame = 0 #number of pixels lost in frame
 
-                imagearray_copy = np.zeros(int(self.frame_width * self.frame_height), np.uint8)
+                imagearray_frame = np.zeros(int(self.frame_width * self.frame_height), np.uint8) # frame data to store in imagearray queue
 
-                for i in range(0,5):
-                    #num_buffer_pixel = int.from_bytes(plot_buffer_copy[i][28:32][::-1], "big")
+                for i in range(0,5): # Number of buffers per frame. This shouldn't be hardcoded.
+                    num_pixel_in_buffer = int.from_bytes(frame_data[i][28:32][::-1], "big")
                     
-                    if len(plot_buffer_copy) >= buffer_numpixel_assert[i] + HEADER_LENGTH:
-                        padded_temp_pixel_vector = bytearray(plot_buffer_copy[i][HEADER_LENGTH:HEADER_LENGTH + buffer_numpixel_assert[i]])
+                    #
+                    if len(frame_data) >= buffer_numpixel_assert[i] + HEADER_LENGTH:
+                        padded_temp_pixel_vector = bytearray(frame_data[i][HEADER_LENGTH:HEADER_LENGTH + buffer_numpixel_assert[i]])
                     else:
-                        temp_pixel_vector = bytearray(plot_buffer_copy[i][HEADER_LENGTH:-1])
-                        lost_frame_pixel += num_buffer_pixel - len(temp_pixel_vector)
+                        temp_pixel_vector = bytearray(frame_data[i][HEADER_LENGTH:-1])
+                        num_pixel_lost_in_frame += num_pixel_in_buffer - len(temp_pixel_vector)
                         padded_temp_pixel_vector = bytearray([0] * (buffer_numpixel_assert[i] - len(temp_pixel_vector)))
                         padded_temp_pixel_vector.extend(temp_pixel_vector)
                     
                     '''
                     try:
-                        assert len(temp_pixel_vector) == num_buffer_pixel
+                        assert len(temp_pixel_vector) == num_pixel_in_buffer
                     except:
                         locallogs.debug('Buffer pixel count warning: metadata and actual length do not match')
-                        locallogs.debug('num_buffer_pixel: ' + str(num_buffer_pixel) + \
+                        locallogs.debug('num_pixel_in_buffer: ' + str(num_pixel_in_buffer) + \
                                     ', len(pixel_vector): ' + str(len(temp_pixel_vector)) + \
-                                    ', buffer_frame_index: ' + str(i) + \
-                                    ', len(buffer_frame[i]): ' + str(len(plot_buffer_copy[i])) + '\n')
+                                    ', frame_buffer_index: ' + str(i) + \
+                                    ', len(frame_buffer_queue[i]): ' + str(len(frame_data[i])) + '\n')
                     '''
                     if i == 0:
                         pixel_vector = padded_temp_pixel_vector
                     else:
                         pixel_vector.extend(padded_temp_pixel_vector)
-                locallogs.info('FRAME: ' + str(int.from_bytes(plot_buffer_copy[0][4:8][::-1], "big")) + \
-                            ', TOTAL_PX: ' + str(num_frame_pixel) + \
-                            ', LOST_PX: ' + str(lost_frame_pixel))
                 
                 if len(pixel_vector) > self.frame_width * self.frame_height:
                     pixel_vector = pixel_vector[0:self.frame_width * self.frame_height]
                 #if num_frame_pixel == self.num_pixel_assert:
-                imagearray_copy[0::4] = np.uint8(pixel_vector[3::4])
-                imagearray_copy[1::4] = np.uint8(pixel_vector[2::4])
-                imagearray_copy[2::4] = np.uint8(pixel_vector[1::4])
-                imagearray_copy[3::4] = np.uint8(pixel_vector[0::4])
-                imagearray.put(imagearray_copy)
-                locallogs.info('FRAME: ' + str(int.from_bytes(plot_buffer_copy[0][4:8][::-1], "big")) + ' stored!')
+                imagearray_frame[0::4] = np.uint8(pixel_vector[3::4])
+                imagearray_frame[1::4] = np.uint8(pixel_vector[2::4])
+                imagearray_frame[2::4] = np.uint8(pixel_vector[1::4])
+                imagearray_frame[3::4] = np.uint8(pixel_vector[0::4])
+                imagearray.put(imagearray_frame)
+                locallogs.info('FRAME: ' + str(int.from_bytes(frame_data[0][4:8][::-1], "big")) + \
+                            ', TOTAL_PX: ' + str(num_pixel_in_frame) + \
+                            ', LOST_PX: ' + str(num_pixel_lost_in_frame))
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
-    def capture(self, comport:str = 'COM3', baudrate:int = 1200000):
+    def capture(self, comport:str = 'COM3', baudrate:int = 1200000, mode:str = 'DEBUG'):
         logdirectories = ['log', 'log/uart_recv', 'log/format_frame', 'log/buffer_to_frame']
         for logpath in logdirectories:
             if not os.path.exists(logpath):
@@ -181,14 +209,14 @@ class uart_daq:
 
         #Queue size is hard coded
         queue_manager = multiprocessing.Manager()
-        serial_buffer_read = queue_manager.Queue(10) # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        buffer_frame = queue_manager.Queue(5) #[b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
+        serial_buffer_queue = queue_manager.Queue(10) # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
+        frame_buffer_queue = queue_manager.Queue(5) #[b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
         imagearray = queue_manager.Queue(5)
         imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
 
-        p_uart_recv = multiprocessing.Process(target=self._uart_recv, args=(serial_buffer_read, comport, baudrate, ))
-        p_buffer_to_frame = multiprocessing.Process(target=self._buffer_to_frame, args=(serial_buffer_read, buffer_frame, ))
-        p_format_frame = multiprocessing.Process(target=self._format_frame, args=(buffer_frame, imagearray, ))
+        p_uart_recv = multiprocessing.Process(target=self._uart_recv, args=(serial_buffer_queue, comport, baudrate, ))
+        p_buffer_to_frame = multiprocessing.Process(target=self._buffer_to_frame, args=(serial_buffer_queue, frame_buffer_queue, ))
+        p_format_frame = multiprocessing.Process(target=self._format_frame, args=(frame_buffer_queue, imagearray, ))
         p_uart_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
@@ -233,14 +261,114 @@ class uart_daq:
                 print("[Terminated] format_frame()")
                 break # watchdog process daemon gets [Terminated]
 
+def updateDevice():
+    args = updateDeviceParser.parse_args()
+    moduleList = ['LED', 'EWL']
+
+    ledMAX = 100
+    ledMIN = 0
+
+    ewlMAX = 255
+    ewlMIN = 0
+
+    ledDeviceTag = 0 # 2-bits each for now
+    ewlDeviceTag = 1 # 2-bits each for now
+
+    deviceTagPos = 4
+    preamblePos = 6
+
+    Preamble = [2, 1] # 2-bits each for now
+
+    uartPayload = 4
+    uartRepeat = 5
+    uartTimeGap = 0.01
+
+    try:
+        assert len(vars(args)) == 4
+    except AssertionError as msg:
+        print(msg)
+        print("Usage: updateDevice [COM port] [baudrate] [module] [value]")
+        sys.exit(1)
+
+    try:
+        comport = str(args.port)
+    except (ValueError, IndexError) as e:
+        print(e)
+        sys.exit(1)
+
+    try:
+        baudrate = int(args.baudrate)
+    except (ValueError, IndexError) as e:
+        print(e)
+        sys.exit(1)
+
+    try:
+        module = str(args.module)
+        assert module in moduleList
+    except AssertionError as msg:
+        print(msg)
+        print("Available modules:")
+        for module in moduleList:
+            print('\t' + module)
+        sys.exit(1)
+
+    try:
+        value = int(args.value)
+    except Exception as e:
+        print(e)
+        print("Value needs to be an integer")
+        sys.exit(1)
+
+    try:
+        if module == 'LED':
+            assert (value <= ledMAX and value >= ledMIN)
+        if module == 'EWL':
+            assert (value <= ewlMAX and value >= ewlMIN)
+    except AssertionError as msg:
+        print(msg)
+        if module == 'LED':
+            print("LED value need to be a integer within 0-100")
+        if module == 'EWL':
+            print("EWL value need to be an integer within 0-255")
+        sys.exit(1)
+    
+    if(module == 'LED'):
+        deviceTag = ledDeviceTag << deviceTagPos
+    elif(module == 'EWL'):
+        deviceTag = ewlDeviceTag << deviceTagPos
+
+    command = [0,0]
+
+    command[0] = int(Preamble[0] * 2 ** preamblePos + deviceTag + np.floor(value/(2**uartPayload))).to_bytes(1, 'big')
+    command[1] = int(Preamble[1] * 2 ** preamblePos + deviceTag + value%(2**uartPayload)).to_bytes(1, 'big')
+
+    #set up serial port
+    try:
+        serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+    print('Open serial port')
+
+    for uartCommand in command:
+        for repeat in range(uartRepeat):
+            # read UART data until preamble and put into queue
+            serial_port.write(uartCommand)
+            time.sleep(uartTimeGap)
+    
+    serial_port.close()
+    print('\t' + module + ': ' +str(value))
+    print('Close serial port')
+    sys.exit(1)
+
 def main():
-    args = parser.parse_args()
+    args = daqParser.parse_args()
 
     try:
         assert len(vars(args)) == 2
     except AssertionError as msg:
         print(msg)
-        print("Usage: uart_daq.py [COM port] [baudrate]")
+        print("Usage: uart_image_capture [COM port] [baudrate]")
         sys.exit(1)
 
     try:
