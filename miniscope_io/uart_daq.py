@@ -123,6 +123,7 @@ class uart_daq:
                     frame_buffer_index = 0
 
     def _format_frame(self, frame_buffer_queue, imagearray):
+        pixel_order_flip = False
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
@@ -137,7 +138,7 @@ class uart_daq:
         # This shouldn't be hardcoded
         buffer_numpixel_assert = [20440, 20440, 20440, 20440, 10656]
 
-        HEADER_LENGTH = (10 - 1) * 4
+        HEADER_LENGTH = 10 * 4
 
         while 1:
             if(frame_buffer_queue.qsize() > 0): # Higher is safe but lower is fast.
@@ -181,10 +182,16 @@ class uart_daq:
                 if len(pixel_vector) > self.frame_width * self.frame_height:
                     pixel_vector = pixel_vector[0:self.frame_width * self.frame_height]
                 #if num_frame_pixel == self.num_pixel_assert:
-                imagearray_frame[0::4] = np.uint8(pixel_vector[3::4])
-                imagearray_frame[1::4] = np.uint8(pixel_vector[2::4])
-                imagearray_frame[2::4] = np.uint8(pixel_vector[1::4])
-                imagearray_frame[3::4] = np.uint8(pixel_vector[0::4])
+                if pixel_order_flip:
+                    imagearray_frame[0::4] = np.uint8(pixel_vector[3::4])
+                    imagearray_frame[1::4] = np.uint8(pixel_vector[2::4])
+                    imagearray_frame[2::4] = np.uint8(pixel_vector[1::4])
+                    imagearray_frame[3::4] = np.uint8(pixel_vector[0::4])
+                else:
+                    imagearray_frame[0::4] = np.uint8(pixel_vector[0::4])
+                    imagearray_frame[1::4] = np.uint8(pixel_vector[1::4])
+                    imagearray_frame[2::4] = np.uint8(pixel_vector[2::4])
+                    imagearray_frame[3::4] = np.uint8(pixel_vector[3::4])
                 imagearray.put(imagearray_frame)
                 locallogs.info('FRAME: ' + str(int.from_bytes(frame_data[0][4:8][::-1], "big")) + \
                             ', TOTAL_PX: ' + str(num_pixel_in_frame) + \
