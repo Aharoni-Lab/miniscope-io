@@ -9,12 +9,21 @@ from pydantic import BaseModel, field_validator
 import pandas as pd
 
 class Frame(BaseModel, arbitrary_types_allowed=True):
+    """
+    An individual frame from a miniscope recording
+
+    Typically returned from :meth:`.SDCard.read`
+    """
     data: Optional[np.ndarray] = None
     headers: Optional[List[DataHeader]] = None
 
     @field_validator('headers')
     @classmethod
     def frame_nums_must_be_equal(cls, v:List[DataHeader]) -> Optional[List[DataHeader]]:
+        """
+        Each frame_number field in each header must be the same (they come from the same frame!)
+        """
+
         if v is not None and not all([header.frame_num != v[0].frame_num for header in v]):
             raise ValueError(f"All frame numbers should be equal! Got f{[h.frame_num for h in v]}")
         return v
@@ -28,6 +37,9 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
 
 
 class Frames(BaseModel):
+    """
+    A collection of frames from a miniscope recording
+    """
     frames: List[Frame]
 
     @overload
