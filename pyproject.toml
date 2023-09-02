@@ -36,7 +36,7 @@ optional = true
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^6.2.1"
-furo = "^2023.5.20"
+furo = ">=2023.5.20,<2023.07.26"
 myst-parser = "^2.0.0"
 
 [tool.poetry.extras]
