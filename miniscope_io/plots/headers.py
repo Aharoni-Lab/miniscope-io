@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sdcard import DataHeader
 
 def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     cols = ('write_buffer_count', 'dropped_buffer_count', 'buffer_count')
