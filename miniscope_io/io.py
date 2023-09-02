@@ -1,7 +1,7 @@
 """
 I/O functions for the SD card
 """
-from typing import Union, BinaryIO, Optional, Tuple, List
+from typing import Union, BinaryIO, Optional, Tuple, List, Literal, overload
 from pathlib import Path
 import warnings
 
@@ -9,7 +9,7 @@ import numpy as np
 
 from miniscope_io.sdcard import SDLayout, SDConfig, DataHeader
 from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
-
+from miniscope_io.data import Frame
 
 
 class SDCard:
@@ -221,10 +221,10 @@ class SDCard:
         )
         # use construct because we're already sure these are ints from the numpy casting
         #https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
-        header = DataHeader.construct(
+        header = DataHeader.model_construct(
             **{
                 k: dataHeader[v]
-                for k, v in self.layout.buffer.dict().items()
+                for k, v in self.layout.buffer.model_dump().items()
                 if v is not None
             })
         return header
@@ -285,7 +285,16 @@ class SDCard:
 
         return data
 
-    def read(self, return_header:bool=False) -> Union[np.ndarray, Tuple[np.ndarray, List[DataHeader]]]:
+    @overload
+    def read(self, return_header: Literal[True]= True) -> Frame: ...
+
+    @overload
+    def read(self, return_header: Literal[False] = False) -> np.ndarray: ...
+
+    def read(
+            self,
+            return_header:bool = False
+         ) -> Union[np.ndarray, Frame]:
         """
         Read a single frame
 
@@ -331,7 +340,7 @@ class SDCard:
                 self.positions[self._frame] = last_position
                 frame = np.reshape(self._array, (self.config.width, self.config.height))
                 if return_header:
-                    return frame, headers
+                    return Frame.model_construct(frame=frame, headers=headers)
                 else:
                     return frame
 
