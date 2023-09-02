@@ -38,6 +38,7 @@ optional = true
 sphinx = "^6.2.1"
 furo = ">=2023.5.20,<2023.07.26"
 myst-parser = "^2.0.0"
+autodoc-pydantic = "^2.0.1"
 
 [tool.poetry.extras]
 tests = ["pytest"]
