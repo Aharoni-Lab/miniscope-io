@@ -61,8 +61,8 @@ def test_return_headers(wirefree):
         frame_object = wirefree.read(return_header=True)
         assert isinstance(frame_object, Frame)
 
-        assert len(frame_object.buffers) == 5
-        assert all([isinstance(b, DataHeader) for b in frame_object.buffers])
+        assert len(frame_object.headers) == 5
+        assert all([isinstance(b, DataHeader) for b in frame_object.headers])
 
 def test_frame_count(wirefree):
     """

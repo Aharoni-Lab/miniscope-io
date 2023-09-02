@@ -153,12 +153,14 @@ class SDCard:
         if self._frame_count is None:
             if self._f is None:
                 with self as self_open:
-                    frame, headers = self_open.read(return_header=True)
+                    frame = self_open.read(return_header=True)
+                    headers = frame.headers
 
             else:
                 # If we're already open, great, just return to the last frame
                 last_frame = self.frame
-                frame, headers = self.read(return_header=True)
+                frame = self.read(return_header=True)
+                headers = frame.headers
                 self.frame = last_frame
 
             self._frame_count = int(np.ceil(
