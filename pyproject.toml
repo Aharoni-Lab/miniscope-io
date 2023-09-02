@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "miniscope_io"
-version = "0.1.2"
+version = "0.1.4"
 description = ""
-authors = ["sneakers-the-rat <JLSaunders987@gmail.com>"]
+authors = [
+    "sneakers-the-rat <JLSaunders987@gmail.com>",
+    "t-sasatani <sasatani.dev@gmail.com>",
+]
 readme = "README.md"
 packages = [{include = "miniscope_io"}]
 
@@ -15,6 +18,8 @@ jupyter = "^1.0.0"
 matplotlib = "^3.7.1"
 pandas = "^2.1.0"
 pydantic = "^2.3.0"
+coloredlogs = "^15.0.1"
+pyserial = "^3.5"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -41,3 +46,7 @@ docs = ["sphinx", "furo", "myst-parser"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+uart_image_capture = "miniscope_io.uart_daq:main"
+updateDevice = "miniscope_io.uart_daq:updateDevice"
