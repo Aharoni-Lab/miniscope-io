@@ -31,15 +31,10 @@ class SDCard:
     def __init__(
             self,
             drive: Union[str, Path],
-            layout: SDLayout,
-            directpath: bool = False
+            layout: SDLayout
         ):
 
-        if directpath == False:
-            self.drive = Path(drive).resolve()
-        else:
-            self.drive = drive
-    # Logs the error appropriately. 
+        self.drive = drive
         self.layout = layout
 
         # Private attributes used when the file reading context is entered
@@ -74,20 +69,17 @@ class SDCard:
     @property
     def config(self) -> SDConfig:
         if self._config is None:
-            try:
-                with open(self.drive, 'rb') as sd:
-                    sd.seek(self.layout.sectors.config_pos, 0)
-                    configSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
+            with open(self.drive, 'rb') as sd:
+                sd.seek(self.layout.sectors.config_pos, 0)
+                configSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
 
-                self._config = SDConfig(
-                    **{
-                        k: configSectorData[v]
-                        for k, v in self.layout.config.dict().items()
-                        if v is not None
-                    }
-                )
-            except Exception as error:
-                print("An exception occurred:", error)
+            self._config = SDConfig(
+                **{
+                    k: configSectorData[v]
+                    for k, v in self.layout.config.dict().items()
+                    if v is not None
+                }
+            )
 
         return self._config
 

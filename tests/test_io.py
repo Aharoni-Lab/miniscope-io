@@ -1,8 +1,11 @@
 import pytest
 import tempfile
 from pathlib import Path
+import os
 
 from miniscope_io.sdcard import DataHeader
+from miniscope_io.formats import WireFreeSDLayout
+from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
 from miniscope_io.data import Frame
 from miniscope_io.utils import hash_file
@@ -79,6 +82,31 @@ def test_frame_count(wirefree):
         wirefree.frame = 389
         with pytest.raises(EndOfRecordingException):
             frame = wirefree.read()
+
+def test_relative_path():
+    """
+    Test that we can use both relative and absolute paths in the SD card model
+    """
+    # get absolute path of working directory, then get relative path to data from there
+    abs_cwd = Path(os.getcwd()).resolve()
+    abs_child = Path(__file__).parent.parent / 'data' / 'wirefree_example.img'
+    rel_path = abs_child.relative_to(abs_cwd)
+
+    assert not rel_path.is_absolute()
+    sdcard = SDCard(drive = rel_path, layout = WireFreeSDLayout)
+
+    # check we can do something basic like read config
+    assert sdcard.config is not None
+
+    # check it remains relative after init
+    assert not sdcard.drive.is_absolute()
+
+    # now try with an absolute path
+    abs_path = rel_path.resolve()
+    assert abs_path.is_absolute()
+    sdcard_abs = SDCard(drive= abs_path, layout= WireFreeSDLayout)
+    assert sdcard_abs.config is not None
+    assert sdcard_abs.drive.is_absolute()
 
 
 @pytest.mark.parametrize(
