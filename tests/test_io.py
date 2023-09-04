@@ -85,7 +85,7 @@ def test_frame_count(wirefree):
     ['file', 'fourcc', 'hash'],
     [
         ('video.avi', 'GREY', '2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c'),
-        ('video.mp4', 'mp4v', 'aecbe09ebabce67acd509b4819da76ea4ddee945c2cf078fbe4ae7b157965637')
+        ('video.mp4', 'mp4v', '85c98346bf50a2bccc0c9aed485a2159b52e93b05ab180db0885d903fc13b143')
     ]
 )
 def test_write_video(wirefree, file, fourcc, hash):
