@@ -18,7 +18,8 @@ extensions = [
     'sphinx.ext.graphviz',
     "myst_parser",
     'sphinx.ext.napoleon',
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinxcontrib.autodoc_pydantic'
 ]
 
 templates_path = ['_templates']

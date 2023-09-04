@@ -1,22 +1,10 @@
 import pytest
-import itertools
-from pathlib import Path
 
-from miniscope_io.io import SDCard
-from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.sdcard import DataHeader
 from miniscope_io.exceptions import EndOfRecordingException
+from miniscope_io.data import Frame
 
-@pytest.fixture
-def wirefree():
-    """
-    SDCard with wirefree layout pointing to the sample data file
-
-    """
-    sd_path = Path(__file__).parent.parent / 'data' / 'wirefree_example.img'
-    sdcard = SDCard(drive = sd_path, layout = WireFreeSDLayout)
-    return sdcard
-
+from .fixtures import wirefree
 
 
 def test_read(wirefree):
@@ -70,9 +58,11 @@ def test_return_headers(wirefree):
     We can return the headers for the individual buffers in a frame
     """
     with wirefree:
-        frame, buffers = wirefree.read(return_header=True)
-        assert len(buffers) == 5
-        assert all([isinstance(b, DataHeader) for b in buffers])
+        frame_object = wirefree.read(return_header=True)
+        assert isinstance(frame_object, Frame)
+
+        assert len(frame_object.headers) == 5
+        assert all([isinstance(b, DataHeader) for b in frame_object.headers])
 
 def test_frame_count(wirefree):
     """
