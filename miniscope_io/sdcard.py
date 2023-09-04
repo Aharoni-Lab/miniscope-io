@@ -95,6 +95,7 @@ class BufferHeaderPositions(BaseModel):
     timestamp: int = 7
     data_length: int = 8
     write_timestamp: Optional[int] = None
+    battery_voltage: Optional[int] = None
 
 class SDLayout(BaseModel):
     """
@@ -119,6 +120,12 @@ class SDLayout(BaseModel):
     header: SDHeaderPositions = SDHeaderPositions()
     config: ConfigPositions = ConfigPositions()
     buffer: BufferHeaderPositions = BufferHeaderPositions()
+
+    version: Optional[str] = None
+    """
+    Not Implemented: version stored in the SD card header that indicates
+    when this layout should be used
+    """
 
 # --------------------------------------------------
 # Data Containers
@@ -151,6 +158,7 @@ class DataHeader(BaseModel):
     timestamp: int
     data_length: int
     write_timestamp: Optional[int] = None
+    battery_voltage: Optional[int] = None
 
 
 

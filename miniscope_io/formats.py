@@ -9,7 +9,11 @@ from miniscope_io.sdcard import \
     BufferHeaderPositions, \
     ConfigPositions
 
+
+
+
 WireFreeSDLayout = SDLayout(
+    version="0.1.1",
     sectors=SectorConfig(
         header = 1022,
         config = 1023,
@@ -49,6 +53,16 @@ WireFreeSDLayout = SDLayout(
         data_length          = 8
     )
 )
+
+WireFreeSDLayout_Battery = SDLayout(**WireFreeSDLayout.model_dump())
+"""
+Making another format for now, but added version field so that we could
+replace making more top-level classes with a FormatCollection that can store 
+sets of formats for the same device with multiple versions.
+"""
+WireFreeSDLayout_Battery.buffer.write_timestamp = 9
+WireFreeSDLayout_Battery.buffer.battery_voltage = 10
+
 
 
 WireFreeSDLayout_Old = SDLayout(
