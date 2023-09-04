@@ -379,11 +379,11 @@ class SDCard:
         Save contents of SD card to video with opencv
 
         Args:
-            path (:class:`pathlib.Path`): Output video path, with video extension `.avi` or `.mp4`
-            fourcc (str): FourCC code used with opencv, one of:
-                - `GREY` (default)
-                - `X264`
-                - `XVID`
+            path (:class:`pathlib.Path`): Output video path, with video extension ``.avi`` or ``.mp4``
+            fourcc (str): FourCC code used with opencv. Other codecs may be available depending on your opencv installation, but by default opencv supports one of:
+                * ``GREY`` (default)
+                * ``mp4v``
+                * ``XVID``
             isColor (bool): Indicates whether output video is in color (default: `False`)
             force (bool): If `True`, overwrite output video if one already exists (default: `False`)
             progress (bool): If `True` (default) show progress bar.
