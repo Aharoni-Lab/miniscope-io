@@ -1,8 +1,11 @@
 import pytest
+import tempfile
+from pathlib import Path
 
 from miniscope_io.sdcard import DataHeader
 from miniscope_io.exceptions import EndOfRecordingException
 from miniscope_io.data import Frame
+from miniscope_io.utils import hash_file
 
 from .fixtures import wirefree
 
@@ -76,6 +79,26 @@ def test_frame_count(wirefree):
         wirefree.frame = 389
         with pytest.raises(EndOfRecordingException):
             frame = wirefree.read()
+
+
+@pytest.mark.parametrize(
+    ['file', 'fourcc', 'hash'],
+    [
+        ('video.avi', 'GREY', '70b6898113a6d9f05c02bd52131ee56dc68b1c65fed518ea2265440fab801cc6'),
+        ('video.mp4', 'X264', 'aecbe09ebabce67acd509b4819da76ea4ddee945c2cf078fbe4ae7b157965637')
+    ]
+)
+def test_write_video(wirefree, file, fourcc, hash):
+    """
+    Test that we can write videos from an SD card!!
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / file
+        wirefree.to_video(path, fourcc=fourcc, progress=False)
+        file_hash = hash_file(path)
+        assert file_hash == hash
+
+
 
 
 #
