@@ -32,7 +32,7 @@ class SDCard:
             layout: SDLayout
         ):
 
-        self.drive = Path(drive)
+        self.drive = drive
         self.layout = layout
 
         # Private attributes used when the file reading context is entered
