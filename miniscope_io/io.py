@@ -370,7 +370,7 @@ class SDCard:
     def to_video(
         self,
         path: Union[Path,str],
-        fourcc: Literal['GREY', 'avc1', 'XVID'] = 'GREY',
+        fourcc: Literal['GREY', 'mp4v', 'XVID'] = 'GREY',
         isColor: bool = False,
         force: bool = False,
         progress: bool = True
