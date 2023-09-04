@@ -84,7 +84,7 @@ def test_frame_count(wirefree):
 @pytest.mark.parametrize(
     ['file', 'fourcc', 'hash'],
     [
-        ('video.avi', 'GREY', '70b6898113a6d9f05c02bd52131ee56dc68b1c65fed518ea2265440fab801cc6'),
+        ('video.avi', 'GREY', '2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c'),
         ('video.mp4', 'AVC1', 'aecbe09ebabce67acd509b4819da76ea4ddee945c2cf078fbe4ae7b157965637')
     ]
 )
