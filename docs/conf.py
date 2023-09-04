@@ -19,7 +19,8 @@ extensions = [
     "myst_parser",
     'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
-    'sphinxcontrib.autodoc_pydantic'
+    'sphinxcontrib.autodoc_pydantic',
+    'sphinx.ext.intersphinx'
 ]
 
 templates_path = ['_templates']
@@ -33,6 +34,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'furo'
 html_static_path = ['_static']
 
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None)
+}
 
 # ----------
 # package settings

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.5 - 23-09-03
+
+- https://github.com/Aharoni-Lab/miniscope-io/pull/9
+- https://github.com/Aharoni-Lab/miniscope-io/pull/10
+
+Bugfixes:
+- Handle absolute paths correctly on windows, which can't deal with {meth}`pathlib.Path.resolve()`, apparently
+
+New features:
+- Added {meth}`~miniscope_io.io.SDCard.to_video` to export videos
+  - Added notebook demonstrating {meth}`~miniscope_io.io.SDCard.to_video`
+- Added {mod}`miniscope_io.utils` module with {func}`~.utils.hash_file` function for hashing files (used in testing)
+
+Code structure:
+- (Minor) moved {meth}`~miniscope_io.io.SDCard.skip` to general methods block (no change)
+
+Tests:
+- Run tests on macos and windows
+
 ## 0.1.4 - 23-09-03
 
 https://github.com/Aharoni-Lab/miniscope-io/pull/8
