@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.4 - 23-09-03
+
+https://github.com/Aharoni-Lab/miniscope-io/pull/8
+
+New features:
+
+- Data models! Hold a collection of frames and get their headers
+- Plots! Mimic the plots from ye olde notebook
+- Update to pydantic v2
+- Version field in formats
+- Format for miniscope firmware with battery voltage level
+
+Reverted:
+
+- grab_frames notebook is restored to using the example data and having the evaluated output present
+
+
+
 ## 0.1.1 - 23-07-13
 
 ### Additions
