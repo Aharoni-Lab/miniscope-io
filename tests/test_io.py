@@ -1,4 +1,5 @@
 import pytest
+import tempfile
 from pathlib import Path
 import os
 
@@ -7,6 +8,7 @@ from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
 from miniscope_io.data import Frame
+from miniscope_io.utils import hash_file
 
 from .fixtures import wirefree
 
@@ -105,6 +107,26 @@ def test_relative_path():
     sdcard_abs = SDCard(drive= abs_path, layout= WireFreeSDLayout)
     assert sdcard_abs.config is not None
     assert sdcard_abs.drive.is_absolute()
+
+
+@pytest.mark.parametrize(
+    ['file', 'fourcc', 'hash'],
+    [
+        ('video.avi', 'GREY', '2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c'),
+        ('video.mp4', 'mp4v', '85c98346bf50a2bccc0c9aed485a2159b52e93b05ab180db0885d903fc13b143')
+    ]
+)
+def test_write_video(wirefree, file, fourcc, hash):
+    """
+    Test that we can write videos from an SD card!!
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / file
+        wirefree.to_video(path, fourcc=fourcc, progress=False)
+        file_hash = hash_file(path)
+        assert file_hash == hash
+
+
 
 
 #

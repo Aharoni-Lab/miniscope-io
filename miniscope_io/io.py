@@ -3,9 +3,11 @@ I/O functions for the SD card
 """
 from typing import Union, BinaryIO, Optional, Tuple, List, Literal, overload
 from pathlib import Path
+import cv2
 import warnings
 
 import numpy as np
+from tqdm import tqdm
 
 from miniscope_io.sdcard import SDLayout, SDConfig, DataHeader
 from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
@@ -353,6 +355,75 @@ class SDCard:
             pixel_count += header.data_length
             last_buffer_n = header.frame_buffer_count
 
+    # --------------------------------------------------
+    # Write methods
+    # --------------------------------------------------
+
+    def to_video(
+        self,
+        path: Union[Path,str],
+        fourcc: Literal['GREY', 'mp4v', 'XVID'] = 'GREY',
+        isColor: bool = False,
+        force: bool = False,
+        progress: bool = True
+    ):
+        """
+        Save contents of SD card to video with opencv
+
+        Args:
+            path (:class:`pathlib.Path`): Output video path, with video extension ``.avi`` or ``.mp4``
+            fourcc (str): FourCC code used with opencv. Other codecs may be available depending on your opencv installation, but by default opencv supports one of:
+                * ``GREY`` (default)
+                * ``mp4v``
+                * ``XVID``
+            isColor (bool): Indicates whether output video is in color (default: `False`)
+            force (bool): If `True`, overwrite output video if one already exists (default: `False`)
+            progress (bool): If `True` (default) show progress bar.
+        """
+        path = Path(path)
+        if path.exists() and not force:
+            raise FileExistsError(f"{str(path)} already exists, not overwriting. Use force=True to overwrite.")
+
+        if progress:
+            pbar = tqdm(total=self.frame_count)
+
+        writer = cv2.VideoWriter(
+            str(path),
+            cv2.VideoWriter_fourcc(*fourcc),
+            self.config.fs,
+            (self.config.width, self.config.height),
+            isColor=isColor
+        )
+
+        # wrap in try block so we always close video writer class
+        try:
+            # Open video context manager
+            with self:
+                # catch the stop iteration signal
+                try:
+                    while True:
+                        # this is sort of an awkward stack, should probably make a
+                        # generator version of `read`
+                        frame = self.read(return_header=False)
+                        writer.write(frame)
+
+                        if progress:
+                            pbar.update()
+
+                except StopIteration:
+                    # end of the video!
+                    pass
+
+        finally:
+            writer.release()
+            if progress:
+                pbar.close()
+
+    # --------------------------------------------------
+    # General Methods
+    # --------------------------------------------------
+
+
     def skip(self):
         """
         Skip a frame
@@ -385,11 +456,6 @@ class SDCard:
                 self._frame += 1
                 self.positions[self.frame] = last_position
                 break
-
-
-    # --------------------------------------------------
-    # General Methods
-    # --------------------------------------------------
 
     def check_valid(self) -> bool:
         """
