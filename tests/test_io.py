@@ -1,16 +1,20 @@
+import pdb
+
+import numpy as np
 import pytest
 import tempfile
 from pathlib import Path
 import os
+import warnings
 
 from miniscope_io.sdcard import DataHeader
-from miniscope_io.formats import WireFreeSDLayout
+from miniscope_io.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
 from miniscope_io.data import Frame
 from miniscope_io.utils import hash_file
 
-from .fixtures import wirefree
+from .fixtures import wirefree, wirefree_battery
 
 
 def test_read(wirefree):
@@ -110,13 +114,13 @@ def test_relative_path():
 
 
 @pytest.mark.parametrize(
-    ['file', 'fourcc', 'hash'],
+    ['file', 'fourcc', 'hashes'],
     [
-        ('video.avi', 'GREY', '2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c'),
-        ('video.mp4', 'mp4v', '85c98346bf50a2bccc0c9aed485a2159b52e93b05ab180db0885d903fc13b143')
+        ('video.avi', 'GREY', ('2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c', '70b6898113a6d9f05c02bd52131ee56dc68b1c65fed518ea2265440fab801cc6')),
+        ('video.mp4', 'mp4v', ('85c98346bf50a2bccc0c9aed485a2159b52e93b05ab180db0885d903fc13b143', '9155aa6e44d8863d3defbd815ba8ac33d036dd4eb06c474ba3dd6270a28d47f6'))
     ]
 )
-def test_write_video(wirefree, file, fourcc, hash):
+def test_write_video(wirefree, file, fourcc, hashes):
     """
     Test that we can write videos from an SD card!!
     """
@@ -124,7 +128,46 @@ def test_write_video(wirefree, file, fourcc, hash):
         path = Path(tempdir) / file
         wirefree.to_video(path, fourcc=fourcc, progress=False)
         file_hash = hash_file(path)
-        assert file_hash == hash
+        assert file_hash in hashes
+
+@pytest.mark.parametrize(
+    ['n_frames', 'out_file', 'hash'],
+    [
+        (50, Path(__file__).parent / '__tmp__' / 'test_toimg.img', '9b48a4ae3458187072d73840b51c9de6f986dd2f175c566dbb1d44216c313e19')
+    ]
+)
+def test_to_img(wirefree_battery, n_frames, out_file, hash):
+    wirefree_battery.to_img(out_file, n_frames, force=True)
+    out_hash = hash_file(out_file)
+
+    assert out_hash == hash
+
+    sd = SDCard(out_file, WireFreeSDLayout_Battery)
+
+    # we should be able to read all the frames!
+    frames = []
+    with sd:
+        for i in range(n_frames):
+            frames.append(sd.read(return_header=True))
+
+    assert not any([f.data is None for f in frames])
+    assert all([np.nonzero(f.data) for f in frames])
+
+    # we should not write to file if it exists and force is False
+    assert out_file.exists()
+    mtime = os.path.getmtime(out_file)
+
+    with pytest.raises(FileExistsError):
+        wirefree_battery.to_img(out_file, n_frames, force=False)
+
+    assert mtime == os.path.getmtime(out_file)
+
+    # forcing should overwrite the file
+    wirefree_battery.to_img(out_file, n_frames, force=True)
+    assert mtime != os.path.getmtime(out_file)
+
+    out_file.unlink()
+
 
 
 

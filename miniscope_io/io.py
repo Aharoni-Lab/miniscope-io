@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 
 from miniscope_io.sdcard import SDLayout, SDConfig, DataHeader
-from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
+from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException, ReadHeaderException
 from miniscope_io.data import Frame
 
 
@@ -153,6 +153,8 @@ class SDCard:
             else:
                 # If we're already open, great, just return to the last frame
                 last_frame = self.frame
+                # Go one frame back in case we are at the end of the data
+                self.frame = min(last_frame - 1, 0)
                 frame = self.read(return_header=True)
                 headers = frame.headers
                 self.frame = last_frame
@@ -222,14 +224,18 @@ class SDCard:
                 dtype=np.uint32
             )
         )
+
         # use construct because we're already sure these are ints from the numpy casting
-        #https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
-        header = DataHeader.model_construct(
-            **{
-                k: dataHeader[v]
-                for k, v in self.layout.buffer.model_dump().items()
-                if v is not None
-            })
+        # https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
+        try:
+            header = DataHeader.model_construct(
+                **{
+                    k: dataHeader[v]
+                    for k, v in self.layout.buffer.model_dump().items()
+                    if v is not None
+                })
+        except IndexError:
+            raise ReadHeaderException(f"Could not read header, expected header to have {len(self.layout.buffer.model_dump().keys())} fields, got {len(dataHeader)}. Likely mismatch between specified and actual SD Card layout or reached end of data.\nHeader Data: {dataHeader}")
         return header
 
     def _n_frame_blocks(self, header: DataHeader) -> int:
@@ -277,7 +283,7 @@ class SDCard:
         """
         if data.shape[0] != expected_size:
             warnings.warn(
-                f"Expected buffer data length: {expected_size}, got data with shape {data.shape}. Padding to expected length")
+                f"Frame: {self._frame}: Expected buffer data length: {expected_size}, got data with shape {data.shape}. Padding to expected length")
 
             # trim if too long
             if data.shape[0] > expected_size:
@@ -333,6 +339,12 @@ class SDCard:
                     raise EndOfRecordingException("Reached the end of the video!")
                 else:
                     raise e
+            except ReadHeaderException as e:
+                # if we are on the last frame, normal! signal end of iteration
+                if self._frame == self.frame_count - 1:
+                    raise EndOfRecordingException("Reached the end of the video!")
+                else:
+                    raise e
 
             if header.frame_buffer_count == 0 and last_buffer_n > 0:
                 # we are in the next frame!
@@ -343,7 +355,7 @@ class SDCard:
                 self.positions[self._frame] = last_position
                 frame = np.reshape(self._array, (self.config.width, self.config.height))
                 if return_header:
-                    return Frame.model_construct(frame=frame, headers=headers)
+                    return Frame.model_construct(data=frame, headers=headers)
                 else:
                     return frame
 
@@ -384,6 +396,14 @@ class SDCard:
         if path.exists() and not force:
             raise FileExistsError(f"{str(path)} already exists, not overwriting. Use force=True to overwrite.")
 
+        if path.suffix == '.mp4' and fourcc.lower() == 'grey':
+            warnings.warn('Cannot use .mp4 with GREY fourcc code. Using .avi instead')
+            path = path.with_suffix('.avi')
+        elif path.suffix == '.avi' and fourcc.lower() == 'mp4v':
+            warnings.warn('Cannot use .avi with mp4v fourcc code, using .mp4 instead')
+            path = path.with_suffix('.mp4')
+
+
         if progress:
             pbar = tqdm(total=self.frame_count)
 
@@ -418,6 +438,87 @@ class SDCard:
             writer.release()
             if progress:
                 pbar.close()
+
+    def to_img(
+        self,
+        path: Optional[Union[Path,str]],
+        frame: Optional[int] = None,
+        force: bool = False,
+        chunk_size: int = 1e6,
+        progress: bool = True
+    ):
+        """
+        Create a new disk image that is truncated to the actual size of the video data
+
+        Typically, making disk images using dd or other tools will create an image
+        file that is the full size of the media it's stored on. Rather than
+        sending a bunch of 30GB image files around, we can instead create an
+        image that is truncated to just the size of the data that has actually been recorded
+
+        Args:
+            path (:class:`pathlib.Path`): Path to write .img file to
+            frame (int): Optional, if present only write the first n frames. If
+                ``None`` , write all frames
+            force (bool): If ``True``, overwrite an existing file. If ``False`` , (default)
+                don't.
+            chunk_size (int): Number of bytes to read/write at once (default ``1e6`` )
+            progress (bool): If ``True`` (default), show progress bar
+        """
+        path = Path(path)
+        if path.exists() and not force:
+            raise FileExistsError('File exists, use force=True to overwrite')
+
+        path.parent.mkdir(parents=True,exist_ok=True)
+
+        start_frame = self.frame
+
+        if frame is None:
+            frame = self.frame_count - 1
+
+
+        # read it to move the file position to the end of the frame
+        with self:
+            # go to one before the requested frame to make sure we have its position
+            self.frame = frame - 1
+            # read advances us to the end of the requested frame -- where we want to truncate
+            try:
+                read_frame = self.read(return_header=True)
+            except EndOfRecordingException:
+                # normal if we are trying to read the whole thing
+                pass
+            # now we can take the diff of the positions to get the expected offset
+            # for the end of the last frame
+            # these should be populated from the read and frame reposition
+            diff = self.positions[frame] - self.positions[frame-1]
+            final_position = self._f.tell() + diff
+
+        # try block to ensure closing pbar
+        pos = 0
+        if progress:
+            pbar = tqdm(total=final_position)
+        else:
+            pbar = None
+
+        try:
+            with open(self.drive, 'rb') as readfile, open(path, 'wb') as writefile:
+                while pos < final_position:
+                    readsize = int(np.min([final_position-pos, chunk_size]))
+                    data = readfile.read(readsize)
+                    writefile.write(data)
+                    pos = readfile.tell()
+                    if progress:
+                        pbar.update(readsize)
+
+        finally:
+            if progress:
+                pbar.close()
+
+        # return frame to the place it was before we wrote
+        if start_frame is not None:
+            with self:
+                self.frame = start_frame
+
+
 
     # --------------------------------------------------
     # General Methods
