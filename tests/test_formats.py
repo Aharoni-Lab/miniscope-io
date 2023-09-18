@@ -13,7 +13,7 @@ def test_to_from_json(format):
     """
     A format can be exported and re-imported from JSON and remain equivalent
     """
-    fmt_json = format.json()
+    fmt_json = format.model_dump_json()
 
     # convert the json to a dict
     fmt_dict = json.loads(fmt_json)
