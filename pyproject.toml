@@ -21,6 +21,7 @@ pydantic = "^2.3.0"
 coloredlogs = "^15.0.1"
 pyserial = "^3.5"
 tqdm = "^4.66.1"
+bitstring = "^4.1.2"
 
 
 [tool.poetry.group.dev.dependencies]

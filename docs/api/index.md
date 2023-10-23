@@ -10,4 +10,5 @@ sdcard
 exceptions
 plots/index
 utils
+uart_daq
 ```

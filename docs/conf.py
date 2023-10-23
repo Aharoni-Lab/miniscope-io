@@ -63,3 +63,9 @@ napoleon_attr_annotations = True
 
 # graphviz
 graphviz_output_format = "svg"
+
+
+# autodoc
+# Mock imports for packages we don't have yet - this one is
+# for opal kelley stuff we need to figure out the licensing for
+autodoc_mock_imports = ['routine']
