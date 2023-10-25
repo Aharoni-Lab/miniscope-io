@@ -3,9 +3,11 @@
 ```{toctree}
 :caption: API
 
+config
 data
 formats
 io
+logging
 sdcard
 exceptions
 plots/index
