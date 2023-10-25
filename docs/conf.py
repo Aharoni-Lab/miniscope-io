@@ -38,7 +38,8 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'matplotlib': ('https://matplotlib.org/stable/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
-    'pandas': ('https://pandas.pydata.org/docs/', None)
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'rich': ('https://rich.readthedocs.io/en/stable/', None)
 }
 
 # ----------
@@ -63,3 +64,9 @@ napoleon_attr_annotations = True
 
 # graphviz
 graphviz_output_format = "svg"
+
+
+# autodoc
+# Mock imports for packages we don't have yet - this one is
+# for opal kelley stuff we need to figure out the licensing for
+autodoc_mock_imports = ['routine']
