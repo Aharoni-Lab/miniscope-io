@@ -11,7 +11,8 @@ import cv2
 import numpy as np
 import serial
 from bitstring import Array, BitArray, Bits
-from routine.ok_utils import okDev
+
+from miniscope_io.devices.opalkelly import okDev
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("uart_image_capture")
