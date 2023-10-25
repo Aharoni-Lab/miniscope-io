@@ -12,7 +12,13 @@ import numpy as np
 import serial
 from bitstring import Array, BitArray, Bits
 
-from miniscope_io.devices.opalkelly import okDev
+from miniscope_io import init_logger
+try:
+    from miniscope_io.devices.opalkelly import okDev
+except ImportError:
+    module_logger = init_logger('uart_daq')
+    module_logger.warning("Could not import OpalKelly driver, unable to read from FPGA!")
+
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("uart_image_capture")
@@ -56,6 +62,7 @@ class uart_daq:
         assert frame_height * frame_width == sum(self.buffer_npix)
         self.nbuffer_per_fm = len(self.buffer_npix)
         self.pix_depth = pix_depth
+        self.logger = init_logger('uart_daq')
 
     def _parse_header(self, buffer, truncate=False):
         pre_len = len(self.preamble)
@@ -79,40 +86,26 @@ class uart_daq:
 
     # Receive buffers and push into serial_buffer_queue
     def _uart_recv(self, serial_buffer_queue, comport: str, baudrate: int):
-        # set up logger
-        locallogs = logging.getLogger(__name__)
-        locallogs.setLevel(logging.DEBUG)
-
-        file = logging.FileHandler(
-            datetime.now().strftime("log/uart_recv/uart_recv_log%Y_%m_%d_%H_%M.log")
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-
-        locallogs.addHandler(file)
-        coloredlogs.install(level=logging.INFO, logger=locallogs)
 
         # set up serial port
         serial_port = serial.Serial(
             port=comport, baudrate=baudrate, timeout=5, stopbits=1
         )
-        locallogs.info("Serial port open: " + str(serial_port.name))
+        self.logger.info("Serial port open: " + str(serial_port.name))
 
         # Throw away the first buffer because it won't fully come in
         log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
 
-        while 1:
-            # read UART data until preamble and put into queue
-            log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
-            serial_buffer_queue.put(log_uart_buffer)
-
-        time.sleep(1)  # time for ending other process
-        serial_port.close()
-        print("Close serial port")
-        sys.exit(1)
+        try:
+            while 1:
+                # read UART data until preamble and put into queue
+                log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
+                serial_buffer_queue.put(log_uart_buffer)
+        finally:
+            time.sleep(1)  # time for ending other process
+            serial_port.close()
+            self.logger.info("Close serial port")
+            sys.exit(1)
 
     def _fpga_recv(
         self, serial_buffer_queue, bit_file, read_length=None, pre_first=True
@@ -120,23 +113,7 @@ class uart_daq:
         # determine length
         if read_length is None:
             read_length = int(max(self.buffer_npix) * self.pix_depth / 8 / 16) * 16
-        # set up logger
-        locallogs = logging.getLogger(__name__)
-        locallogs.setLevel(logging.DEBUG)
-        log_path = "log/fpga_recv/"
-        os.makedirs(log_path, exist_ok=True)
-        file = logging.FileHandler(
-            os.path.join(
-                log_path, datetime.now().strftime("fpga_recv_log%Y_%m_%d_%H_%M.log")
-            )
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-        locallogs.addHandler(file)
-        coloredlogs.install(level=logging.INFO, logger=locallogs)
+
         # set up fpga devices
         dev = okDev()
         dev.uploadBit(bit_file)
@@ -163,23 +140,8 @@ class uart_daq:
     # Pull out data buffers from serial_buffer_queue
     # Make a list of buffers forming a frame and push into frame_buffer_queue
     def _buffer_to_frame(self, serial_buffer_queue, frame_buffer_queue):
-        # set up logger
-        locallogs = logging.getLogger(__name__)
-        locallogs.setLevel(logging.DEBUG)
-
-        file = logging.FileHandler(
-            datetime.now().strftime(
-                "log/buffer_to_frame/buffer_to_frame_log%Y_%m_%d_%H_%M.log"
-            )
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-
-        locallogs.addHandler(file)
-        coloredlogs.install(level=logging.INFO, logger=locallogs)
+        # set up additional logger since loggers can't be shared across processes.
+        locallogs = init_logger('uart_daq.buffer')
 
         cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
@@ -237,22 +199,7 @@ class uart_daq:
 
     def _format_frame(self, frame_buffer_queue, imagearray):
         pixel_order_flip = False
-        locallogs = logging.getLogger(__name__)
-        locallogs.setLevel(logging.DEBUG)
-
-        file = logging.FileHandler(
-            datetime.now().strftime(
-                "log/format_frame/format_frame_log%Y_%m_%d_%H_%M.log"
-            )
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-
-        locallogs.addHandler(file)
-        coloredlogs.install(level=logging.INFO, logger=locallogs)
+        locallogs = init_logger('uart_daq.frame')
 
         while 1:
             if frame_buffer_queue.qsize() > 0:  # Higher is safe but lower is fast.
@@ -331,30 +278,6 @@ class uart_daq:
         bit_file: str = "/Users/mbrosch/Downloads/USBInterface/USBInterface-6mhz-3v3-INVERSE.bit",
         read_length: int = None,
     ):
-        logdirectories = [
-            "log",
-            "log/uart_recv",
-            "log/format_frame",
-            "log/buffer_to_frame",
-        ]
-        for logpath in logdirectories:
-            if not os.path.exists(logpath):
-                os.makedirs(logpath)
-        file = logging.FileHandler(
-            datetime.now().strftime("log/logfile%Y_%m_%d_%H_%M.log")
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-
-        globallogs = logging.getLogger(__name__)
-        globallogs.setLevel(logging.DEBUG)
-
-        globallogs.addHandler(file)
-        coloredlogs.install(level=logging.DEBUG, logger=globallogs)
-
         # Queue size is hard coded
         queue_manager = multiprocessing.Manager()
         serial_buffer_queue = queue_manager.Queue(
@@ -367,6 +290,7 @@ class uart_daq:
         imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
 
         if source == "uart":
+            self.logger.debug("Starting uart capture process")
             p_recv = multiprocessing.Process(
                 target=self._uart_recv,
                 args=(
@@ -376,6 +300,7 @@ class uart_daq:
                 ),
             )
         elif source == "fpga":
+            self.logger.debug("Starting fpga capture process")
             p_recv = multiprocessing.Process(
                 target=self._fpga_recv,
                 args=(
@@ -384,6 +309,8 @@ class uart_daq:
                     read_length,
                 ),
             )
+        else:
+            raise ValueError(f'Only uart and fpga are implemented as sources, got {source}')
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
@@ -415,37 +342,39 @@ class uart_daq:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
                 break  # esc to quit
-        print("End capture")
+        self.logger.info("End capture")
 
         while True:
-            print("[Terminating] uart_recv()")
+            self.logger.debug("[Terminating] uart_recv()")
             p_recv.terminate()
             time.sleep(0.1)
             if not p_recv.is_alive():
                 p_recv.join(timeout=1.0)
-                print("[Terminated] uart_recv()")
+                self.logger.debug("[Terminated] uart_recv()")
                 break  # watchdog process daemon gets [Terminated]
 
         while True:
-            print("[Terminating] buffer_to_frame()")
+            self.logger.debug("[Terminating] buffer_to_frame()")
             p_buffer_to_frame.terminate()
             time.sleep(0.1)
             if not p_buffer_to_frame.is_alive():
                 p_buffer_to_frame.join(timeout=1.0)
-                print("[Terminated] buffer_to_frame()")
+                self.logger.debug("[Terminated] buffer_to_frame()")
                 break  # watchdog process daemon gets [Terminated]
 
         while True:
-            print("[Terminating] format_frame()")
+            self.logger.debug("[Terminating] format_frame()")
             p_format_frame.terminate()
             time.sleep(0.1)
             if not p_format_frame.is_alive():
                 p_format_frame.join(timeout=1.0)
-                print("[Terminated] format_frame()")
+                self.logger.debug("[Terminated] format_frame()")
                 break  # watchdog process daemon gets [Terminated]
 
 
 def updateDevice():
+    logger = init_logger('uart_daq')
+
     args = updateDeviceParser.parse_args()
     moduleList = ["LED", "EWL"]
 
@@ -470,38 +399,36 @@ def updateDevice():
     try:
         assert len(vars(args)) == 4
     except AssertionError as msg:
-        print(msg)
-        print("Usage: updateDevice [COM port] [baudrate] [module] [value]")
-        sys.exit(1)
+        logger.exception("Usage: updateDevice [COM port] [baudrate] [module] [value]")
+        raise msg
 
     try:
         comport = str(args.port)
     except (ValueError, IndexError) as e:
-        print(e)
-        sys.exit(1)
+        logger.exception(e)
+        raise e
 
     try:
         baudrate = int(args.baudrate)
     except (ValueError, IndexError) as e:
-        print(e)
-        sys.exit(1)
+        logger.exception(e)
+        raise e
 
     try:
         module = str(args.module)
         assert module in moduleList
     except AssertionError as msg:
-        print(msg)
-        print("Available modules:")
+        err_str = "Available modules:\n"
         for module in moduleList:
-            print("\t" + module)
-        sys.exit(1)
+            err_str += "\t" + module + '\n'
+        logger.exception(err_str)
+        raise msg
 
     try:
         value = int(args.value)
     except Exception as e:
-        print(e)
-        print("Value needs to be an integer")
-        sys.exit(1)
+        logger.exception("Value needs to be an integer")
+        raise e
 
     try:
         if module == "LED":
@@ -509,12 +436,11 @@ def updateDevice():
         if module == "EWL":
             assert value <= ewlMAX and value >= ewlMIN
     except AssertionError as msg:
-        print(msg)
         if module == "LED":
-            print("LED value need to be a integer within 0-100")
+            logger.exception("LED value need to be a integer within 0-100")
         if module == "EWL":
-            print("EWL value need to be an integer within 0-255")
-        sys.exit(1)
+            logger.exception("EWL value need to be an integer within 0-255")
+        raise msg
 
     if module == "LED":
         deviceTag = ledDeviceTag << deviceTagPos
@@ -538,9 +464,9 @@ def updateDevice():
             port=comport, baudrate=baudrate, timeout=5, stopbits=1
         )
     except Exception as e:
-        print(e)
-        sys.exit(1)
-    print("Open serial port")
+        logger.exception(e)
+        raise e
+    logger.info("Open serial port")
 
     for uartCommand in command:
         for repeat in range(uartRepeat):
@@ -549,8 +475,8 @@ def updateDevice():
             time.sleep(uartTimeGap)
 
     serial_port.close()
-    print("\t" + module + ": " + str(value))
-    print("Close serial port")
+    logger.info("\t" + module + ": " + str(value))
+    logger.info("Close serial port")
     sys.exit(1)
 
 

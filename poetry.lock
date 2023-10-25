@@ -2868,6 +2868,24 @@ files = [
 ]
 
 [[package]]
+name = "rich"
+version = "13.6.0"
+description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
+optional = false
+python-versions = ">=3.7.0"
+files = [
+    {file = "rich-13.6.0-py3-none-any.whl", hash = "sha256:2b38e2fe9ca72c9a00170a1a2d20c63c790d0e10ef1fe35eba76e1e7b1d7d245"},
+    {file = "rich-13.6.0.tar.gz", hash = "sha256:5c14d22737e6d5084ef4771b62d5d4363165b403455a30a1c8ca39dc7b644bef"},
+]
+
+[package.dependencies]
+markdown-it-py = ">=2.2.0"
+pygments = ">=2.13.0,<3.0.0"
+
+[package.extras]
+jupyter = ["ipywidgets (>=7.5.1,<9)"]
+
+[[package]]
 name = "rpds-py"
 version = "0.10.0"
 description = "Python bindings to Rust's persistent data structures (rpds)"
@@ -3451,4 +3469,4 @@ tests = []
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "887e4bb35c2e5a7ca0de9fd2f1fa51db92d6242dcf95322c3a90d03976d5a4ea"
+content-hash = "9a9ec60592b133308f3e820fbc10cf797320bb8847e0ba3d204384c33e8355c0"
