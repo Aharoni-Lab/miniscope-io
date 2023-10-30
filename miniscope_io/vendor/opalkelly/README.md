@@ -31,3 +31,15 @@ install_name_tool -change \
   @loader_path/libokFrontPanel.dylib \
   miniscope_io/vendor/opalkelly/mac/_ok.so
 ```
+
+### Linux
+
+Since we can't modify `LD_LIBRARY_PATH` dynamically, we change the location
+of the loaded `libokFrontPanel.so` to be `$ORIGIN/libokFrontPanel.so`
+
+```bash
+patchelf --remove-needed libokFrontPanel.so miniscope_io/vendor/opalkelly/linux/_ok.so
+patchelf --add-needed '$ORIGIN/libokFrontPanel.so' miniscope_io/vendor/opalkelly/linux/_ok.so
+```
+
+We also need to install `liblua5.3-0` (`apt install liblua5.3-0`)!
