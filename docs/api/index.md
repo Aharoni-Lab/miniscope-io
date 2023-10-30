@@ -11,4 +11,5 @@ exceptions
 plots/index
 utils
 uart_daq
+vendor/index
 ```
