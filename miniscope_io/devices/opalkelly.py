@@ -2,7 +2,7 @@ import time
 
 from bitstring import BitArray
 
-from miniscope_io.vendor.opalkelly.lib import ok
+from miniscope_io.vendor import opalkelly as ok
 
 
 class okDev(ok.okCFrontPanel):

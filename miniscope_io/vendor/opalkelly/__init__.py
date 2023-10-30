@@ -23,7 +23,6 @@ elif sys.platform.startswith('linux'):
     from miniscope_io.vendor.opalkelly.linux.ok import *
 
 elif sys.platform.startswith('win'):
-    # Windows
-    pass
+    raise NotImplementedError('Usage of the opalkelly module from windows is currently unsupported, PRs welcome!')
 else:
     raise ImportError('Dont know what operating system you are on, cant use OpalKelly')

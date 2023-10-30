@@ -5,6 +5,7 @@ import os
 import sys
 import time
 from datetime import datetime
+import warnings
 
 import coloredlogs
 import cv2
@@ -12,7 +13,12 @@ import numpy as np
 import serial
 from bitstring import Array, BitArray, Bits
 
-from miniscope_io.devices.opalkelly import okDev
+HAVE_OK = False
+try:
+    from miniscope_io.devices.opalkelly import okDev
+    HAVE_OK = True
+except (ImportError, ModuleNotFoundError) as e:
+    warnings.warn(f'Cannot import OpalKelly device, got exception {e}')
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("uart_image_capture")
@@ -117,6 +123,8 @@ class uart_daq:
     def _fpga_recv(
         self, serial_buffer_queue, bit_file, read_length=None, pre_first=True
     ):
+        if not HAVE_OK:
+            raise RuntimeError('Couldnt import OpalKelly device. Check the docs for install instructions!')
         # determine length
         if read_length is None:
             read_length = int(max(self.buffer_npix) * self.pix_depth / 8 / 16) * 16
