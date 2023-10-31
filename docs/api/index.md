@@ -4,6 +4,7 @@
 :caption: API
 
 data
+devices
 formats
 io
 sdcard

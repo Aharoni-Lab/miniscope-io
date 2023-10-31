@@ -16,7 +16,12 @@ guide/index
 :caption: Contents:
 
 api/index
-changelog
+```
+
+```{toctree}
+:caption: Meta:
+
+meta/index
 ```
  
 

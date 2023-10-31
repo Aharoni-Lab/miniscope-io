@@ -20,7 +20,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
     'sphinxcontrib.autodoc_pydantic',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.todo'
 ]
 
 templates_path = ['_templates']
@@ -69,3 +70,6 @@ graphviz_output_format = "svg"
 # Mock imports for packages we don't have yet - this one is
 # for opal kelley stuff we need to figure out the licensing for
 autodoc_mock_imports = ['routine']
+
+# todo
+todo_include_todos = True

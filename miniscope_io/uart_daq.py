@@ -6,6 +6,7 @@ import sys
 import time
 from datetime import datetime
 import warnings
+from typing import Literal
 
 import coloredlogs
 import cv2
@@ -34,6 +35,14 @@ updateDeviceParser.add_argument("value", help="LED value")
 
 
 class uart_daq:
+    """
+    A combined class for reading frames from a UART and FPGA source.
+
+    .. todo::
+
+        Phil/Takuya - docstrings for uart daq: what devices these correspond to, how to configure them, usage examples, tests
+
+    """
     def __init__(
         self,
         frame_width: int = 304,
@@ -121,7 +130,7 @@ class uart_daq:
         sys.exit(1)
 
     def _fpga_recv(
-        self, serial_buffer_queue, bit_file, read_length=None, pre_first=True
+        self, serial_buffer_queue, read_length=None, pre_first=True
     ):
         if not HAVE_OK:
             raise RuntimeError('Couldnt import OpalKelly device. Check the docs for install instructions!')
@@ -147,7 +156,6 @@ class uart_daq:
         coloredlogs.install(level=logging.INFO, logger=locallogs)
         # set up fpga devices
         dev = okDev()
-        dev.uploadBit(bit_file)
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)
         dev.setWire(0x00, 0b0)
@@ -332,11 +340,10 @@ class uart_daq:
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
     def capture(
         self,
-        source: str,
+        source: Literal['uart', 'fpga'],
         comport: str = "COM3",
         baudrate: int = 1200000,
         mode: str = "DEBUG",
-        bit_file: str = "/Users/mbrosch/Downloads/USBInterface/USBInterface-6mhz-3v3-INVERSE.bit",
         read_length: int = None,
     ):
         logdirectories = [
@@ -388,10 +395,12 @@ class uart_daq:
                 target=self._fpga_recv,
                 args=(
                     serial_buffer_queue,
-                    bit_file,
                     read_length,
                 ),
             )
+        else:
+            raise ValueError(f'source can be one of uart or fpga. Got {source}')
+
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
