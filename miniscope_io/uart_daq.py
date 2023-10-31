@@ -6,13 +6,14 @@ import sys
 import time
 from datetime import datetime
 import warnings
-from typing import Literal
+from typing import Literal, Tuple, Any, Optional
 
 import coloredlogs
 import cv2
 import numpy as np
 import serial
 from bitstring import Array, BitArray, Bits
+from pydantic import BaseModel
 
 HAVE_OK = False
 try:
@@ -33,6 +34,49 @@ updateDeviceParser.add_argument("baudrate", help="baudrate")
 updateDeviceParser.add_argument("module", help="module to update")
 updateDeviceParser.add_argument("value", help="LED value")
 
+class FPGAHeaderFormat(BaseModel):
+    """
+    Positions for header fields returned by :meth:`.okDev.readData`
+
+    .. todo::
+
+        Jonny: This model basically duplicates :class:`~miniscope_io.sdcard.BufferHeaderPositions`
+        except using start:end tuples rather than start indices with a word length. Refactor these
+        so we can ensure a single set of header terms and models. Split out SD-card specific models
+        from ones we might want to use generally across miniscopes. These models being separate from the
+        other format models sort of sucks but will do for this PR.
+
+    .. todo::
+
+        Everyone: Is there a better format than having these index classes AND the container classes?
+        eg. :class:`~miniscope_io.sdcard.BufferHeaderPositions` and :class:`~miniscope_io.sdcard.DataHeader`
+
+    """
+    linked_list: Tuple[int, int] = (0, 32)
+    frame_num: Tuple[int, int] = (32, 64)
+    buffer_count: Tuple[int, int] = (64, 96)
+    frame_buffer_count: Tuple[int, int] = (96, 128)
+    timestamp: Tuple[int,int] = (192, 224)
+    pixel_count: Tuple[int, int] = (224, 256)
+
+class FPGAHeader(BaseModel):
+    """
+    Container for FPGA header data, structured by :class:`.FPGAHeaderFormat`
+
+    .. note::
+
+        Assuming these are all ints for now like they are in the SDCard Headers, fixmeplz -jonny
+    """
+    linked_list: Any
+    """
+    Not sure what this is!
+    """
+    frame_num: int
+    buffer_count: int
+    frame_buffer_count: int
+    timestamp: int
+    pixel_count: int
+
 
 class uart_daq:
     """
@@ -48,17 +92,10 @@ class uart_daq:
         frame_width: int = 304,
         frame_height: int = 304,
         preamble=b"\x12\x34\x56",
-        header_fmt={
-            "FRAME_NUM": (32, 64),
-            "BUFFER_COUNT": (64, 96),
-            "LINKED_LIST": (0, 32),
-            "FRAME_BUFFER_COUNT": (96, 128),
-            "PIXEL_COUNT": (224, 256),
-            "TIMESTAMP": (192, 224),
-        },
+        header_fmt: FPGAHeaderFormat = FPGAHeaderFormat(),
         header_len=11,
         LSB=True,
-        buffer_npix=[20432, 20432, 20432, 20432, 10688],
+        buffer_npix=(20432, 20432, 20432, 20432, 10688),
         pix_depth=8,
     ):
         self.frame_width = frame_width
@@ -72,19 +109,25 @@ class uart_daq:
         self.nbuffer_per_fm = len(self.buffer_npix)
         self.pix_depth = pix_depth
 
-    def _parse_header(self, buffer, truncate=False):
+    def _parse_header(self,
+            buffer: BitArray,
+            truncate: Literal['preamble', 'header', False] = False
+        ) -> Tuple[FPGAHeader, BitArray]:
         pre_len = len(self.preamble)
         if self.LSB:
             assert buffer[:pre_len][::-1] == self.preamble
         else:
             assert buffer[:pre_len] == self.preamble
         header_data = dict()
-        for hd, bit_range in self.header_fmt.items():
+        for hd, bit_range in self.header_fmt.model_dump().items():
             b = buffer[pre_len + bit_range[0] : pre_len + bit_range[1]]
             if self.LSB:
                 header_data[hd] = b[::-1].uint
             else:
                 header_data[hd] = b.uint
+
+        header_data = FPGAHeader.model_construct(**header_data)
+
         if truncate == "preamble":
             return header_data, buffer[pre_len:]
         elif truncate == "header":
@@ -209,12 +252,12 @@ class uart_daq:
                 header_data, serial_buffer = self._parse_header(serial_buffer)
 
                 # log metadata
-                locallogs.debug(str(header_data))
+                locallogs.debug(str(header_data.model_dump()))
 
                 # if first buffer of a frame
-                if header_data["FRAME_NUM"] != cur_fm_num:
+                if header_data.frame_num != cur_fm_num:
                     # discard first incomplete frame
-                    if cur_fm_num == -1 and header_data["FRAME_BUFFER_COUNT"] != 0:
+                    if cur_fm_num == -1 and header_data.frame_buffer_count != 0:
                         continue
 
                     # push frame_buffer into frame_buffer queue
@@ -223,8 +266,8 @@ class uart_daq:
                     frame_buffer = [None] * self.nbuffer_per_fm
 
                     # update frame_num and index
-                    cur_fm_num = header_data["FRAME_NUM"]
-                    cur_fm_buffer_index = header_data["FRAME_BUFFER_COUNT"]
+                    cur_fm_num = header_data.frame_num
+                    cur_fm_buffer_index = header_data.frame_buffer_count
 
                     # update data
                     frame_buffer[cur_fm_buffer_index] = serial_buffer
@@ -238,10 +281,10 @@ class uart_daq:
 
                 # if same frame_num with previous buffer.
                 elif (
-                    header_data["FRAME_NUM"] == cur_fm_num
-                    and header_data["FRAME_BUFFER_COUNT"] > cur_fm_buffer_index
+                    header_data.frame_num == cur_fm_num
+                    and header_data.frame_buffer_count > cur_fm_buffer_index
                 ):
-                    cur_fm_buffer_index = header_data["FRAME_BUFFER_COUNT"]
+                    cur_fm_buffer_index = header_data.frame_buffer_count
                     frame_buffer[cur_fm_buffer_index] = serial_buffer
                     locallogs.debug(
                         "----buffer #" + str(cur_fm_buffer_index) + " stored"
@@ -288,15 +331,15 @@ class uart_daq:
                         )
                         nbit_lost += npix_expected
                         continue
-                    npix_header = header_data["PIXEL_COUNT"]
+                    npix_header = header_data.pixel_count
                     npix_actual = len(fm_dat) / self.pix_depth
 
                     if npix_actual != npix_expected:
                         if i < len(self.buffer_npix) - 1:
                             locallogs.warning(
                                 "Pixel count inconsistent for frame {} buffer {}. Expected: {}, Header: {}, Actual: {}".format(
-                                    header_data["FRAME_NUM"],
-                                    header_data["FRAME_BUFFER_COUNT"],
+                                    header_data.frame_num,
+                                    header_data.frame_buffer_count,
                                     npix_expected,
                                     npix_header,
                                     npix_actual,
@@ -333,7 +376,7 @@ class uart_daq:
 
                 locallogs.info(
                     "frame: {}, bits lost: {}".format(
-                        header_data["FRAME_NUM"], nbit_lost
+                        header_data.frame_num, nbit_lost
                     )
                 )
 
@@ -344,7 +387,7 @@ class uart_daq:
         comport: str = "COM3",
         baudrate: int = 1200000,
         mode: str = "DEBUG",
-        read_length: int = None,
+        read_length: Optional[int] = None,
     ):
         logdirectories = [
             "log",
