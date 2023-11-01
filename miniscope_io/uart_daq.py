@@ -136,6 +136,8 @@ class uart_daq:
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
+        pre_bytes = bytes(bytearray(self.preamble.tobytes())[::-1])
+
         file = logging.FileHandler(
             datetime.now().strftime("log/uart_recv/uart_recv_log%Y_%m_%d_%H_%M.log")
         )
@@ -155,11 +157,15 @@ class uart_daq:
         locallogs.info("Serial port open: " + str(serial_port.name))
 
         # Throw away the first buffer because it won't fully come in
-        log_uart_buffer = bytearray(serial_port.read_until(self.preamble_string))
+        uart_bites = serial_port.read_until(pre_bytes)
+        log_uart_buffer = BitArray([x for x in uart_bites])
+
 
         while 1:
             # read UART data until preamble and put into queue
-            log_uart_buffer = bytearray(serial_port.read_until(self.preamble_string))
+            uart_bites = serial_port.read_until(pre_bytes)
+            log_uart_buffer = ([x for x in uart_bites])
+            print(log_uart_buffer[0:100])
             serial_buffer_queue.put(log_uart_buffer)
 
         time.sleep(1)  # time for ending other process
@@ -611,9 +617,10 @@ def updateDevice():
 
 def main():
     args = daqParser.parse_args()
-    daq_inst = uart_daq()
+
 
     if args.source == "UART":
+        daq_inst = uart_daq()
         try:
             assert len(vars(args)) == 3
         except AssertionError as msg:
@@ -636,6 +643,8 @@ def main():
 
 
     if args.source == "OK":
+        daq_inst = uart_daq()
+
         HAVE_OK = False
         try:
             from miniscope_io.devices.opalkelly import okDev
