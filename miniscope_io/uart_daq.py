@@ -15,17 +15,11 @@ import serial
 from bitstring import Array, BitArray, Bits
 from pydantic import BaseModel
 
-HAVE_OK = False
-try:
-    from miniscope_io.devices.opalkelly import okDev
-    HAVE_OK = True
-except (ImportError, ModuleNotFoundError) as e:
-    warnings.warn(f'Cannot import OpalKelly device, got exception {e}')
-
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("uart_image_capture")
-daqParser.add_argument("port", help="serial port")
-daqParser.add_argument("baudrate", help="baudrate")
+daqParser.add_argument("source", help="Input source; [\"UART\", \"OK\"]")
+daqParser.add_argument("--port", help="serial port: string")
+daqParser.add_argument("--baudrate", help="baudrate: int")
 
 # Parsers for update LED
 updateDeviceParser = argparse.ArgumentParser("updateDevice")
@@ -100,6 +94,7 @@ class uart_daq:
     ):
         self.frame_width = frame_width
         self.frame_height = frame_height
+        self.preamble_string = preamble
         self.preamble = Bits(preamble)
         self.header_fmt = header_fmt
         self.header_len = header_len * 32
@@ -160,11 +155,11 @@ class uart_daq:
         locallogs.info("Serial port open: " + str(serial_port.name))
 
         # Throw away the first buffer because it won't fully come in
-        log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
+        log_uart_buffer = bytearray(serial_port.read_until(self.preamble_string))
 
         while 1:
             # read UART data until preamble and put into queue
-            log_uart_buffer = bytearray(serial_port.read_until(self.preamble))
+            log_uart_buffer = bytearray(serial_port.read_until(self.preamble_string))
             serial_buffer_queue.put(log_uart_buffer)
 
         time.sleep(1)  # time for ending other process
@@ -615,30 +610,40 @@ def updateDevice():
 
 
 def main():
-    # args = daqParser.parse_args()
-
-    # try:
-    #     assert len(vars(args)) == 2
-    # except AssertionError as msg:
-    #     print(msg)
-    #     print("Usage: uart_image_capture [COM port] [baudrate]")
-    #     sys.exit(1)
-
-    # try:
-    #     comport = str(args.port)
-    # except (ValueError, IndexError) as e:
-    #     print(e)
-    #     sys.exit(1)
-
-    # try:
-    #     baudrate = int(args.baudrate)
-    # except (ValueError, IndexError) as e:
-    #     print(e)
-    #     sys.exit(1)
-
+    args = daqParser.parse_args()
     daq_inst = uart_daq()
-    daq_inst.capture(source="fpga")
 
+    if args.source == "UART":
+        try:
+            assert len(vars(args)) == 3
+        except AssertionError as msg:
+            print(msg)
+            print("Usage: uart_image_capture --port [COM port] --baudrate [baudrate]")
+            sys.exit(1)
+
+        try:
+            comport = str(args.port)
+        except (ValueError, IndexError) as e:
+            print(e)
+            sys.exit(1)
+
+        try:
+            baudrate = int(args.baudrate)
+        except (ValueError, IndexError) as e:
+            print(e)
+            sys.exit(1)
+        daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
+
+
+    if args.source == "OK":
+        HAVE_OK = False
+        try:
+            from miniscope_io.devices.opalkelly import okDev
+            HAVE_OK = True
+        except (ImportError, ModuleNotFoundError) as e:
+            warnings.warn(f'Cannot import OpalKelly device, got exception {e}')
+
+        daq_inst.capture(source="fpga")
 
 if __name__ == "__main__":
     main()
