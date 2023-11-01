@@ -16,7 +16,7 @@ from bitstring import Array, BitArray, Bits
 from pydantic import BaseModel
 
 # Parsers for daq inputs
-daqParser = argparse.ArgumentParser("uart_image_capture")
+daqParser = argparse.ArgumentParser("stream_image_capture")
 daqParser.add_argument("source", help="Input source; [\"UART\", \"OK\"]")
 daqParser.add_argument("--port", help="serial port: string")
 daqParser.add_argument("--baudrate", help="baudrate: int")
@@ -72,13 +72,13 @@ class FPGAHeader(BaseModel):
     pixel_count: int
 
 
-class uart_daq:
+class stream_daq:
     """
     A combined class for reading frames from a UART and FPGA source.
 
     .. todo::
 
-        Phil/Takuya - docstrings for uart daq: what devices these correspond to, how to configure them, usage examples, tests
+        Phil/Takuya - docstrings for stream daq: what devices these correspond to, how to configure them, usage examples, tests
 
     """
     def __init__(
@@ -165,7 +165,6 @@ class uart_daq:
             # read UART data until preamble and put into queue
             uart_bites = serial_port.read_until(pre_bytes)
             log_uart_buffer = ([x for x in uart_bites])
-            print(log_uart_buffer[0:100])
             serial_buffer_queue.put(log_uart_buffer)
 
         time.sleep(1)  # time for ending other process
@@ -479,12 +478,12 @@ class uart_daq:
         print("End capture")
 
         while True:
-            print("[Terminating] uart_recv()")
+            print("[Terminating] uart/fpga_recv()")
             p_recv.terminate()
             time.sleep(0.1)
             if not p_recv.is_alive():
                 p_recv.join(timeout=1.0)
-                print("[Terminated] uart_recv()")
+                print("[Terminated] uart/fpga_recv()")
                 break  # watchdog process daemon gets [Terminated]
 
         while True:
@@ -620,12 +619,12 @@ def main():
 
 
     if args.source == "UART":
-        daq_inst = uart_daq()
+        daq_inst = stream_daq()
         try:
             assert len(vars(args)) == 3
         except AssertionError as msg:
             print(msg)
-            print("Usage: uart_image_capture --port [COM port] --baudrate [baudrate]")
+            print("Usage: stream_image_capture --port [COM port] --baudrate [baudrate]")
             sys.exit(1)
 
         try:
@@ -643,7 +642,7 @@ def main():
 
 
     if args.source == "OK":
-        daq_inst = uart_daq()
+        daq_inst = stream_daq()
 
         HAVE_OK = False
         try:
