@@ -28,7 +28,7 @@ updateDeviceParser.add_argument("baudrate", help="baudrate")
 updateDeviceParser.add_argument("module", help="module to update")
 updateDeviceParser.add_argument("value", help="LED value")
 
-class FPGAHeaderFormat(BaseModel):
+class MetadataHeaderFormat(BaseModel):
     """
     Positions for header fields returned by :meth:`.okDev.readData`
 
@@ -53,9 +53,9 @@ class FPGAHeaderFormat(BaseModel):
     timestamp: Tuple[int,int] = (192, 224)
     pixel_count: Tuple[int, int] = (224, 256)
 
-class FPGAHeader(BaseModel):
+class MetadataHeader(BaseModel):
     """
-    Container for FPGA header data, structured by :class:`.FPGAHeaderFormat`
+    Container for FPGA header data, structured by :class:`.MetadataHeaderFormat`
 
     .. note::
 
@@ -86,7 +86,7 @@ class stream_daq:
         frame_width: int = 304,
         frame_height: int = 304,
         preamble=b"\x12\x34\x56",
-        header_fmt: FPGAHeaderFormat = FPGAHeaderFormat(),
+        header_fmt: MetadataHeaderFormat = MetadataHeaderFormat(),
         header_len=11,
         LSB=True,
         buffer_npix=(20432, 20432, 20432, 20432, 10688),
@@ -94,11 +94,13 @@ class stream_daq:
     ):
         self.frame_width = frame_width
         self.frame_height = frame_height
-        self.preamble_string = preamble
         self.preamble = Bits(preamble)
         self.header_fmt = header_fmt
         self.header_len = header_len * 32
-        self.LSB = LSB
+        if LSB:
+            self.LSB = True
+        else:
+            self.LSB = False
         self.buffer_npix = buffer_npix
         assert frame_height * frame_width == sum(self.buffer_npix)
         self.nbuffer_per_fm = len(self.buffer_npix)
@@ -107,7 +109,8 @@ class stream_daq:
     def _parse_header(self,
             buffer: BitArray,
             truncate: Literal['preamble', 'header', False] = False
-        ) -> Tuple[FPGAHeader, BitArray]:
+        ) -> Tuple[MetadataHeader, BitArray]:
+        
         pre_len = len(self.preamble)
         if self.LSB:
             assert buffer[:pre_len][::-1] == self.preamble
@@ -121,7 +124,7 @@ class stream_daq:
             else:
                 header_data[hd] = b.uint
 
-        header_data = FPGAHeader.model_construct(**header_data)
+        header_data = MetadataHeader.model_construct(**header_data)
 
         if truncate == "preamble":
             return header_data, buffer[pre_len:]
@@ -615,11 +618,11 @@ def updateDevice():
 
 
 def main():
+    daq_inst = stream_daq()
     args = daqParser.parse_args()
 
-
     if args.source == "UART":
-        daq_inst = stream_daq()
+
         try:
             assert len(vars(args)) == 3
         except AssertionError as msg:
@@ -640,10 +643,7 @@ def main():
             sys.exit(1)
         daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
 
-
     if args.source == "OK":
-        daq_inst = stream_daq()
-
         HAVE_OK = False
         try:
             from miniscope_io.devices.opalkelly import okDev
