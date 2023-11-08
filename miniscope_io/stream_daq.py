@@ -377,7 +377,7 @@ class stream_daq:
                         "uint:32",
                         [
                             pixel_vector[i : i + 32][::-1].uint
-                            for i in range(0, len(pixel_vector), 32)
+                            for i in reversed(range(0, len(pixel_vector), 32))
                         ],
                     )
                 img = np.frombuffer(pixel_vector.tobytes(), dtype=np.uint8)
