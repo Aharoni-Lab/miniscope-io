@@ -90,13 +90,13 @@ class stream_daq:
         self,
         frame_width: int = 304,
         frame_height: int = 304,
-        preamble=b"\x12\x34\x56",
+        preamble: bytes = b"\x12\x34\x56",
         header_fmt: MetadataHeaderFormat = MetadataHeaderFormat(),
-        header_len=11,
-        LSB=True,
-        buffer_npix=(20432, 20432, 20432, 20432, 10688),
-        pix_depth=8,
-    ):
+        header_len: int = 11,
+        LSB: bool = True,
+        buffer_npix: Tuple[int] = (20432, 20432, 20432, 20432, 10688),
+        pix_depth: int = 8,
+    ) -> None:
         self.frame_width = frame_width
         self.frame_height = frame_height
         self.preamble = preamble
@@ -177,7 +177,12 @@ class stream_daq:
         print("Close serial port")
         sys.exit(1)
 
-    def _fpga_recv(self, serial_buffer_queue, read_length=None, pre_first=True):
+    def _fpga_recv(
+        self,
+        serial_buffer_queue: multiprocessing.Queue[bytes],
+        read_length: int = None,
+        pre_first: bool = True,
+    ) -> None:
         if not HAVE_OK:
             raise RuntimeError(
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
@@ -228,7 +233,11 @@ class stream_daq:
 
     # Pull out data buffers from serial_buffer_queue
     # Make a list of buffers forming a frame and push into frame_buffer_queue
-    def _buffer_to_frame(self, serial_buffer_queue, frame_buffer_queue):
+    def _buffer_to_frame(
+        self,
+        serial_buffer_queue: multiprocessing.Queue[bytes],
+        frame_buffer_queue: multiprocessing.Queue[bytes],
+    ):
         # set up logger
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
@@ -303,7 +312,11 @@ class stream_daq:
                 else:
                     cur_fm_buffer_index = 0
 
-    def _format_frame(self, frame_buffer_queue, imagearray):
+    def _format_frame(
+        self,
+        frame_buffer_queue: multiprocessing.Queue[bytes],
+        imagearray: multiprocessing.Queue[np.ndarray],
+    ):
         pixel_order_flip = False
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
