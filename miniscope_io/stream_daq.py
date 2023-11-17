@@ -317,7 +317,6 @@ class stream_daq:
         frame_buffer_queue: multiprocessing.Queue[bytes],
         imagearray: multiprocessing.Queue[np.ndarray],
     ):
-        pixel_order_flip = False
         locallogs = logging.getLogger(__name__)
         locallogs.setLevel(logging.DEBUG)
 
@@ -406,7 +405,6 @@ class stream_daq:
         source: Literal["uart", "fpga"],
         comport: str = "COM3",
         baudrate: int = 1200000,
-        mode: str = "DEBUG",
         read_length: Optional[int] = None,
     ):
         logdirectories = [
