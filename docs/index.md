@@ -6,11 +6,22 @@
 # miniscope-io
 
 ```{toctree}
+:caption: Guide:
+
+guide/index
+```
+
+```{toctree}
 :maxdepth: 2
 :caption: Contents:
 
 api/index
-changelog
+```
+
+```{toctree}
+:caption: Meta:
+
+meta/index
 ```
  
 
