@@ -15,6 +15,15 @@ import serial
 from bitstring import Array, BitArray, Bits
 from pydantic import BaseModel
 
+HAVE_OK = False
+ok_error = None
+try:
+    from miniscope_io.devices.opalkelly import okDev
+
+    HAVE_OK = True
+except (ImportError, ModuleNotFoundError) as ok_error:
+    pass
+
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("stream_image_capture")
 daqParser.add_argument("source", help='Input source; ["UART", "OK"]')
@@ -243,7 +252,7 @@ class stream_daq:
 
     def _fpga_recv(
         self,
-        serial_buffer_queue: multiprocessing.Queue[bytes],
+        serial_buffer_queue: multiprocessing.Queue,
         read_length: int = None,
         pre_first: bool = True,
     ) -> None:
@@ -319,8 +328,8 @@ class stream_daq:
 
     def _buffer_to_frame(
         self,
-        serial_buffer_queue: multiprocessing.Queue[bytes],
-        frame_buffer_queue: multiprocessing.Queue[list[bytes]],
+        serial_buffer_queue: multiprocessing.Queue,
+        frame_buffer_queue: multiprocessing.Queue,
     ):
         """
         Group buffers together to make frames.
@@ -356,6 +365,8 @@ class stream_daq:
 
         cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
+
+        frame_buffer = [None] * self.nbuffer_per_fm
 
         while 1:
             if (
@@ -412,8 +423,8 @@ class stream_daq:
 
     def _format_frame(
         self,
-        frame_buffer_queue: multiprocessing.Queue[list[bytes]],
-        imagearray: multiprocessing.Queue[np.ndarray],
+        frame_buffer_queue: multiprocessing.Queue,
+        imagearray: multiprocessing.Queue,
     ):
         """
         Construct frame from grouped buffers.
@@ -445,6 +456,7 @@ class stream_daq:
 
         locallogs.addHandler(file)
         coloredlogs.install(level=logging.INFO, logger=locallogs)
+        header_data = None
 
         while 1:
             if frame_buffer_queue.qsize() > 0:  # Higher is safe but lower is fast.
@@ -507,9 +519,10 @@ class stream_daq:
                 img = np.frombuffer(pixel_vector.tobytes(), dtype=np.uint8)
                 imagearray.put(img)
 
-                locallogs.info(
-                    "frame: {}, bits lost: {}".format(header_data.frame_num, nbit_lost)
-                )
+                if header_data is not None:
+                    locallogs.info(
+                        "frame: {}, bits lost: {}".format(header_data.frame_num, nbit_lost)
+                    )
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
     def capture(
@@ -764,8 +777,8 @@ def updateDevice():
 
 
 def main():
-    daq_inst = stream_daq()
     args = daqParser.parse_args()
+    daq_inst = stream_daq()
 
     if args.source == "UART":
         try:
@@ -789,13 +802,8 @@ def main():
         daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
 
     if args.source == "OK":
-        HAVE_OK = False
-        try:
-            from miniscope_io.devices.opalkelly import okDev
-
-            HAVE_OK = True
-        except (ImportError, ModuleNotFoundError) as e:
-            warnings.warn(f"Cannot import OpalKelly device, got exception {e}")
+        if not HAVE_OK:
+            raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
 
         daq_inst.capture(source="fpga")
 
