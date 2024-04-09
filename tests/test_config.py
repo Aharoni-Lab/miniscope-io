@@ -34,7 +34,7 @@ def test_config_from_environment():
         config = Config()
         assert config.base_dir == Path(tmpdirname)
         assert config.log_dir == override_logdir
-        assert config.logs.level == 'error'
+        assert config.logs.level == 'error'.upper()
         del os.environ['MINISCOPE_IO_BASE_DIR']
         del os.environ['MINISCOPE_IO_LOG_DIR']
         del os.environ['MINISCOPE_IO_LOGS__LEVEL']

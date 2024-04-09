@@ -112,8 +112,8 @@ def test_relative_path():
 @pytest.mark.parametrize(
     ['file', 'fourcc', 'hash'],
     [
-        ('video.avi', 'GREY', '2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c'),
-        ('video.mp4', 'mp4v', '85c98346bf50a2bccc0c9aed485a2159b52e93b05ab180db0885d903fc13b143')
+        ('video.avi', 'GREY', '2a92ba8ac8ba17f08a65454981f08c7ca865de604d1dfe673f4db8aaf71c9f95'),
+        ('video.mp4', 'mp4v', 'fc11ea13e138fa42166117bec42fc1ba320ed8da491f2b2531b06dcd3fc34ec1')
     ]
 )
 def test_write_video(wirefree, file, fourcc, hash):

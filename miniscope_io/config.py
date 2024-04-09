@@ -33,8 +33,18 @@ class LogConfig(BaseModel):
     Maximum size of log files (bytes)
     """
 
+    @field_validator('level', 'level_file', 'level_stdout', mode="before")
+    @classmethod
+    def uppercase_levels(cls, value: Optional[str] = None):
+        if value is not None:
+            value = value.upper()
+        return value
+
     @model_validator(mode='after')
     def inherit_base_level(self) -> 'LogConfig':
+        """
+        If loglevels for specific output streams are unset, set from base :attr:`.level`
+        """
         levels = ('level_file', 'level_stdout')
         for level_name in levels:
             if getattr(self, level_name) is None:
