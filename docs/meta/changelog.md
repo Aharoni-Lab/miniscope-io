@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.6 - 24-04-09
+
+- https://github.com/Aharoni-Lab/miniscope-io/pull/14
+
+New features:
+
+- Added support for the wireless FPGA and UART daqs - work in progress unifying the API, but
+  initial version of code is present in `stream_daq.py`
+- Vendored opalkelly device drivers - see `devices` and `vendor`
+
 ## 0.1.5 - 23-09-03
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/9
