@@ -1,6 +1,8 @@
 """
 Need input on these tests...
 """
+import pytest
+import sys
 
 def test_import_ok():
     """
@@ -8,4 +10,8 @@ def test_import_ok():
     that just means that it has all the c extension
     modules it imports.
     """
-    from miniscope_io.vendor.opalkelly.lib import ok
+    if sys.platform.startswith('win'):
+        with pytest.raises(NotImplementedError):
+            from miniscope_io.vendor import opalkelly as ok
+    else:
+        from miniscope_io.vendor import opalkelly as ok

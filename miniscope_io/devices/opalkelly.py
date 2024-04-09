@@ -2,10 +2,19 @@ import time
 
 from bitstring import BitArray
 
-from miniscope_io.vendor.opalkelly.lib import ok
+from miniscope_io.vendor import opalkelly as ok
 
 
 class okDev(ok.okCFrontPanel):
+    """
+    I/O and configuration for an (what kind of opal kelly device?)
+
+    .. todo::
+
+        Phil: document what this thing does, including how bitfiles work
+        and how they're generated/where they're located.
+
+    """
     def __init__(self, serial_id: str = ""):
         super().__init__()
         ret = self.OpenBySerial("")
@@ -17,6 +26,7 @@ class okDev(ok.okCFrontPanel):
             print("Connected to {}".format(self.info.productName))
 
     def uploadBit(self, bit_file: str):
+
         ret = self.ConfigureFPGA(bit_file)
         if ret == self.NoError:
             print("Succesfully uploaded {}".format(bit_file))

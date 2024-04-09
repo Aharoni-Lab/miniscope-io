@@ -5,6 +5,7 @@
 
 config
 data
+devices
 formats
 io
 logging
@@ -13,4 +14,5 @@ exceptions
 plots/index
 utils
 uart_daq
+vendor/index
 ```
