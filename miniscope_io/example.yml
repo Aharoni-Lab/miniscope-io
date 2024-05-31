@@ -1,0 +1,15 @@
+device: "OK" # capture device. "OK" (Opal Kelly) or "UART"
+bitstream: "USBInterface-6mhz-3v3-INVERSE.bit"
+
+port: null # COM port, equired for UART mode
+baudrate: null # Baud rate, required for UART mode
+
+frame_width: 304
+frame_height: 304
+preamble: '12345678'
+header_len: 12
+pix_depth: 8
+buffer_block_length: 40
+block_size: 512
+num_buffers: 8
+LSB: True

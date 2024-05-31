@@ -1,4 +1,5 @@
 import argparse
+import yaml
 import logging
 import multiprocessing
 import os
@@ -30,9 +31,7 @@ except (ImportError, ModuleNotFoundError) as ok_error:
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("stream_image_capture")
-daqParser.add_argument("source", help='Input source; ["UART", "OK"]')
-daqParser.add_argument("--port", help="serial port: string")
-daqParser.add_argument("--baudrate", help="baudrate: int")
+daqParser.add_argument("-c", "--config", help='JSON config file path: string')
 
 # Parsers for update LED
 updateDeviceParser = argparse.ArgumentParser("updateDevice")
@@ -100,14 +99,8 @@ class stream_daq:
 
     def __init__(
         self,
-        frame_width: int = 304,
-        frame_height: int = 304,
-        preamble: bytes = b"\x12\x34\x56",
+        config: dict,
         header_fmt: MetadataHeaderFormat = MetadataHeaderFormat(),
-        header_len: int = 11,
-        LSB: bool = True,
-        buffer_npix: Tuple[int] = (20432, 20432, 20432, 20432, 10688),
-        pix_depth: int = 8,
     ) -> None:
         """
         Constructer for the class.
@@ -116,12 +109,8 @@ class stream_daq:
 
         Parameters
         ----------
-        frame_width : int, optional
-            Width of the frame (in pixels), by default 304.
-        frame_height : int, optional
-            Height of the frame (in pixels), by default 304.
-        preamble : bytes, optional
-            Preamble string at the beginning of every buffer header, by default b"\x12\x34\x56".
+        config : dict
+            DAQ configurations imported from yaml file. An list of elements and an example can be found in example.yml
         header_fmt : MetadataHeaderFormat, optional
             Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
         header_len : int, optional
@@ -141,22 +130,39 @@ class stream_daq:
         pix_depth : int, optional
             Bit-depth of each pixel, by default 8.
         """
-        self.frame_width = frame_width
-        self.frame_height = frame_height
-        self.preamble = preamble
-        self.header_fmt = header_fmt
-        self.header_len = header_len * 32
-        if LSB:
-            self.LSB = True
-        else:
-            self.LSB = False
-        self.buffer_npix = buffer_npix
-        assert frame_height * frame_width == sum(
-            self.buffer_npix
-        ), "Number of pixels defined by frame width and height must agree with total number of pixels in `buffer_npix`!"
-        self.nbuffer_per_fm = len(self.buffer_npix)
-        self.pix_depth = pix_depth
+        config_keys = ['frame_width',
+                       'frame_height',
+                       'header_len',
+                       'pix_depth',
+                       'buffer_block_length',
+                       'num_buffers',
+                       'block_size',
+                       'LSB',
+                       'preamble',
+                       'bitstream']
+        
         self.logger = init_logger('uart_daq')
+
+        for key in config_keys:
+            if key in config:
+                if key == 'preamble':
+                    self.preamble = bytes.fromhex(config[key])
+                elif key == 'header_len':
+                    self.header_len = config[key] * 32
+                else:
+                    setattr(self, key, config[key])
+            else:
+                self.logger.error("ERROR: {key} not found in config")
+
+        self.header_fmt = header_fmt
+        px_per_frame = self.frame_width * self.frame_height
+        px_per_buffer = self.buffer_block_length * self.block_size - self.header_len/8
+        quotient, remainder = divmod(
+            px_per_frame,
+            px_per_buffer
+            )
+        self.buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
+        self.nbuffer_per_fm = len(self.buffer_npix)
 
     def _parse_header(
         self, buffer: bytes, truncate: Literal["preamble", "header", False] = False
@@ -277,7 +283,11 @@ class stream_daq:
             read_length = int(max(self.buffer_npix) * self.pix_depth / 8 / 16) * 16
 
         # set up fpga devices
+        BIT_FILE = "./devices/" + self.bitstream
+        BIT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), BIT_FILE))
+        # set up fpga devices
         dev = okDev()
+        dev.uploadBit(BIT_FILE)
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)
         dev.setWire(0x00, 0b0)
@@ -471,8 +481,7 @@ class stream_daq:
     def capture(
         self,
         source: Literal["uart", "fpga"],
-        comport: str = "COM3",
-        baudrate: int = 1200000,
+        config: dict,
         read_length: Optional[int] = None,
     ):
         """
@@ -482,10 +491,8 @@ class stream_daq:
         ----------
         source : Literal[uart, fpga]
             Device source.
-        comport : str, optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._uart_recv` when `source == "uart"`, by default "COM3".
-        baudrate : int, optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._uart_recv` when `source == "uart"`, by default 1200000.
+        config : dict
+            To write. Contains config info imported from yaml file (example: example.yml).
         read_length : Optional[int], optional
             Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
 
@@ -535,8 +542,8 @@ class stream_daq:
                 target=self._uart_recv,
                 args=(
                     serial_buffer_queue,
-                    comport,
-                    baudrate,
+                    config['port'],
+                    config['baudrate'],
                 ),
             )
         elif source == "fpga":
@@ -722,34 +729,32 @@ def updateDevice():
 
 def main():
     args = daqParser.parse_args()
-    daq_inst = stream_daq()
 
-    if args.source == "UART":
-        try:
-            assert len(vars(args)) == 3
-        except AssertionError as msg:
-            print(msg)
-            print("Usage: stream_image_capture --port [COM port] --baudrate [baudrate]")
-            sys.exit(1)
+    with open(args.config, 'r') as f:
+        daqConfig = yaml.safe_load(f)
 
+    daq_inst = stream_daq(config=daqConfig)
+
+    if daqConfig['device'] == "UART":
         try:
-            comport = str(args.port)
+            comport = daqConfig['port']
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
 
         try:
-            baudrate = int(args.baudrate)
+            baudrate = daqConfig['baudrate']
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
-        daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
+        #daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
+        daq_inst.capture(source="uart", config = daqConfig)
 
-    if args.source == "OK":
+    if daqConfig['device'] == "OK":
         if not HAVE_OK:
             raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
 
-        daq_inst.capture(source="fpga")
+        daq_inst.capture(source="fpga", config = daqConfig)
 
 
 if __name__ == "__main__":
