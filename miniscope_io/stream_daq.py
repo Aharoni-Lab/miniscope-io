@@ -218,7 +218,7 @@ class stream_daq:
         if truncate == "preamble":
             return header_data, buffer[pre_len:]
         elif truncate == "header":
-            return header_data, buffer[pre_len + self.header_len :]
+            return header_data, buffer[self.header_len :]
         else:
             return header_data, buffer
 
