@@ -1,0 +1,26 @@
+# capture device. "OK" (Opal Kelly) or "UART"
+device: "OK"
+
+# bitstream file to upload to Opal Kelly board
+bitstream: "USBInterface-6mhz-3v3-INVERSE.bit"
+
+# COM port and baud rate rquired for UART mode
+port: null
+baudrate: null
+
+# Preamble for each data buffer. This is actually converted to bytes in the StreamDaq but has to be imported as a string because .yaml doesn't support hexadecimal formats.
+preamble: '12345678'
+
+# Image format. StreamDaq will calculate buffer size, etc. based on these parameters
+frame_width: 304
+frame_height: 304
+pix_depth: 8
+
+# Buffer data format. These have to match the firmware value
+header_len: 12
+buffer_block_length: 40
+block_size: 512
+num_buffers: 8
+
+# Temporary parameter to handle bit polarity. This is not actual LSB so need to fix later.
+LSB: True
