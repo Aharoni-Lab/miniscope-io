@@ -5,7 +5,6 @@ import multiprocessing
 import os
 import sys
 import time
-import warnings
 from datetime import datetime
 from typing import Any, Literal, Optional, Tuple
 
@@ -25,7 +24,7 @@ try:
 
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError) as ok_error:
-    module_logger = init_logger('uart_daq')
+    module_logger = init_logger('streamDaq')
     module_logger.warning(
         "Could not import OpalKelly driver, unable to read from FPGA!")
 
@@ -64,7 +63,7 @@ class MetadataHeaderFormat(BaseModel):
 
 class MetadataHeader(BaseModel):
     """
-    Container for FPGA header data, structured by :class:`.MetadataHeaderFormat`
+    Container for the data stream's header, structured by :class:`.MetadataHeaderFormat`
 
     """
 
@@ -79,6 +78,60 @@ class MetadataHeader(BaseModel):
     pixel_count: int
 
 class StreamDaqConfig(BaseModel):
+    """
+    Format model used to parse DAQ configuration yaml file (examples are in ./config)
+    The model attributes are key-value pairs needed for reconstructing frames from data streams.
+
+    Parameters
+    ----------
+    device: str
+        Interface hardware used for receiving data.
+        Current options are "OK" (Opal Kelly XEM 7310) and "UART" (generic UART-USB converters).
+        Only "OK" is supported at the moment.
+    bitstream: str, optional
+        Required when device is "OK".
+        Configuration file to be uploaded to Opal Kelly module.
+    port: str, optional
+        Required when device is "UART".
+        COM port connected to the UART-USB converter.
+    baudrate: Optional[int]
+        Required when device is "UART".
+        Baudrate of the connection to the UART-USB converter.
+    frame_width: int
+        Frame width of transferred image. This is used to reconstruct image.
+    frame_height: int
+        Frame height of transferred image. This is used to reconstruct image.
+    preamble: str
+        32-bit preamble used to locate the start of each buffer. The header and image data follows this preamble.
+        This is used as a hex but imported as a string because yaml doesn't support hex format.
+    header_len : int, optional
+        Length of header in bits. (For 32-bit words, 32 * number of words)
+        This is useful when not all the variable/words in the header are defined in :class:`.MetadataHeaderFormat`.
+        The user is responsible to ensure that `header_len` is larger than the largest bit position defined in :class:`.MetadataHeaderFormat` otherwise unexpected behavior might occur.
+    pix_depth : int, optional
+        Bit-depth of each pixel, by default 8.
+    buffer_block_length: int
+        Defines the data buffer structure. This value needs to match the Miniscope firmware.
+        Number of blocks per each data buffer.
+        This is required to calculate the number of pixels contained in one data buffer.
+    block_size: int
+        Defines the data buffer structure. This value needs to match the Miniscope firmware.
+        Number of 32-bit words per data block.
+        This is required to calculate the number of pixels contained in one data buffer.
+    num_buffers: int
+        Defines the data buffer structure. This value needs to match the Miniscope firmware.
+        This is the number of buffers that the source microcontroller cycles around.
+        This isn't strictly required for data reconstruction but useful for debugging.
+    LSB : bool, optional
+        Whether the sourse is in "LSB" mode or not, by default True.
+        If `not LSB`, then the incoming bitstream is expected to be in Most Significant Bit first mode and data are transmitted in normal order.
+        If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
+        Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
+        Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
+
+    ..todo::
+        Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
+    """        
     device: str
     bitstream: Optional[str]
     port: Optional[str]
@@ -87,11 +140,11 @@ class StreamDaqConfig(BaseModel):
     frame_height: int
     preamble: str
     header_len: int
-    pix_depth: int
+    pix_depth: int = 8
     buffer_block_length: int
     block_size: int
     num_buffers: int
-    LSB: bool
+    LSB: Optional[bool]
 
     @classmethod
     def from_yaml(cls, file_path: str) -> 'StreamDaqConfig':
@@ -101,12 +154,23 @@ class StreamDaqConfig(BaseModel):
 
 class stream_daq:
     """
-    A combined class for reading frames from a UART and FPGA source.
+    A combined class for configuring and reading frames from a UART and FPGA source.
+    Supported devices and required inputs are described in StreamDaqConfig model documentation.
+    This function's entry point is the main function, which should be used from the stream_image_capture command installed with the package.
+    Example configuration yaml files are stored in /miniscope-io/config/.
+
+    Examples
+    --------
+    >>> streamDaq -c path/to/config/yaml/file.yml
+    Connected to XEM7310-A75
+    Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
+    FrontPanel is supported
+    [24-06-11T01:40:45] INFO     [miniscope_io.streamDaq.frame] frame: 1570, bits lost: 0                                    stream_daq.py:524
+    [24-06-11T01:40:46] INFO     [miniscope_io.streamDaq.frame] frame: 1571, bits lost: 0                                    stream_daq.py:524
 
     .. todo::
-
+        Example section: add the terminal output when running the script
         Phil/Takuya - docstrings for stream daq: what devices these correspond to, how to configure them, usage examples, tests
-
     """
 
     def __init__(
@@ -116,46 +180,26 @@ class stream_daq:
     ) -> None:
         """
         Constructer for the class.
-
-        Currently supports UART and FPGA source.
+        This parses configuration from the input yaml file. 
 
         Parameters
         ----------
-        config : dict
-            DAQ configurations imported from yaml file. An list of elements and an example can be found in example.yml
+        config : StreamDaqConfig
+            DAQ configurations imported from the input yaml file.
+            Examples and required properties can be found in /miniscope-io/config/example.yml
         header_fmt : MetadataHeaderFormat, optional
             Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
-        header_len : int, optional
-            Length of header in (32-bit) words, by default 11.
-            This is useful when not all the variable/words in the header are defined in :class:`.MetadataHeaderFormat`.
-            The user is responsible to ensure that `header_len * 32` is larger than the largest bit position defined in :class:`.MetadataHeaderFormat` otherwise unexpected behavior might occur.
-        LSB : bool, optional
-            Whether the sourse is in "LSB" mode or not, by default True.
-            If `not LSB`, then the incoming bitstream is expected to be in Most Significant Bit first mode and data are transmitted in normal order.
-            If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
-            Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
-            Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
-        buffer_npix : Tuple[int], optional
-            A tuple defining how pixels within a single frame is split across multiple buffers, by default (20432, 20432, 20432, 20432, 10688).
-            Each number in the tuple represents how many pixels are contained in each buffer.
-            The length of the tuple represents the number of buffers a frame is split across.
-        pix_depth : int, optional
-            Bit-depth of each pixel, by default 8.
         """        
-        self.logger = init_logger('uart_daq')
+        self.logger = init_logger('streamDaq')
 
 
         for key in config.model_json_schema()['properties'].keys():
-            # Using the `dict` method to ensure we get a dictionary representation of the config
             config_dict = config.model_dump()
 
             if key in config_dict:
                 if key == 'preamble':
                     # Not ideal but needed because yaml can't handle hexadecimal files.
                     self.preamble = bytes.fromhex(config_dict[key])
-                elif key == 'header_len':
-                    # To convert number of words to bits, this should multiply by 32
-                    self.header_len = config_dict[key] * 32
                 else:
                     setattr(self, key, config_dict[key])
             else:
@@ -218,7 +262,8 @@ class stream_daq:
         self, serial_buffer_queue: multiprocessing.Queue, comport: str, baudrate: int
     ):
         """
-        Receive buffers and push into serial_buffer_queue
+        Receive buffers and push into serial_buffer_queue.
+        Currently not supported.
 
         Parameters
         ----------
@@ -337,7 +382,7 @@ class stream_daq:
         frame_buffer_queue : multiprocessing.Queue[list[bytes]]
             Output frame queue.
         """
-        locallogs = init_logger('uart_daq.buffer')
+        locallogs = init_logger('streamDaq.buffer')
 
         cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
@@ -416,7 +461,7 @@ class stream_daq:
         imagearray : multiprocessing.Queue[np.ndarray]
             Output image array queue.
         """
-        locallogs = init_logger('uart_daq.frame')
+        locallogs = init_logger('streamDaq.frame')
         header_data = None
 
         while 1:
