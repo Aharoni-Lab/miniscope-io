@@ -323,7 +323,8 @@ class stream_daq:
                 if not pre_first:
                     buf_start, buf_stop = buf_start + len(pre), buf_stop + len(pre)
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
-            cur_buffer = cur_buffer[pre_pos[-1] :]
+            if pre_pos:
+                cur_buffer = cur_buffer[pre_pos[-1] :]
 
     def _buffer_to_frame(
         self,
