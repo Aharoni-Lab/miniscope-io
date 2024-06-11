@@ -53,5 +53,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-stream_image_capture = "miniscope_io.stream_daq:main"
+streamDaq = "miniscope_io.stream_daq:main"
 updateDevice = "miniscope_io.device_update:updateDevice"
