@@ -31,7 +31,7 @@ except (ImportError, ModuleNotFoundError) as ok_error:
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("stream_image_capture")
-daqParser.add_argument("-c", "--config", help='JSON config file path: string')
+daqParser.add_argument("-c", "--config", help='YAML config file path: string')
 
 # Parsers for update LED
 updateDeviceParser = argparse.ArgumentParser("updateDevice")
@@ -86,6 +86,26 @@ class MetadataHeader(BaseModel):
     timestamp: int
     pixel_count: int
 
+class StreamDaqConfig(BaseModel):
+    device: str
+    bitstream: Optional[str]
+    port: Optional[str]
+    baudrate: Optional[int]
+    frame_width: int
+    frame_height: int
+    preamble: str
+    header_len: int
+    pix_depth: int
+    buffer_block_length: int
+    block_size: int
+    num_buffers: int
+    LSB: bool
+
+    @classmethod
+    def from_yaml(cls, file_path: str) -> 'StreamDaqConfig':
+        with open(file_path, 'r') as file:
+            config_data = yaml.safe_load(file)
+        return cls(**config_data)
 
 class stream_daq:
     """
@@ -99,7 +119,7 @@ class stream_daq:
 
     def __init__(
         self,
-        config: dict,
+        config: StreamDaqConfig,
         header_fmt: MetadataHeaderFormat = MetadataHeaderFormat(),
     ) -> None:
         """
@@ -129,30 +149,25 @@ class stream_daq:
             The length of the tuple represents the number of buffers a frame is split across.
         pix_depth : int, optional
             Bit-depth of each pixel, by default 8.
-        """
-        config_keys = ['frame_width',
-                       'frame_height',
-                       'header_len',
-                       'pix_depth',
-                       'buffer_block_length',
-                       'num_buffers',
-                       'block_size',
-                       'LSB',
-                       'preamble',
-                       'bitstream']
-        
+        """        
         self.logger = init_logger('uart_daq')
 
-        for key in config_keys:
-            if key in config:
+
+        for key in config.model_json_schema()['properties'].keys():
+            # Using the `dict` method to ensure we get a dictionary representation of the config
+            config_dict = config.model_dump()
+
+            if key in config_dict:
                 if key == 'preamble':
-                    self.preamble = bytes.fromhex(config[key])
+                    # Not ideal but needed because yaml can't handle hexadecimal files.
+                    self.preamble = bytes.fromhex(config_dict[key])
                 elif key == 'header_len':
-                    self.header_len = config[key] * 32
+                    # To convert number of words to bits, this should multiply by 32
+                    self.header_len = config_dict[key] * 32
                 else:
-                    setattr(self, key, config[key])
+                    setattr(self, key, config_dict[key])
             else:
-                self.logger.error("ERROR: {key} not found in config")
+                self.logger.error(f"ERROR: {key} not found in config")
 
         self.header_fmt = header_fmt
         px_per_frame = self.frame_width * self.frame_height
@@ -481,7 +496,7 @@ class stream_daq:
     def capture(
         self,
         source: Literal["uart", "fpga"],
-        config: dict,
+        config: StreamDaqConfig,
         read_length: Optional[int] = None,
     ):
         """
@@ -730,27 +745,26 @@ def updateDevice():
 def main():
     args = daqParser.parse_args()
 
-    with open(args.config, 'r') as f:
-        daqConfig = yaml.safe_load(f)
+    daqConfig = StreamDaqConfig.from_yaml(args.config)
 
     daq_inst = stream_daq(config=daqConfig)
 
-    if daqConfig['device'] == "UART":
+    if daqConfig.device == "UART":
         try:
-            comport = daqConfig['port']
+            comport = daqConfig.port
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
 
         try:
-            baudrate = daqConfig['baudrate']
+            baudrate = daqConfig.baudrate
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
         #daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
         daq_inst.capture(source="uart", config = daqConfig)
 
-    if daqConfig['device'] == "OK":
+    if daqConfig.device == "OK":
         if not HAVE_OK:
             raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
 
