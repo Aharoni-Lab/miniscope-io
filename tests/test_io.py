@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 import os
 
-from miniscope_io.sdcard import DataHeader
+from miniscope_io.models.sdcard import SDBufferHeader
 from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
@@ -68,7 +68,7 @@ def test_return_headers(wirefree):
         assert isinstance(frame_object, Frame)
 
         assert len(frame_object.headers) == 5
-        assert all([isinstance(b, DataHeader) for b in frame_object.headers])
+        assert all([isinstance(b, SDBufferHeader) for b in frame_object.headers])
 
 def test_frame_count(wirefree):
     """

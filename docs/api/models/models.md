@@ -1,7 +1,7 @@
-# sdcard
+# Models
 
 ```{eval-rst}
-.. automodule:: miniscope_io.sdcard
+.. automodule:: miniscope_io.models.models
     :members:
     :undoc-members:
 ```

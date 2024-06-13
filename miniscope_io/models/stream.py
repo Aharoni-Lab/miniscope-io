@@ -1,0 +1,85 @@
+"""
+Models for :mod:`miniscope_io.stream_daq`
+"""
+from typing import Optional
+
+from miniscope_io.models import MiniscopeConfig
+from miniscope_io.models.mixins import YAMLMixin
+from miniscope_io.models.buffer import BufferHeaderFormat
+from miniscope_io.types import Range
+
+
+class StreamBufferHeaderFormat(BufferHeaderFormat):
+    pixel_count: Range
+
+
+class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
+    """
+    Format model used to parse DAQ configuration yaml file (examples are in ./config)
+    The model attributes are key-value pairs needed for reconstructing frames from data streams.
+
+    Parameters
+    ----------
+    device: str
+        Interface hardware used for receiving data.
+        Current options are "OK" (Opal Kelly XEM 7310) and "UART" (generic UART-USB converters).
+        Only "OK" is supported at the moment.
+    bitstream: str, optional
+        Required when device is "OK".
+        Configuration file to be uploaded to Opal Kelly module.
+    port: str, optional
+        Required when device is "UART".
+        COM port connected to the UART-USB converter.
+    baudrate: Optional[int]
+        Required when device is "UART".
+        Baudrate of the connection to the UART-USB converter.
+    frame_width: int
+        Frame width of transferred image. This is used to reconstruct image.
+    frame_height: int
+        Frame height of transferred image. This is used to reconstruct image.
+    preamble: str
+        32-bit preamble used to locate the start of each buffer. The header and image data follows this preamble.
+        This is used as a hex but imported as a string because yaml doesn't support hex format.
+    header_len : int, optional
+        Length of header in bits. (For 32-bit words, 32 * number of words)
+        This is useful when not all the variable/words in the header are defined in :class:`.MetadataHeaderFormat`.
+        The user is responsible to ensure that `header_len` is larger than the largest bit position defined in :class:`.MetadataHeaderFormat` otherwise unexpected behavior might occur.
+    pix_depth : int, optional
+        Bit-depth of each pixel, by default 8.
+    buffer_block_length: int
+        Defines the data buffer structure. This value needs to match the Miniscope firmware.
+        Number of blocks per each data buffer.
+        This is required to calculate the number of pixels contained in one data buffer.
+    block_size: int
+        Defines the data buffer structure. This value needs to match the Miniscope firmware.
+        Number of 32-bit words per data block.
+        This is required to calculate the number of pixels contained in one data buffer.
+    num_buffers: int
+        Defines the data buffer structure. This value needs to match the Miniscope firmware.
+        This is the number of buffers that the source microcontroller cycles around.
+        This isn't strictly required for data reconstruction but useful for debugging.
+    LSB : bool, optional
+        Whether the sourse is in "LSB" mode or not, by default True.
+        If `not LSB`, then the incoming bitstream is expected to be in Most Significant Bit first mode and data are transmitted in normal order.
+        If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
+        Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
+        Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
+
+    ..todo::
+        Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
+    """
+    device: str
+    bitstream: Optional[str]
+    port: Optional[str]
+    baudrate: Optional[int]
+    frame_width: int
+    frame_height: int
+    preamble: str
+    header_len: int
+    pix_depth: int = 8
+    buffer_block_length: int
+    block_size: int
+    num_buffers: int
+    LSB: Optional[bool]
+
+

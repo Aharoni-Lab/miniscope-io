@@ -4,11 +4,13 @@ from pathlib import Path
 from pydantic import field_validator, model_validator, Field, BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from miniscope_io.models import MiniscopeIOModel
+
 _default_basedir = Path().home() / '.config' / 'miniscope_io'
 LOG_LEVELS = Literal['DEBUG', 'INFO', 'WARNING', 'ERROR']
 
 
-class LogConfig(BaseModel):
+class LogConfig(MiniscopeIOModel):
     """
     Configuration for logging
     """
