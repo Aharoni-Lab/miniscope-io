@@ -233,17 +233,14 @@ class StreamDaq:
         dev.setWire(0x00, 0b0)
         # read loop
         cur_buffer = BitArray()
-        pre = Bits(self.preamble)
-        if self.config.LSB:
-            pre = pre[::-1]
         while True:
             buf = dev.readData(read_length)
             dat = BitArray(buf)
             cur_buffer = cur_buffer + dat
-            pre_pos = list(cur_buffer.findall(pre))
+            pre_pos = list(cur_buffer.findall(self.preamble))
             for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
                 if not pre_first:
-                    buf_start, buf_stop = buf_start + len(pre), buf_stop + len(pre)
+                    buf_start, buf_stop = buf_start + len(self.preamble), buf_stop + len(self.preamble)
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
@@ -472,7 +469,7 @@ class StreamDaq:
             5
         )  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
         imagearray = queue_manager.Queue(5)
-        imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
+        imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
