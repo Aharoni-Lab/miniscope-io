@@ -9,7 +9,7 @@ port: null
 baudrate: null
 
 # Preamble for each data buffer. This is actually converted to bytes in the StreamDaq but has to be imported as a string because .yaml doesn't support hexadecimal formats.
-preamble: '12345678'
+preamble: 0x12345678
 
 # Image format. StreamDaq will calculate buffer size, etc. based on these parameters
 frame_width: 152

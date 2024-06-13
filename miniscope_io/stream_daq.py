@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from datetime import datetime
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, List
 
 import coloredlogs
 import cv2
@@ -74,33 +74,37 @@ class StreamDaq:
             Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
         """        
         self.logger = init_logger('streamDaq')
-
-
-        for key in config.model_json_schema()['properties'].keys():
-            config_dict = config.model_dump()
-
-            if key in config_dict:
-                if key == 'preamble':
-                    # Not ideal but needed because yaml can't handle hexadecimal files.
-                    self.preamble = bytes.fromhex(config_dict[key])
-                else:
-                    setattr(self, key, config_dict[key])
-            else:
-                self.logger.error(f"ERROR: {key} not found in config")
-
+        self.config = config
         self.header_fmt = header_fmt
-        px_per_frame = self.frame_width * self.frame_height
-        px_per_buffer = self.buffer_block_length * self.block_size - self.header_len/8
-        quotient, remainder = divmod(
-            px_per_frame,
-            px_per_buffer
-            )
-        self.buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
-        self.nbuffer_per_fm = len(self.buffer_npix)
+        self.preamble = Bits(self.config.preamble)
+        if self.config.LSB:
+            self.preamble = self.preamble[::-1]
+
+        self._buffer_npix: Optional[List[int]] = None
+        self._nbuffer_per_fm: Optional[int] = None
+
+    @property
+    def buffer_npix(self) -> List[int]:
+        """List of pixels per buffer for a frame"""
+        if self._buffer_npix is None:
+            px_per_frame = self.config.frame_width * self.config.frame_height
+            px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len / 8
+            quotient, remainder = divmod(px_per_frame, px_per_buffer)
+            self._buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
+        return self._buffer_npix
+
+    @property
+    def nbuffer_per_fm(self) -> int:
+        """
+        Number of buffers per frame, computed from :attr:`.buffer_npix`
+        """
+        if self._nbuffer_per_fm is None:
+            self._nbuffer_per_fm = len(self.buffer_npix)
+        return self._nbuffer_per_fm
 
     def _parse_header(
-        self, buffer: bytes, truncate: Literal["preamble", "header", False] = False
-    ) -> Tuple[BufferHeader, bytes]:
+        self, buffer: Bits, truncate: Literal["preamble", "header", False] = False
+    ) -> Tuple[BufferHeader, Bits]:
         """
         Function to parse header from each buffer.
 
@@ -119,15 +123,12 @@ class StreamDaq:
         Tuple[BufferHeader, bytes]
             The returned header data and (optionally truncated) buffer data.
         """
-        pre = Bits(self.preamble)
-        if self.LSB:
-            pre = pre[::-1]
-        pre_len = len(pre)
-        assert buffer[:pre_len] == pre
+        pre_len = len(self.preamble)
+        assert buffer[:pre_len] == self.preamble
         header_data = dict()
         for hd, bit_range in self.header_fmt.model_dump().items():
             b = buffer[pre_len + bit_range[0] : pre_len + bit_range[1]]
-            if self.LSB:
+            if self.config.LSB:
                 header_data[hd] = b[::-1].uint
             else:
                 header_data[hd] = b.uint
@@ -137,7 +138,7 @@ class StreamDaq:
         if truncate == "preamble":
             return header_data, buffer[pre_len:]
         elif truncate == "header":
-            return header_data, buffer[self.header_len :]
+            return header_data, buffer[self.config.header_len :]
         else:
             return header_data, buffer
 
@@ -215,14 +216,15 @@ class StreamDaq:
             )
         # determine length
         if read_length is None:
-            read_length = int(max(self.buffer_npix) * self.pix_depth / 8 / 16) * 16
+            read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
 
         # set up fpga devices
-        BIT_FILE = "./devices/" + self.bitstream
-        BIT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), BIT_FILE))
+        BIT_FILE = self.config.bitstream
+        if not BIT_FILE.exists():
+            raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
         dev = okDev()
-        dev.uploadBit(BIT_FILE)
+        dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)
         dev.setWire(0x00, 0b0)
@@ -232,7 +234,7 @@ class StreamDaq:
         # read loop
         cur_buffer = BitArray()
         pre = Bits(self.preamble)
-        if self.LSB:
+        if self.config.LSB:
             pre = pre[::-1]
         while True:
             buf = dev.readData(read_length)
@@ -361,12 +363,12 @@ class StreamDaq:
                         )
                     else:
                         frame_data[i] = Bits(
-                            int=0, length=npix_expected * self.pix_depth
+                            int=0, length=npix_expected * self.config.pix_depth
                         )
                         nbit_lost += npix_expected
                         continue
                     npix_header = header_data.pixel_count
-                    npix_actual = len(fm_dat) / self.pix_depth
+                    npix_actual = len(fm_dat) / self.config.pix_depth
 
                     if npix_actual != npix_expected:
                         if i < len(self.buffer_npix) - 1:
@@ -379,7 +381,7 @@ class StreamDaq:
                                     npix_actual,
                                 )
                             )
-                        nbit_expected = npix_expected * self.pix_depth
+                        nbit_expected = npix_expected * self.config.pix_depth
                         if len(fm_dat) > nbit_expected:
                             fm_dat = fm_dat[:nbit_expected]
                         else:
@@ -394,10 +396,10 @@ class StreamDaq:
                     pixel_vector = pixel_vector + d
 
                 assert len(pixel_vector) == (
-                    self.frame_height * self.frame_width * self.pix_depth
+                    self.config.frame_height * self.config.frame_width * self.config.pix_depth
                 )
 
-                if self.LSB:
+                if self.config.LSB:
                     pixel_vector = Array(
                         "uint:32",
                         [

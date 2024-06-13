@@ -1,8 +1,12 @@
 """
 Models for :mod:`miniscope_io.stream_daq`
 """
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
+from pydantic import field_validator
+
+from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.buffer import BufferHeaderFormat
@@ -69,12 +73,12 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
     device: str
-    bitstream: Optional[str]
+    bitstream: Optional[Path]
     port: Optional[str]
     baudrate: Optional[int]
     frame_width: int
     frame_height: int
-    preamble: str
+    preamble: bytes
     header_len: int
     pix_depth: int = 8
     buffer_block_length: int
@@ -82,4 +86,22 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     num_buffers: int
     LSB: Optional[bool]
 
+    @field_validator('preamble', mode='before')
+    def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
+        if isinstance(value, str):
+            return bytes.fromhex(value)
+        elif isinstance(value, int):
+            return bytes.fromhex(hex(value)[2:])
+        else:
+            return value
+
+    @field_validator('bitstream', mode='after')
+    def resolve_relative(cls, value: Path) -> Path:
+        """
+        If we are given a relative path to a bitstream, resolve it relative to
+        the device path
+        """
+        if not value.is_absolute():
+            value = DEVICE_DIR / value
+        return value
 
