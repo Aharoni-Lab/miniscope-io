@@ -80,22 +80,8 @@ class StreamDaq:
         if self.config.LSB:
             self.preamble = self.preamble[::-1]
 
-        self.preamble_serialized = self.preamble.bytes  # <<-- Add this line
-
-
-# Directly initialize attributes from config
-        self.frame_width = config.frame_width
-        self.frame_height = config.frame_height
-        self.pix_depth = config.pix_depth
-        self.header_len = config.header_len
-        self.buffer_block_length = config.buffer_block_length
-        self.block_size = config.block_size
-
         self._buffer_npix: Optional[List[int]] = None
         self._nbuffer_per_fm: Optional[int] = None
-
-          # Debugging: Print the initialized preamble
-        print(f"Initialized preamble: {self.preamble}")
 
     @property
     def buffer_npix(self) -> List[int]:
@@ -247,9 +233,7 @@ class StreamDaq:
         dev.setWire(0x00, 0b0)
         # read loop
         cur_buffer = BitArray()
-        pre = Bits(self.preamble_serialized)
-        print(f"Using preamble in _fpga_recv: {pre}")  # Debugging: Print the preamble used in _fpga_recv
-
+        pre = Bits(self.preamble)
         if self.config.LSB:
             pre = pre[::-1]
         while True:
@@ -507,7 +491,6 @@ class StreamDaq:
                 args=(
                     serial_buffer_queue,
                     read_length,
-                    self.preamble_serialized,
                 ),
             )
         else:
@@ -577,10 +560,6 @@ def main():
     args = daqParser.parse_args()
 
     daqConfig = StreamDaqConfig.from_yaml(args.config)
-
-    # Print configuration for debugging
-    print(f"Configuration loaded: {daqConfig}")
-
 
     daq_inst = StreamDaq(config=daqConfig)
 
