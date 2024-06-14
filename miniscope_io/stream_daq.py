@@ -26,13 +26,14 @@ try:
 
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError) as ok_error:
-    module_logger = init_logger('streamDaq')
+    module_logger = init_logger("streamDaq")
     module_logger.warning(
-        "Could not import OpalKelly driver, unable to read from FPGA!")
+        "Could not import OpalKelly driver, unable to read from FPGA!"
+    )
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("stream_image_capture")
-daqParser.add_argument("-c", "--config", help='YAML config file path: string')
+daqParser.add_argument("-c", "--config", help="YAML config file path: string")
 
 
 class StreamDaq:
@@ -63,7 +64,7 @@ class StreamDaq:
     ) -> None:
         """
         Constructer for the class.
-        This parses configuration from the input yaml file. 
+        This parses configuration from the input yaml file.
 
         Parameters
         ----------
@@ -72,8 +73,8 @@ class StreamDaq:
             Examples and required properties can be found in /miniscope-io/config/example.yml
         header_fmt : MetadataHeaderFormat, optional
             Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
-        """        
-        self.logger = init_logger('streamDaq')
+        """
+        self.logger = init_logger("streamDaq")
         self.config = config
         self.header_fmt = header_fmt
         self.preamble = Bits(self.config.preamble)
@@ -88,7 +89,10 @@ class StreamDaq:
         """List of pixels per buffer for a frame"""
         if self._buffer_npix is None:
             px_per_frame = self.config.frame_width * self.config.frame_height
-            px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len / 8
+            px_per_buffer = (
+                self.config.buffer_block_length * self.config.block_size
+                - self.config.header_len / 8
+            )
             quotient, remainder = divmod(px_per_frame, px_per_buffer)
             self._buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
         return self._buffer_npix
@@ -216,12 +220,16 @@ class StreamDaq:
             )
         # determine length
         if read_length is None:
-            read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
+            read_length = (
+                int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
+            )
 
         # set up fpga devices
         BIT_FILE = self.config.bitstream
         if not BIT_FILE.exists():
-            raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
+            raise RuntimeError(
+                f"Configured to use bitfile at {BIT_FILE} but no such file exists"
+            )
         # set up fpga devices
         dev = okDev()
         dev.uploadBit(str(BIT_FILE))
@@ -240,7 +248,9 @@ class StreamDaq:
             pre_pos = list(cur_buffer.findall(self.preamble))
             for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
                 if not pre_first:
-                    buf_start, buf_stop = buf_start + len(self.preamble), buf_stop + len(self.preamble)
+                    buf_start, buf_stop = buf_start + len(
+                        self.preamble
+                    ), buf_stop + len(self.preamble)
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
@@ -264,7 +274,7 @@ class StreamDaq:
         frame_buffer_queue : multiprocessing.Queue[list[bytes]]
             Output frame queue.
         """
-        locallogs = init_logger('streamDaq.buffer')
+        locallogs = init_logger("streamDaq.buffer")
 
         cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
@@ -343,7 +353,7 @@ class StreamDaq:
         imagearray : multiprocessing.Queue[np.ndarray]
             Output image array queue.
         """
-        locallogs = init_logger('streamDaq.frame')
+        locallogs = init_logger("streamDaq.frame")
         header_data = None
 
         while 1:
@@ -393,7 +403,9 @@ class StreamDaq:
                     pixel_vector = pixel_vector + d
 
                 assert len(pixel_vector) == (
-                    self.config.frame_height * self.config.frame_width * self.config.pix_depth
+                    self.config.frame_height
+                    * self.config.frame_width
+                    * self.config.pix_depth
                 )
 
                 if self.config.LSB:
@@ -409,7 +421,9 @@ class StreamDaq:
 
                 if header_data is not None:
                     locallogs.info(
-                        "frame: {}, bits lost: {}".format(header_data.frame_num, nbit_lost)
+                        "frame: {}, bits lost: {}".format(
+                            header_data.frame_num, nbit_lost
+                        )
                     )
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
@@ -469,7 +483,9 @@ class StreamDaq:
             5
         )  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
         imagearray = queue_manager.Queue(5)
-        imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
+        imagearray.put(
+            np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8)
+        )
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
@@ -477,8 +493,8 @@ class StreamDaq:
                 target=self._uart_recv,
                 args=(
                     serial_buffer_queue,
-                    config['port'],
-                    config['baudrate'],
+                    config["port"],
+                    config["baudrate"],
                 ),
             )
         elif source == "fpga":
@@ -553,6 +569,7 @@ class StreamDaq:
                 self.logger.debug("[Terminated] format_frame()")
                 break  # watchdog process daemon gets [Terminated]
 
+
 def main():
     args = daqParser.parse_args()
 
@@ -572,14 +589,16 @@ def main():
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
-        #daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
-        daq_inst.capture(source="uart", config = daqConfig)
+        # daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
+        daq_inst.capture(source="uart", config=daqConfig)
 
     if daqConfig.device == "OK":
         if not HAVE_OK:
-            raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
+            raise ImportError(
+                "Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}"
+            )
 
-        daq_inst.capture(source="fpga", config = daqConfig)
+        daq_inst.capture(source="fpga", config=daqConfig)
 
 
 if __name__ == "__main__":

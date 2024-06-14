@@ -15,6 +15,7 @@ class okDev(ok.okCFrontPanel):
         and how they're generated/where they're located.
 
     """
+
     def __init__(self, serial_id: str = ""):
         super().__init__()
         ret = self.OpenBySerial("")

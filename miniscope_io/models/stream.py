@@ -1,6 +1,7 @@
 """
 Models for :mod:`miniscope_io.stream_daq`
 """
+
 from pathlib import Path
 from typing import Optional, Union
 
@@ -72,6 +73,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     ..todo::
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
+
     device: str
     bitstream: Optional[Path]
     port: Optional[str]
@@ -86,7 +88,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     num_buffers: int
     LSB: Optional[bool]
 
-    @field_validator('preamble', mode='before')
+    @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
         if isinstance(value, str):
             return bytes.fromhex(value)
@@ -95,7 +97,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         else:
             return value
 
-    @field_validator('bitstream', mode='after')
+    @field_validator("bitstream", mode="after")
     def resolve_relative(cls, value: Path) -> Path:
         """
         If we are given a relative path to a bitstream, resolve it relative to
@@ -104,4 +106,3 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         if not value.is_absolute():
             value = DEVICE_DIR / value
         return value
-

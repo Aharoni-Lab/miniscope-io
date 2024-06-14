@@ -1,6 +1,7 @@
 """
 Classes for using in-memory data from a miniscope
 """
+
 import numpy as np
 from typing import List, Optional, overload, Literal, Union
 from miniscope_io.models.sdcard import SDBufferHeader
@@ -8,24 +9,32 @@ from pydantic import BaseModel, field_validator
 
 import pandas as pd
 
+
 class Frame(BaseModel, arbitrary_types_allowed=True):
     """
     An individual frame from a miniscope recording
 
     Typically returned from :meth:`.SDCard.read`
     """
+
     data: Optional[np.ndarray] = None
     headers: Optional[List[SDBufferHeader]] = None
 
-    @field_validator('headers')
+    @field_validator("headers")
     @classmethod
-    def frame_nums_must_be_equal(cls, v:List[SDBufferHeader]) -> Optional[List[SDBufferHeader]]:
+    def frame_nums_must_be_equal(
+        cls, v: List[SDBufferHeader]
+    ) -> Optional[List[SDBufferHeader]]:
         """
         Each frame_number field in each header must be the same (they come from the same frame!)
         """
 
-        if v is not None and not all([header.frame_num != v[0].frame_num for header in v]):
-            raise ValueError(f"All frame numbers should be equal! Got f{[h.frame_num for h in v]}")
+        if v is not None and not all(
+            [header.frame_num != v[0].frame_num for header in v]
+        ):
+            raise ValueError(
+                f"All frame numbers should be equal! Got f{[h.frame_num for h in v]}"
+            )
         return v
 
     @property
@@ -40,15 +49,20 @@ class Frames(BaseModel):
     """
     A collection of frames from a miniscope recording
     """
+
     frames: List[Frame]
 
     @overload
-    def flatten_headers(self, as_dict:Literal[False] = False) -> List[SDBufferHeader]: ...
+    def flatten_headers(
+        self, as_dict: Literal[False] = False
+    ) -> List[SDBufferHeader]: ...
 
     @overload
-    def flatten_headers(self, as_dict:Literal[True] = True) -> List[dict]: ...
+    def flatten_headers(self, as_dict: Literal[True] = True) -> List[dict]: ...
 
-    def flatten_headers(self, as_dict:bool = False) -> Union[List[dict],List[SDBufferHeader]]:
+    def flatten_headers(
+        self, as_dict: bool = False
+    ) -> Union[List[dict], List[SDBufferHeader]]:
         """
         Return flat list of headers, not grouped by frame
 
@@ -65,7 +79,7 @@ class Frames(BaseModel):
             h.extend(headers)
         return h
 
-    def to_df(self, what:Literal['headers']='headers') -> pd.DataFrame:
+    def to_df(self, what: Literal["headers"] = "headers") -> pd.DataFrame:
         """
         Convert frames to pandas dataframe
 
@@ -77,5 +91,4 @@ class Frames(BaseModel):
         if what == "headers":
             return pd.DataFrame(self.flatten_headers(as_dict=True))
         else:
-            raise ValueError('Return mode not implemented!')
-
+            raise ValueError("Return mode not implemented!")

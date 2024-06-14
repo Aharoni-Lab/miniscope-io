@@ -6,6 +6,4 @@ models in :mod:`~.miniscope_io.models.stream` et al.
 
 from miniscope_io.formats.sdcard import WireFreeSDLayout
 
-__all__ = [
-    "WireFreeSDLayout"
-]
+__all__ = ["WireFreeSDLayout"]

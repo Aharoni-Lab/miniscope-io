@@ -7,14 +7,15 @@ from rich.logging import RichHandler
 
 from miniscope_io.models.config import Config, LOG_LEVELS
 
+
 def init_logger(
-        name: str,
-        log_dir: Union[Optional[Path], bool] = None,
-        level: Optional[LOG_LEVELS] = None,
-        file_level: Optional[LOG_LEVELS] = None,
-        log_file_n: Optional[int] = None,
-        log_file_size: Optional[int] = None
-    ):
+    name: str,
+    log_dir: Union[Optional[Path], bool] = None,
+    level: Optional[LOG_LEVELS] = None,
+    file_level: Optional[LOG_LEVELS] = None,
+    log_file_n: Optional[int] = None,
+    log_file_size: Optional[int] = None,
+):
     """
     Make a logger.
 
@@ -51,49 +52,49 @@ def init_logger(
     if log_file_size is None:
         log_file_size = config.logs.file_size
 
-    if not name.startswith('miniscope_io'):
-        name = 'miniscope_io.' + name
+    if not name.startswith("miniscope_io"):
+        name = "miniscope_io." + name
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
     # Add handlers for stdout and file
     if log_dir is not False:
-        logger.addHandler(_file_handler(
-            name, file_level, log_dir, log_file_n, log_file_size
-        ))
+        logger.addHandler(
+            _file_handler(name, file_level, log_dir, log_file_n, log_file_size)
+        )
 
     logger.addHandler(_rich_handler())
 
     return logger
 
+
 def _file_handler(
-        name: str,
-        file_level: LOG_LEVELS,
-        log_dir: Path,
-        log_file_n: int = 5,
-        log_file_size: int = 2**22
-    ) -> RotatingFileHandler:
+    name: str,
+    file_level: LOG_LEVELS,
+    log_dir: Path,
+    log_file_n: int = 5,
+    log_file_size: int = 2**22,
+) -> RotatingFileHandler:
     # See init_logger for arg docs
 
-    filename = Path(log_dir) / '.'.join([name, 'log'])
+    filename = Path(log_dir) / ".".join([name, "log"])
     file_handler = RotatingFileHandler(
-        str(filename),
-        mode='a',
-        maxBytes=log_file_size,
-        backupCount=log_file_n
+        str(filename), mode="a", maxBytes=log_file_size, backupCount=log_file_n
     )
-    file_formatter = logging.Formatter("[%(asctime)s] %(levelname)s [%(name)s]: %(message)s")
+    file_formatter = logging.Formatter(
+        "[%(asctime)s] %(levelname)s [%(name)s]: %(message)s"
+    )
     file_handler.setLevel(file_level)
     file_handler.setFormatter(file_formatter)
     return file_handler
+
 
 def _rich_handler() -> RichHandler:
     rich_handler = RichHandler(rich_tracebacks=True, markup=True)
     rich_formatter = logging.Formatter(
         "[bold green]\[%(name)s][/bold green] %(message)s",
-        datefmt='[%y-%m-%dT%H:%M:%S]'
+        datefmt="[%y-%m-%dT%H:%M:%S]",
     )
     rich_handler.setFormatter(rich_formatter)
     return rich_handler
-

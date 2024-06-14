@@ -13,8 +13,9 @@ updateDeviceParser.add_argument("baudrate", help="baudrate")
 updateDeviceParser.add_argument("module", help="module to update")
 updateDeviceParser.add_argument("value", help="LED value")
 
+
 def updateDevice():
-    '''
+    """
     Script to update hardware settings over a generic UART-USB converter.
     This script currently supports updating the excitation LED brightness and electrical wetting lens driver gain.
     Not tested after separating from stream_daq.py.
@@ -25,8 +26,8 @@ def updateDevice():
 
     ..todo::
         Test to see if changing package structure broke anything.
-    '''
-    logger = init_logger('streamDaq')
+    """
+    logger = init_logger("streamDaq")
 
     args = updateDeviceParser.parse_args()
     moduleList = ["LED", "EWL"]
@@ -73,7 +74,7 @@ def updateDevice():
     except AssertionError as msg:
         err_str = "Available modules:\n"
         for module in moduleList:
-            err_str += "\t" + module + '\n'
+            err_str += "\t" + module + "\n"
         logger.exception(err_str)
         raise msg
 
@@ -103,9 +104,7 @@ def updateDevice():
     command = [0, 0]
 
     command[0] = int(
-        Preamble[0] * 2**preamblePos
-        + deviceTag
-        + np.floor(value / (2**uartPayload))
+        Preamble[0] * 2**preamblePos + deviceTag + np.floor(value / (2**uartPayload))
     ).to_bytes(1, "big")
     command[1] = int(
         Preamble[1] * 2**preamblePos + deviceTag + value % (2**uartPayload)
@@ -131,4 +130,3 @@ def updateDevice():
     logger.info("\t" + module + ": " + str(value))
     logger.info("Close serial port")
     sys.exit(1)
-

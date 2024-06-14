@@ -28,6 +28,8 @@ rich = "^13.6.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
+black = "^24.1.1"
+ruff = "^0.2.0"
 
 [tool.poetry.group.tests]
 optional = true
@@ -55,3 +57,62 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 streamDaq = "miniscope_io.stream_daq:main"
 updateDevice = "miniscope_io.device_update:updateDevice"
+
+
+[tool.ruff]
+target-version = "py311"
+include = ["src/numpydantic/**/*.py", "pyproject.toml"]
+exclude = ["tests", "miniscope_io/vendor"]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # annotations
+    "ANN",
+    ## ----------
+    # pydocstyle
+    # undocumented public objects
+    "D100", "D101", "D102", "D103", "D104", "D106", "D107",
+    # indentation
+    "D207", "D208",
+    # whitespace
+    "D210", "D211",
+    # emptiness
+    "D419",
+
+
+]
+ignore = [
+    "ANN101", "ANN102", "ANN401", "ANN204",
+    # explicit strict arg for zip
+    "B905",
+    # builtin type annotations
+    "UP006", "UP035",
+    # | for Union types (only supported >=3.10
+    "UP007", "UP038",
+    # docstrings for __init__
+    "D107",
+]
+
+fixable = ["ALL"]
+
+[tool.mypy]
+plugins = [
+    "pydantic.mypy"
+]
+
+[tool.black]
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = "miniscope_io/.*\\.py$"
+extend-exclude = 'miniscope_io/vendor/.*'
