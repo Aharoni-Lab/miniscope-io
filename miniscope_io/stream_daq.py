@@ -516,9 +516,7 @@ class StreamDaq:
         ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
             if imagearray.qsize() > 0:
                 imagearray_plot = imagearray.get()
-                image = imagearray_plot.reshape(self.frame_width, self.frame_height)
-                # np.savetxt('imagearray.csv', imagearray, delimiter=',')
-                # np.savetxt('image.csv', image, delimiter=',')
+                image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
                 cv2.imshow("image", image)
             if cv2.waitKey(1) == 27:
                 cv2.destroyAllWindows()
