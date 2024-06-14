@@ -5,7 +5,7 @@ containers, etc.
 
 from typing import Union
 
-from miniscope_io.models import MiniscopeConfig, Container
+from miniscope_io.models import Container, MiniscopeConfig
 from miniscope_io.types import Range
 
 

@@ -3,11 +3,11 @@ SD Card data layout formats for different miniscopes!
 """
 
 from miniscope_io.models.sdcard import (
-    SectorConfig,
+    BufferHeaderPositions,
     ConfigPositions,
     SDHeaderPositions,
-    BufferHeaderPositions,
     SDLayout,
+    SectorConfig,
 )
 
 WireFreeSDLayout = SDLayout(

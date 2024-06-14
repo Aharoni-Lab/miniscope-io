@@ -1,12 +1,11 @@
 import argparse
-import yaml
 import logging
 import multiprocessing
 import os
 import sys
 import time
 from datetime import datetime
-from typing import Literal, Optional, Tuple, List
+from typing import List, Literal, Optional, Tuple
 
 import coloredlogs
 import cv2
@@ -25,7 +24,7 @@ try:
     from miniscope_io.devices.opalkelly import okDev
 
     HAVE_OK = True
-except (ImportError, ModuleNotFoundError) as ok_error:
+except (ImportError, ModuleNotFoundError):
     module_logger = init_logger("streamDaq")
     module_logger.warning(
         "Could not import OpalKelly driver, unable to read from FPGA!"
@@ -314,9 +313,7 @@ class StreamDaq:
 
                     if cur_fm_buffer_index != 0:
                         locallogs.warning(
-                            "Frame {} started with buffer {}".format(
-                                cur_fm_num, cur_fm_buffer_index
-                            )
+                            f"Frame {cur_fm_num} started with buffer {cur_fm_buffer_index}"
                         )
 
                 # if same frame_num with previous buffer.
@@ -380,13 +377,7 @@ class StreamDaq:
                     if npix_actual != npix_expected:
                         if i < len(self.buffer_npix) - 1:
                             locallogs.warning(
-                                "Pixel count inconsistent for frame {} buffer {}. Expected: {}, Header: {}, Actual: {}".format(
-                                    header_data.frame_num,
-                                    header_data.frame_buffer_count,
-                                    npix_expected,
-                                    npix_header,
-                                    npix_actual,
-                                )
+                                f"Pixel count inconsistent for frame {header_data.frame_num} buffer {header_data.frame_buffer_count}. Expected: {npix_expected}, Header: {npix_header}, Actual: {npix_actual}"
                             )
                         nbit_expected = npix_expected * self.config.pix_depth
                         if len(fm_dat) > nbit_expected:
@@ -421,9 +412,7 @@ class StreamDaq:
 
                 if header_data is not None:
                     locallogs.info(
-                        "frame: {}, bits lost: {}".format(
-                            header_data.frame_num, nbit_lost
-                        )
+                        f"frame: {header_data.frame_num}, bits lost: {nbit_lost}"
                     )
 
     # COM port should probably be automatically found but not sure yet how to distinguish with other devices.

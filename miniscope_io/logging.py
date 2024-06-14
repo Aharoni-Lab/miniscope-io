@@ -1,11 +1,11 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from typing import Optional, Union
 from pathlib import Path
+from typing import Optional, Union
 
 from rich.logging import RichHandler
 
-from miniscope_io.models.config import Config, LOG_LEVELS
+from miniscope_io.models.config import LOG_LEVELS, Config
 
 
 def init_logger(

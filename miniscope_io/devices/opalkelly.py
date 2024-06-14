@@ -1,6 +1,4 @@
-import time
 
-from bitstring import BitArray
 
 from miniscope_io.vendor import opalkelly as ok
 
@@ -20,19 +18,19 @@ class okDev(ok.okCFrontPanel):
         super().__init__()
         ret = self.OpenBySerial("")
         if ret != self.NoError:
-            raise ValueError("Cannot open device: {}".format(serial_id))
+            raise ValueError(f"Cannot open device: {serial_id}")
         self.info = ok.okTDeviceInfo()
         ret = self.GetDeviceInfo(self.info)
         if ret == self.NoError:
-            print("Connected to {}".format(self.info.productName))
+            print(f"Connected to {self.info.productName}")
 
     def uploadBit(self, bit_file: str):
 
         ret = self.ConfigureFPGA(bit_file)
         if ret == self.NoError:
-            print("Succesfully uploaded {}".format(bit_file))
+            print(f"Succesfully uploaded {bit_file}")
         else:
-            raise ValueError("Configuration of {} failed".format(self.info.productName))
+            raise ValueError(f"Configuration of {self.info.productName} failed")
         print(
             "FrontPanel {} supported".format(
                 "is" if self.IsFrontPanelEnabled() else "not"
@@ -44,13 +42,13 @@ class okDev(ok.okCFrontPanel):
         buf = bytearray(length)
         ret = self.ReadFromBlockPipeOut(addr, data=buf, blockSize=blockSize)
         if ret < 0:
-            raise ValueError("Read failed: {}".format(ret))
+            raise ValueError(f"Read failed: {ret}")
         elif ret < length:
-            print("Only {} bytes read".format(ret))
+            print(f"Only {ret} bytes read")
         return buf
 
     def setWire(self, addr: int, val: int):
         ret = self.SetWireInValue(addr, val)
         ret = self.UpdateWireIns()
         if ret != self.NoError:
-            raise ValueError("Wire update failed: {}".format(ret))
+            raise ValueError(f"Wire update failed: {ret}")

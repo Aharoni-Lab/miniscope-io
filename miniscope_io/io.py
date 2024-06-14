@@ -2,17 +2,17 @@
 I/O functions for the SD card
 """
 
-from typing import Union, BinaryIO, Optional, Tuple, List, Literal, overload
-from pathlib import Path
-import cv2
 import warnings
+from pathlib import Path
+from typing import BinaryIO, Literal, Optional, Union, overload
 
+import cv2
 import numpy as np
 from tqdm import tqdm
 
-from miniscope_io.models.sdcard import SDLayout, SDConfig, SDBufferHeader
-from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
 from miniscope_io.data import Frame
+from miniscope_io.exceptions import EndOfRecordingException
+from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
 
 class SDCard:

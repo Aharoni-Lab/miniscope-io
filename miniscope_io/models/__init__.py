@@ -1,4 +1,4 @@
-from miniscope_io.models.models import MiniscopeIOModel, MiniscopeConfig, Container
+from miniscope_io.models.models import Container, MiniscopeConfig, MiniscopeIOModel
 
 __all__ = [
     "Container",

@@ -61,7 +61,7 @@ updateDevice = "miniscope_io.device_update:updateDevice"
 
 [tool.ruff]
 target-version = "py311"
-include = ["src/numpydantic/**/*.py", "pyproject.toml"]
+include = ["miniscope_io/**/*.py", "pyproject.toml"]
 exclude = ["tests", "miniscope_io/vendor"]
 
 [tool.ruff.lint]

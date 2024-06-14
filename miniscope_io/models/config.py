@@ -1,7 +1,7 @@
-from typing import Optional, Literal
 from pathlib import Path
+from typing import Literal, Optional
 
-from pydantic import field_validator, model_validator, Field, BaseModel
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from miniscope_io.models import MiniscopeIOModel

@@ -1,6 +1,6 @@
-from typing import Union
-from pathlib import Path
 import hashlib
+from pathlib import Path
+from typing import Union
 
 
 def hash_file(path: Union[Path, str]) -> str:

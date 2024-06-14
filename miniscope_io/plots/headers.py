@@ -1,7 +1,5 @@
-from typing import TYPE_CHECKING, Optional, List
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:

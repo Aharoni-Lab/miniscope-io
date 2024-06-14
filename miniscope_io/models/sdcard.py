@@ -6,7 +6,7 @@ for consuming code to use a consistent, introspectable API
 
 from typing import Optional
 
-from miniscope_io.models import MiniscopeConfig, Container
+from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader
 
 
@@ -53,7 +53,7 @@ class SectorConfig(MiniscopeConfig):
         """
         split = item.split("_")
         if len(split) == 2 and split[1] == "pos":
-            return getattr(self, split[0]) * getattr(self, "size")
+            return getattr(self, split[0]) * self.size
         else:
             raise AttributeError()
 

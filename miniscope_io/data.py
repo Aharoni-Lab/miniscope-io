@@ -2,12 +2,13 @@
 Classes for using in-memory data from a miniscope
 """
 
+from typing import List, Literal, Optional, Union, overload
+
 import numpy as np
-from typing import List, Optional, overload, Literal, Union
-from miniscope_io.models.sdcard import SDBufferHeader
+import pandas as pd
 from pydantic import BaseModel, field_validator
 
-import pandas as pd
+from miniscope_io.models.sdcard import SDBufferHeader
 
 
 class Frame(BaseModel, arbitrary_types_allowed=True):
