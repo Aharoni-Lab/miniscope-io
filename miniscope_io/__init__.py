@@ -1,3 +1,7 @@
+"""
+I/O SDK for UCLA Miniscopes
+"""
+
 from pathlib import Path
 
 from miniscope_io.io import SDCard

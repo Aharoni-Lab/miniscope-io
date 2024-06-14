@@ -1,3 +1,12 @@
+"""
+Update miniscope device configuration.
+
+.. todo::
+
+    What kind of devices does this apply to?
+
+"""
+
 import argparse
 import sys
 import time
@@ -15,11 +24,15 @@ updateDeviceParser.add_argument("module", help="module to update")
 updateDeviceParser.add_argument("value", help="LED value")
 
 
-def updateDevice():
+def updateDevice() -> None:
     """
     Script to update hardware settings over a generic UART-USB converter.
-    This script currently supports updating the excitation LED brightness and electrical wetting lens driver gain.
-    Not tested after separating from stream_daq.py.
+    This script currently supports updating the excitation LED brightness and
+    electrical wetting lens driver gain.
+
+    .. note::
+
+        Not tested after separating from stream_daq.py.
 
     Examples
     --------
@@ -122,7 +135,7 @@ def updateDevice():
     logger.info("Open serial port")
 
     for uartCommand in command:
-        for repeat in range(uartRepeat):
+        for _ in range(uartRepeat):
             # read UART data until preamble and put into queue
             serial_port.write(uartCommand)
             time.sleep(uartTimeGap)

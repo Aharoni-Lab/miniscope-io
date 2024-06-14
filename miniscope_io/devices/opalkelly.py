@@ -1,4 +1,6 @@
-
+"""
+Interfaces for OpalKelly (model number?) FPGAs
+"""
 
 from miniscope_io.vendor import opalkelly as ok
 
@@ -24,7 +26,13 @@ class okDev(ok.okCFrontPanel):
         if ret == self.NoError:
             print(f"Connected to {self.info.productName}")
 
-    def uploadBit(self, bit_file: str):
+    def uploadBit(self, bit_file: str) -> None:
+        """
+        Upload a configuration bitfile to the FPGA
+
+        Args:
+            bit_file (str): Path to the bitfile
+        """
 
         ret = self.ConfigureFPGA(bit_file)
         if ret == self.NoError:
@@ -38,7 +46,18 @@ class okDev(ok.okCFrontPanel):
         )
         ret = self.ResetFPGA()
 
-    def readData(self, length: int, addr: int = 0xA0, blockSize: int = 16):
+    def readData(self, length: int, addr: int = 0xA0, blockSize: int = 16) -> bytearray:
+        """
+        Read a buffer's worth of data
+
+        Args:
+            length (int): Amount of data to read
+            addr (int): FPGA address to read from
+            blockSize (int): Size of individual blocks (in what unit?)
+
+        Returns:
+            :class:`bytearray`
+        """
         buf = bytearray(length)
         ret = self.ReadFromBlockPipeOut(addr, data=buf, blockSize=blockSize)
         if ret < 0:
@@ -47,7 +66,16 @@ class okDev(ok.okCFrontPanel):
             print(f"Only {ret} bytes read")
         return buf
 
-    def setWire(self, addr: int, val: int):
+    def setWire(self, addr: int, val: int) -> None:
+        """
+        .. todo::
+
+            Phil! what does this do?
+
+        Args:
+            addr: ?
+            val: ?
+        """
         ret = self.SetWireInValue(addr, val)
         ret = self.UpdateWireIns()
         if ret != self.NoError:

@@ -27,7 +27,8 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
         cls, v: List[SDBufferHeader]
     ) -> Optional[List[SDBufferHeader]]:
         """
-        Each frame_number field in each header must be the same (they come from the same frame!)
+        Each frame_number field in each header must be the same
+        (they come from the same frame!)
         """
 
         if v is not None and not all(
@@ -68,8 +69,8 @@ class Frames(BaseModel):
         Return flat list of headers, not grouped by frame
 
         Args:
-            as_dict (bool): If `True`, return a list of dictionaries, if `False` (default),
-                return a list of :class:`.SDBufferHeader` s.
+            as_dict (bool): If `True`, return a list of dictionaries, if `False`
+                (default), return a list of :class:`.SDBufferHeader` s.
         """
         h = []
         for frame in self.frames:
