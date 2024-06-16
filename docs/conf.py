@@ -9,7 +9,7 @@
 project = 'miniscope-io'
 copyright = '2023, Jonny'
 author = 'Jonny'
-release = '0.1.0'
+release = '0.1.7'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -2,4 +2,5 @@
 
 ```{toctree}
 installation
+usage
 ```

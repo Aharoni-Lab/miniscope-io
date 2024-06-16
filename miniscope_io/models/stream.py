@@ -30,7 +30,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Only "OK" is supported at the moment.
     bitstream: str, optional
         Required when device is "OK".
-        Configuration file to be uploaded to Opal Kelly module.
+        The configuration bitstream file to upload to the Opal Kelly board. This uploads a Manchester decoder HDL and different bitstream files are required to configure different data rates and bit polarity. This is a binary file synthesized using Vivado, and details for generating this file will be provided in later updates.
     port: str, optional
         Required when device is "UART".
         COM port connected to the UART-USB converter.

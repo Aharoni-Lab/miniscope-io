@@ -20,4 +20,5 @@ buffer
 config
 mixins
 models
+stream
 ```
