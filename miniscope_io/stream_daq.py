@@ -72,14 +72,14 @@ class StreamDaq:
             Examples and required properties can be found in /miniscope-io/config/example.yml
         header_fmt : MetadataHeaderFormat, optional
             Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
-        """        
+        """
         self.logger = init_logger('streamDaq')
         self.config = config
         self.header_fmt = header_fmt
-        self.preamble = Bits(self.config.preamble)
         if self.config.LSB:
-            self.preamble = self.preamble[::-1]
-
+            self.preamble = Bits(self.config.preamble[::-1])
+        else:
+            self.preamble = Bits(self.config.preamble)
         self._buffer_npix: Optional[List[int]] = None
         self._nbuffer_per_fm: Optional[int] = None
 
