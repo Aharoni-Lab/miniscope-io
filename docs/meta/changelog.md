@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.7 - 24-06-16
+## 0.1.8 - 24-06-16
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/21
 - https://github.com/Aharoni-Lab/miniscope-io/pull/15
@@ -12,6 +12,8 @@ New features:
 - **Bitstream Loader**: Added a bitstream loader to automatically configure the Opal Kelly FPGA when running `streamDaq`.
 - **Updated Command Line Script**: The command line script for running `streamDaq` has been updated. Use `streamDaq -c path/to/config/yaml/file.yml` to run the process with your YAML configuration file.
 - **Logger Module**: Added a logger module that can be configured using environmental variables or a `.env` file.
+
+Note: Version 0.1.7 was skipped accidentally and does not exist.
 
 ## 0.1.6 - 24-04-09
 
