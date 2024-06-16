@@ -78,14 +78,14 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     baudrate: Optional[int]
     frame_width: int
     frame_height: int
-    preamble: bytes
+    preamble: str
     header_len: int
     pix_depth: int = 8
     buffer_block_length: int
     block_size: int
     num_buffers: int
     LSB: Optional[bool]
-
+    '''
     @field_validator('preamble', mode='before')
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
         if isinstance(value, str):
@@ -94,7 +94,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
             return bytes.fromhex(hex(value)[2:])
         else:
             return value
-
+    '''
     @field_validator('bitstream', mode='after')
     def resolve_relative(cls, value: Path) -> Path:
         """
@@ -104,4 +104,3 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         if not value.is_absolute():
             value = DEVICE_DIR / value
         return value
-

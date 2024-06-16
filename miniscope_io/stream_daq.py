@@ -76,35 +76,19 @@ class StreamDaq:
         self.logger = init_logger('streamDaq')
         self.config = config
         self.header_fmt = header_fmt
-        if self.config.LSB:
-            self.preamble = Bits(self.config.preamble[::-1])
-        else:
-            self.preamble = Bits(self.config.preamble)
-        self._buffer_npix: Optional[List[int]] = None
-        self._nbuffer_per_fm: Optional[int] = None
-
-    @property
-    def buffer_npix(self) -> List[int]:
-        """List of pixels per buffer for a frame"""
-        if self._buffer_npix is None:
-            px_per_frame = self.config.frame_width * self.config.frame_height
-            px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len / 8
-            quotient, remainder = divmod(px_per_frame, px_per_buffer)
-            self._buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
-        return self._buffer_npix
-
-    @property
-    def nbuffer_per_fm(self) -> int:
-        """
-        Number of buffers per frame, computed from :attr:`.buffer_npix`
-        """
-        if self._nbuffer_per_fm is None:
-            self._nbuffer_per_fm = len(self.buffer_npix)
-        return self._nbuffer_per_fm
+        px_per_frame = self.config.frame_width * self.config.frame_height
+        px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len/8
+        quotient, remainder = divmod(
+            px_per_frame,
+            px_per_buffer
+            )
+        self.preamble = bytes.fromhex(self.config.preamble[::-1])
+        self.buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
+        self.nbuffer_per_fm = len(self.buffer_npix)
 
     def _parse_header(
         self, buffer: Bits, truncate: Literal["preamble", "header", False] = False
-    ) -> Tuple[BufferHeader, Bits]:
+    ) -> Tuple[BufferHeader, bytes]:
         """
         Function to parse header from each buffer.
 
@@ -123,8 +107,11 @@ class StreamDaq:
         Tuple[BufferHeader, bytes]
             The returned header data and (optionally truncated) buffer data.
         """
-        pre_len = len(self.preamble)
-        assert buffer[:pre_len] == self.preamble
+        pre = Bits(self.preamble)
+        if self.LSB:
+            pre = pre[::-1]
+        pre_len = len(pre)
+        assert buffer[:pre_len] == pre
         header_data = dict()
         for hd, bit_range in self.header_fmt.model_dump().items():
             b = buffer[pre_len + bit_range[0] : pre_len + bit_range[1]]
