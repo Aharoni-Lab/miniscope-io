@@ -82,7 +82,8 @@ class StreamDaq:
             px_per_frame,
             px_per_buffer
             )
-        self.preamble = bytes.fromhex(self.config.preamble[::-1])
+        
+        self.preamble = bytes.fromhex(self.config.preamble)
         self.buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
         self.nbuffer_per_fm = len(self.buffer_npix)
 
@@ -108,7 +109,7 @@ class StreamDaq:
             The returned header data and (optionally truncated) buffer data.
         """
         pre = Bits(self.preamble)
-        if self.LSB:
+        if self.config.LSB:
             pre = pre[::-1]
         pre_len = len(pre)
         assert buffer[:pre_len] == pre
@@ -220,11 +221,14 @@ class StreamDaq:
         dev.setWire(0x00, 0b0)
         # read loop
         cur_buffer = BitArray()
+        pre = Bits(self.preamble)
+        if self.config.LSB:
+            pre = pre[::-1]
         while True:
             buf = dev.readData(read_length)
             dat = BitArray(buf)
             cur_buffer = cur_buffer + dat
-            pre_pos = list(cur_buffer.findall(self.preamble))
+            pre_pos = list(cur_buffer.findall(pre))
             for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
                 if not pre_first:
                     buf_start, buf_stop = buf_start + len(self.preamble), buf_stop + len(self.preamble)
