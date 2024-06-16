@@ -5,7 +5,7 @@ from pathlib import Path
 
 from rich.logging import RichHandler
 
-from miniscope_io.config import Config, LOG_LEVELS
+from miniscope_io.models.config import Config, LOG_LEVELS
 
 def init_logger(
         name: str,

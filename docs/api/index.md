@@ -3,16 +3,15 @@
 ```{toctree}
 :caption: API
 
-config
 data
 devices
-formats
+formats/index
 io
 logging
-sdcard
+models/index
 exceptions
 plots/index
 utils
-uart_daq
+stream_daq
 vendor/index
 ```

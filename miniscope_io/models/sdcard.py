@@ -3,10 +3,14 @@ Data model for configuring an SD card. Will be instantiated in the constants mod
 specific values. This allows for the model to be reused across different miniscopes, and
 for consuming code to use a consistent, introspectable API
 """
-from typing import Optional
-from pydantic import BaseModel
 
-class SectorConfig(BaseModel):
+from typing import Optional
+
+from miniscope_io.models import MiniscopeConfig, Container
+from miniscope_io.models.buffer import BufferHeader
+
+
+class SectorConfig(MiniscopeConfig):
     """
     Configuration of sector layout on the SD card.
 
@@ -54,7 +58,7 @@ class SectorConfig(BaseModel):
             raise AttributeError()
 
 
-class ConfigPositions(BaseModel):
+class ConfigPositions(MiniscopeConfig):
     """
     Image acquisition configuration positions
     """
@@ -66,8 +70,7 @@ class ConfigPositions(BaseModel):
     n_buffers_dropped: int = 5
 
 
-
-class SDHeaderPositions(BaseModel):
+class SDHeaderPositions(MiniscopeConfig):
     """
     Positions in the header for the whole SD card
     """
@@ -81,7 +84,7 @@ class SDHeaderPositions(BaseModel):
     battery_cutoff: Optional[int] = None
 
 
-class BufferHeaderPositions(BaseModel):
+class BufferHeaderPositions(MiniscopeConfig):
     """
     Positions in the header for each frame
     """
@@ -97,7 +100,8 @@ class BufferHeaderPositions(BaseModel):
     write_timestamp: Optional[int] = None
     battery_voltage: Optional[int] = None
 
-class SDLayout(BaseModel):
+
+class SDLayout(MiniscopeConfig):
     """
     Data layout of an SD Card.
 
@@ -127,11 +131,8 @@ class SDLayout(BaseModel):
     when this layout should be used
     """
 
-# --------------------------------------------------
-# Data Containers
-# --------------------------------------------------
 
-class SDConfig(BaseModel):
+class SDConfig(MiniscopeConfig):
     """
     The configuration of a recording taken on this SD card.
 
@@ -144,24 +145,14 @@ class SDConfig(BaseModel):
     n_buffers_recorded: int
     n_buffers_dropped: int
 
-class DataHeader(BaseModel):
+
+class SDBufferHeader(BufferHeader):
     """
     Header data at the start of each frame
     """
     length: int
-    linked_list:int
-    frame_num: int
-    buffer_count: int
-    frame_buffer_count: int
     write_buffer_count: int
     dropped_buffer_count: int
-    timestamp: int
     data_length: int
     write_timestamp: Optional[int] = None
     battery_voltage: Optional[int] = None
-
-
-
-
-
-

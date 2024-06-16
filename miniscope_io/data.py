@@ -3,7 +3,7 @@ Classes for using in-memory data from a miniscope
 """
 import numpy as np
 from typing import List, Optional, overload, Literal, Union
-from miniscope_io.sdcard import DataHeader
+from miniscope_io.models.sdcard import SDBufferHeader
 from pydantic import BaseModel, field_validator
 
 import pandas as pd
@@ -15,11 +15,11 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
     Typically returned from :meth:`.SDCard.read`
     """
     data: Optional[np.ndarray] = None
-    headers: Optional[List[DataHeader]] = None
+    headers: Optional[List[SDBufferHeader]] = None
 
     @field_validator('headers')
     @classmethod
-    def frame_nums_must_be_equal(cls, v:List[DataHeader]) -> Optional[List[DataHeader]]:
+    def frame_nums_must_be_equal(cls, v:List[SDBufferHeader]) -> Optional[List[SDBufferHeader]]:
         """
         Each frame_number field in each header must be the same (they come from the same frame!)
         """
@@ -43,18 +43,18 @@ class Frames(BaseModel):
     frames: List[Frame]
 
     @overload
-    def flatten_headers(self, as_dict:Literal[False] = False) -> List[DataHeader]: ...
+    def flatten_headers(self, as_dict:Literal[False] = False) -> List[SDBufferHeader]: ...
 
     @overload
     def flatten_headers(self, as_dict:Literal[True] = True) -> List[dict]: ...
 
-    def flatten_headers(self, as_dict:bool = False) -> Union[List[dict],List[DataHeader]]:
+    def flatten_headers(self, as_dict:bool = False) -> Union[List[dict],List[SDBufferHeader]]:
         """
         Return flat list of headers, not grouped by frame
 
         Args:
             as_dict (bool): If `True`, return a list of dictionaries, if `False` (default),
-                return a list of :class:`.DataHeader` s.
+                return a list of :class:`.SDBufferHeader` s.
         """
         h = []
         for frame in self.frames:

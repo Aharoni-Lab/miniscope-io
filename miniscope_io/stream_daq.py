@@ -1,21 +1,23 @@
 import argparse
+import yaml
 import logging
 import multiprocessing
 import os
 import sys
 import time
-import warnings
 from datetime import datetime
-from typing import Any, Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, List
 
 import coloredlogs
 import cv2
 import numpy as np
 import serial
 from bitstring import Array, BitArray, Bits
-from pydantic import BaseModel
 
 from miniscope_io import init_logger
+from miniscope_io.formats.stream import StreamBufferHeader
+from miniscope_io.models.buffer import BufferHeader
+from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
 
 HAVE_OK = False
 ok_error = None
@@ -24,143 +26,82 @@ try:
 
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError) as ok_error:
-    module_logger = init_logger('uart_daq')
+    module_logger = init_logger('streamDaq')
     module_logger.warning(
         "Could not import OpalKelly driver, unable to read from FPGA!")
 
 # Parsers for daq inputs
-daqParser = argparse.ArgumentParser("stream_image_capture")
-daqParser.add_argument("source", help='Input source; ["UART", "OK"]')
-daqParser.add_argument("--port", help="serial port: string")
-daqParser.add_argument("--baudrate", help="baudrate: int")
-
-# Parsers for update LED
-updateDeviceParser = argparse.ArgumentParser("updateDevice")
-updateDeviceParser.add_argument("port", help="serial port")
-updateDeviceParser.add_argument("baudrate", help="baudrate")
-updateDeviceParser.add_argument("module", help="module to update")
-updateDeviceParser.add_argument("value", help="LED value")
+daqParser = argparse.ArgumentParser("streamDaq")
+daqParser.add_argument("-c", "--config", help='YAML config file path: string')
 
 
-class MetadataHeaderFormat(BaseModel):
+class StreamDaq:
     """
-    Format model used to parse header at the beginning of every buffer.
+    A combined class for configuring and reading frames from a UART and FPGA source.
+    Supported devices and required inputs are described in StreamDaqConfig model documentation.
+    This function's entry point is the main function, which should be used from the stream_image_capture command installed with the package.
+    Example configuration yaml files are stored in /miniscope-io/config/.
 
-    The model attributes are key-value pairs mapping the variable/information in the header to their corresponding position (in bits) in the header.
+    Examples
+    --------
+    >>> streamDaq -c path/to/config/yaml/file.yml
+    Connected to XEM7310-A75
+    Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
+    FrontPanel is supported
+    [24-06-11T01:40:45] INFO     [miniscope_io.streamDaq.frame] frame: 1570, bits lost: 0                                    stream_daq.py:524
+    [24-06-11T01:40:46] INFO     [miniscope_io.streamDaq.frame] frame: 1571, bits lost: 0                                    stream_daq.py:524
 
     .. todo::
-
-        Jonny: This model basically duplicates :class:`~miniscope_io.sdcard.BufferHeaderPositions`
-        except using start:end tuples rather than start indices with a word length. Refactor these
-        so we can ensure a single set of header terms and models. Split out SD-card specific models
-        from ones we might want to use generally across miniscopes. These models being separate from the
-        other format models sort of sucks but will do for this PR.
-
-    .. todo::
-
-        Everyone: Is there a better format than having these index classes AND the container classes?
-        eg. :class:`~miniscope_io.sdcard.BufferHeaderPositions` and :class:`~miniscope_io.sdcard.DataHeader`
-
-    """
-
-    linked_list: Tuple[int, int] = (0, 32)
-    frame_num: Tuple[int, int] = (32, 64)
-    buffer_count: Tuple[int, int] = (64, 96)
-    frame_buffer_count: Tuple[int, int] = (96, 128)
-    timestamp: Tuple[int, int] = (192, 224)
-    pixel_count: Tuple[int, int] = (224, 256)
-
-
-class MetadataHeader(BaseModel):
-    """
-    Container for FPGA header data, structured by :class:`.MetadataHeaderFormat`
-
-    """
-
-    linked_list: Any
-    """
-    Not sure what this is!
-    """
-    frame_num: int
-    buffer_count: int
-    frame_buffer_count: int
-    timestamp: int
-    pixel_count: int
-
-
-class stream_daq:
-    """
-    A combined class for reading frames from a UART and FPGA source.
-
-    .. todo::
-
+        Example section: add the terminal output when running the script
         Phil/Takuya - docstrings for stream daq: what devices these correspond to, how to configure them, usage examples, tests
-
     """
 
     def __init__(
         self,
-        frame_width: int = 304,
-        frame_height: int = 304,
-        preamble: bytes = b"\x12\x34\x56",
-        header_fmt: MetadataHeaderFormat = MetadataHeaderFormat(),
-        header_len: int = 11,
-        LSB: bool = True,
-        buffer_npix: Tuple[int] = (20432, 20432, 20432, 20432, 10688),
-        pix_depth: int = 8,
+        config: StreamDaqConfig,
+        header_fmt: StreamBufferHeaderFormat = StreamBufferHeader,
     ) -> None:
         """
         Constructer for the class.
-
-        Currently supports UART and FPGA source.
+        This parses configuration from the input yaml file. 
 
         Parameters
         ----------
-        frame_width : int, optional
-            Width of the frame (in pixels), by default 304.
-        frame_height : int, optional
-            Height of the frame (in pixels), by default 304.
-        preamble : bytes, optional
-            Preamble string at the beginning of every buffer header, by default b"\x12\x34\x56".
+        config : StreamDaqConfig
+            DAQ configurations imported from the input yaml file.
+            Examples and required properties can be found in /miniscope-io/config/example.yml
         header_fmt : MetadataHeaderFormat, optional
             Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
-        header_len : int, optional
-            Length of header in (32-bit) words, by default 11.
-            This is useful when not all the variable/words in the header are defined in :class:`.MetadataHeaderFormat`.
-            The user is responsible to ensure that `header_len * 32` is larger than the largest bit position defined in :class:`.MetadataHeaderFormat` otherwise unexpected behavior might occur.
-        LSB : bool, optional
-            Whether the sourse is in "LSB" mode or not, by default True.
-            If `not LSB`, then the incoming bitstream is expected to be in Most Significant Bit first mode and data are transmitted in normal order.
-            If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
-            Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
-            Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
-        buffer_npix : Tuple[int], optional
-            A tuple defining how pixels within a single frame is split across multiple buffers, by default (20432, 20432, 20432, 20432, 10688).
-            Each number in the tuple represents how many pixels are contained in each buffer.
-            The length of the tuple represents the number of buffers a frame is split across.
-        pix_depth : int, optional
-            Bit-depth of each pixel, by default 8.
         """
-        self.frame_width = frame_width
-        self.frame_height = frame_height
-        self.preamble = preamble
+        self.logger = init_logger('streamDaq')
+        self.config = config
         self.header_fmt = header_fmt
-        self.header_len = header_len * 32
-        if LSB:
-            self.LSB = True
-        else:
-            self.LSB = False
-        self.buffer_npix = buffer_npix
-        assert frame_height * frame_width == sum(
-            self.buffer_npix
-        ), "Number of pixels defined by frame width and height must agree with total number of pixels in `buffer_npix`!"
-        self.nbuffer_per_fm = len(self.buffer_npix)
-        self.pix_depth = pix_depth
-        self.logger = init_logger('uart_daq')
+        self.preamble = self.config.preamble
+        self._buffer_npix: Optional[List[int]] = None
+        self._nbuffer_per_fm: Optional[int] = None
+
+    @property
+    def buffer_npix(self) -> List[int]:
+        """List of pixels per buffer for a frame"""
+        if self._buffer_npix is None:
+            px_per_frame = self.config.frame_width * self.config.frame_height
+            px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len / 8
+            quotient, remainder = divmod(px_per_frame, px_per_buffer)
+            self._buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
+        return self._buffer_npix
+
+    @property
+    def nbuffer_per_fm(self) -> int:
+        """
+        Number of buffers per frame, computed from :attr:`.buffer_npix`
+        """
+        if self._nbuffer_per_fm is None:
+            self._nbuffer_per_fm = len(self.buffer_npix)
+        return self._nbuffer_per_fm
 
     def _parse_header(
-        self, buffer: bytes, truncate: Literal["preamble", "header", False] = False
-    ) -> Tuple[MetadataHeader, bytes]:
+        self, buffer: Bits, truncate: Literal["preamble", "header", False] = False
+    ) -> Tuple[BufferHeader, bytes]:
         """
         Function to parse header from each buffer.
 
@@ -176,28 +117,28 @@ class stream_daq:
 
         Returns
         -------
-        Tuple[MetadataHeader, bytes]
+        Tuple[BufferHeader, bytes]
             The returned header data and (optionally truncated) buffer data.
         """
         pre = Bits(self.preamble)
-        if self.LSB:
+        if self.config.LSB:
             pre = pre[::-1]
         pre_len = len(pre)
         assert buffer[:pre_len] == pre
         header_data = dict()
         for hd, bit_range in self.header_fmt.model_dump().items():
             b = buffer[pre_len + bit_range[0] : pre_len + bit_range[1]]
-            if self.LSB:
+            if self.config.LSB:
                 header_data[hd] = b[::-1].uint
             else:
                 header_data[hd] = b.uint
 
-        header_data = MetadataHeader.model_construct(**header_data)
+        header_data = BufferHeader.model_construct(**header_data)
 
         if truncate == "preamble":
             return header_data, buffer[pre_len:]
         elif truncate == "header":
-            return header_data, buffer[pre_len + self.header_len :]
+            return header_data, buffer[self.config.header_len :]
         else:
             return header_data, buffer
 
@@ -205,7 +146,8 @@ class stream_daq:
         self, serial_buffer_queue: multiprocessing.Queue, comport: str, baudrate: int
     ):
         """
-        Receive buffers and push into serial_buffer_queue
+        Receive buffers and push into serial_buffer_queue.
+        Currently not supported.
 
         Parameters
         ----------
@@ -274,10 +216,15 @@ class stream_daq:
             )
         # determine length
         if read_length is None:
-            read_length = int(max(self.buffer_npix) * self.pix_depth / 8 / 16) * 16
+            read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
 
         # set up fpga devices
+        BIT_FILE = self.config.bitstream
+        if not BIT_FILE.exists():
+            raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
+        # set up fpga devices
         dev = okDev()
+        dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)
         dev.setWire(0x00, 0b0)
@@ -287,7 +234,7 @@ class stream_daq:
         # read loop
         cur_buffer = BitArray()
         pre = Bits(self.preamble)
-        if self.LSB:
+        if self.config.LSB:
             pre = pre[::-1]
         while True:
             buf = dev.readData(read_length)
@@ -296,9 +243,10 @@ class stream_daq:
             pre_pos = list(cur_buffer.findall(pre))
             for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
                 if not pre_first:
-                    buf_start, buf_stop = buf_start + len(pre), buf_stop + len(pre)
+                    buf_start, buf_stop = buf_start + len(self.preamble), buf_stop + len(self.preamble)
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
-            cur_buffer = cur_buffer[pre_pos[-1] :]
+            if pre_pos:
+                cur_buffer = cur_buffer[pre_pos[-1] :]
 
     def _buffer_to_frame(
         self,
@@ -319,7 +267,7 @@ class stream_daq:
         frame_buffer_queue : multiprocessing.Queue[list[bytes]]
             Output frame queue.
         """
-        locallogs = init_logger('uart_daq.buffer')
+        locallogs = init_logger('streamDaq.buffer')
 
         cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
@@ -398,7 +346,7 @@ class stream_daq:
         imagearray : multiprocessing.Queue[np.ndarray]
             Output image array queue.
         """
-        locallogs = init_logger('uart_daq.frame')
+        locallogs = init_logger('streamDaq.frame')
         header_data = None
 
         while 1:
@@ -415,12 +363,12 @@ class stream_daq:
                         )
                     else:
                         frame_data[i] = Bits(
-                            int=0, length=npix_expected * self.pix_depth
+                            int=0, length=npix_expected * self.config.pix_depth
                         )
                         nbit_lost += npix_expected
                         continue
                     npix_header = header_data.pixel_count
-                    npix_actual = len(fm_dat) / self.pix_depth
+                    npix_actual = len(fm_dat) / self.config.pix_depth
 
                     if npix_actual != npix_expected:
                         if i < len(self.buffer_npix) - 1:
@@ -433,7 +381,7 @@ class stream_daq:
                                     npix_actual,
                                 )
                             )
-                        nbit_expected = npix_expected * self.pix_depth
+                        nbit_expected = npix_expected * self.config.pix_depth
                         if len(fm_dat) > nbit_expected:
                             fm_dat = fm_dat[:nbit_expected]
                         else:
@@ -448,10 +396,10 @@ class stream_daq:
                     pixel_vector = pixel_vector + d
 
                 assert len(pixel_vector) == (
-                    self.frame_height * self.frame_width * self.pix_depth
+                    self.config.frame_height * self.config.frame_width * self.config.pix_depth
                 )
 
-                if self.LSB:
+                if self.config.LSB:
                     pixel_vector = Array(
                         "uint:32",
                         [
@@ -471,8 +419,7 @@ class stream_daq:
     def capture(
         self,
         source: Literal["uart", "fpga"],
-        comport: str = "COM3",
-        baudrate: int = 1200000,
+        config: StreamDaqConfig,
         read_length: Optional[int] = None,
     ):
         """
@@ -482,10 +429,8 @@ class stream_daq:
         ----------
         source : Literal[uart, fpga]
             Device source.
-        comport : str, optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._uart_recv` when `source == "uart"`, by default "COM3".
-        baudrate : int, optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._uart_recv` when `source == "uart"`, by default 1200000.
+        config : dict
+            To write. Contains config info imported from yaml file (example: example.yml).
         read_length : Optional[int], optional
             Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
 
@@ -527,7 +472,7 @@ class stream_daq:
             5
         )  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
         imagearray = queue_manager.Queue(5)
-        imagearray.put(np.zeros(int(self.frame_width * self.frame_height), np.uint8))
+        imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
@@ -535,8 +480,8 @@ class stream_daq:
                 target=self._uart_recv,
                 args=(
                     serial_buffer_queue,
-                    comport,
-                    baudrate,
+                    config['port'],
+                    config['baudrate'],
                 ),
             )
         elif source == "fpga":
@@ -574,9 +519,7 @@ class stream_daq:
         ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
             if imagearray.qsize() > 0:
                 imagearray_plot = imagearray.get()
-                image = imagearray_plot.reshape(self.frame_width, self.frame_height)
-                # np.savetxt('imagearray.csv', imagearray, delimiter=',')
-                # np.savetxt('image.csv', image, delimiter=',')
+                image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
                 cv2.imshow("image", image)
             if cv2.waitKey(1) == 27:
                 cv2.destroyAllWindows()
@@ -611,145 +554,33 @@ class stream_daq:
                 self.logger.debug("[Terminated] format_frame()")
                 break  # watchdog process daemon gets [Terminated]
 
-
-def updateDevice():
-    logger = init_logger('uart_daq')
-
-    args = updateDeviceParser.parse_args()
-    moduleList = ["LED", "EWL"]
-
-    ledMAX = 100
-    ledMIN = 0
-
-    ewlMAX = 255
-    ewlMIN = 0
-
-    ledDeviceTag = 0  # 2-bits each for now
-    ewlDeviceTag = 1  # 2-bits each for now
-
-    deviceTagPos = 4
-    preamblePos = 6
-
-    Preamble = [2, 1]  # 2-bits each for now
-
-    uartPayload = 4
-    uartRepeat = 5
-    uartTimeGap = 0.01
-
-    try:
-        assert len(vars(args)) == 4
-    except AssertionError as msg:
-        logger.exception("Usage: updateDevice [COM port] [baudrate] [module] [value]")
-        raise msg
-
-    try:
-        comport = str(args.port)
-    except (ValueError, IndexError) as e:
-        logger.exception(e)
-        raise e
-
-    try:
-        baudrate = int(args.baudrate)
-    except (ValueError, IndexError) as e:
-        logger.exception(e)
-        raise e
-
-    try:
-        module = str(args.module)
-        assert module in moduleList
-    except AssertionError as msg:
-        err_str = "Available modules:\n"
-        for module in moduleList:
-            err_str += "\t" + module + '\n'
-        logger.exception(err_str)
-        raise msg
-
-    try:
-        value = int(args.value)
-    except Exception as e:
-        logger.exception("Value needs to be an integer")
-        raise e
-
-    try:
-        if module == "LED":
-            assert value <= ledMAX and value >= ledMIN
-        if module == "EWL":
-            assert value <= ewlMAX and value >= ewlMIN
-    except AssertionError as msg:
-        if module == "LED":
-            logger.exception("LED value need to be a integer within 0-100")
-        if module == "EWL":
-            logger.exception("EWL value need to be an integer within 0-255")
-        raise msg
-
-    if module == "LED":
-        deviceTag = ledDeviceTag << deviceTagPos
-    elif module == "EWL":
-        deviceTag = ewlDeviceTag << deviceTagPos
-
-    command = [0, 0]
-
-    command[0] = int(
-        Preamble[0] * 2**preamblePos
-        + deviceTag
-        + np.floor(value / (2**uartPayload))
-    ).to_bytes(1, "big")
-    command[1] = int(
-        Preamble[1] * 2**preamblePos + deviceTag + value % (2**uartPayload)
-    ).to_bytes(1, "big")
-
-    # set up serial port
-    try:
-        serial_port = serial.Serial(
-            port=comport, baudrate=baudrate, timeout=5, stopbits=1
-        )
-    except Exception as e:
-        logger.exception(e)
-        raise e
-    logger.info("Open serial port")
-
-    for uartCommand in command:
-        for repeat in range(uartRepeat):
-            # read UART data until preamble and put into queue
-            serial_port.write(uartCommand)
-            time.sleep(uartTimeGap)
-
-    serial_port.close()
-    logger.info("\t" + module + ": " + str(value))
-    logger.info("Close serial port")
-    sys.exit(1)
-
-
 def main():
     args = daqParser.parse_args()
-    daq_inst = stream_daq()
 
-    if args.source == "UART":
-        try:
-            assert len(vars(args)) == 3
-        except AssertionError as msg:
-            print(msg)
-            print("Usage: stream_image_capture --port [COM port] --baudrate [baudrate]")
-            sys.exit(1)
+    daqConfig = StreamDaqConfig.from_yaml(args.config)
 
+    daq_inst = StreamDaq(config=daqConfig)
+
+    if daqConfig.device == "UART":
         try:
-            comport = str(args.port)
+            comport = daqConfig.port
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
 
         try:
-            baudrate = int(args.baudrate)
+            baudrate = daqConfig.baudrate
         except (ValueError, IndexError) as e:
             print(e)
             sys.exit(1)
-        daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
+        #daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
+        daq_inst.capture(source="uart", config = daqConfig)
 
-    if args.source == "OK":
+    if daqConfig.device == "OK":
         if not HAVE_OK:
             raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
 
-        daq_inst.capture(source="fpga")
+        daq_inst.capture(source="fpga", config = daqConfig)
 
 
 if __name__ == "__main__":

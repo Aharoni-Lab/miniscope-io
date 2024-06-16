@@ -9,7 +9,7 @@ import warnings
 import numpy as np
 from tqdm import tqdm
 
-from miniscope_io.sdcard import SDLayout, SDConfig, DataHeader
+from miniscope_io.models.sdcard import SDLayout, SDConfig, SDBufferHeader
 from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
 from miniscope_io.data import Frame
 
@@ -205,7 +205,7 @@ class SDCard:
     # --------------------------------------------------
     # read methods
     # --------------------------------------------------
-    def _read_data_header(self, sd:BinaryIO) -> DataHeader:
+    def _read_data_header(self, sd:BinaryIO) -> SDBufferHeader:
         """
         Given an already open file buffer opened in bytes mode,
          seeked to the start of a frame, read the data header
@@ -224,7 +224,7 @@ class SDCard:
         )
         # use construct because we're already sure these are ints from the numpy casting
         #https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
-        header = DataHeader.model_construct(
+        header = SDBufferHeader.model_construct(
             **{
                 k: dataHeader[v]
                 for k, v in self.layout.buffer.model_dump().items()
@@ -232,7 +232,7 @@ class SDCard:
             })
         return header
 
-    def _n_frame_blocks(self, header: DataHeader) -> int:
+    def _n_frame_blocks(self, header: SDBufferHeader) -> int:
         """
         Compute the number of blocks for a given frame buffer
 
@@ -247,7 +247,7 @@ class SDCard:
         )
         return n_blocks
 
-    def _read_size(self, header: DataHeader) -> int:
+    def _read_size(self, header: SDBufferHeader) -> int:
         """
         Compute the number of bytes to read for a given buffer
 
@@ -259,7 +259,7 @@ class SDCard:
             (header.length * self.layout.word_size)
         return read_size
 
-    def _read_buffer(self, sd: BinaryIO, header: DataHeader) -> np.ndarray:
+    def _read_buffer(self, sd: BinaryIO, header: SDBufferHeader) -> np.ndarray:
         """
         Read a single buffer from a frame.
 
@@ -305,7 +305,7 @@ class SDCard:
             return_header (bool): If `True`, return headers from individual buffers (default `False`)
 
         Return:
-            :class:`numpy.ndarray` , or a tuple(ndarray, List[:class:`~.DataHeader`]) if `return_header` is `True`
+            :class:`numpy.ndarray` , or a tuple(ndarray, List[:class:`~.SDBufferHeader`]) if `return_header` is `True`
         """
         if self._f is None:
             raise RuntimeError('File is not open! Try entering the reader context by using it like `with sdcard:`')
