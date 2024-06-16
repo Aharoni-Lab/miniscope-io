@@ -21,7 +21,7 @@ pydantic = "^2.3.0"
 coloredlogs = "^15.0.1"
 pyserial = "^3.5"
 tqdm = "^4.66.1"
-bitstring = "^4.1.2"
+bitstring = "^4.2.3"
 pydantic-settings = "^2.0.3"
 rich = "^13.6.0"
 
