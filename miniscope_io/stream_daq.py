@@ -31,7 +31,7 @@ except (ImportError, ModuleNotFoundError) as ok_error:
         "Could not import OpalKelly driver, unable to read from FPGA!")
 
 # Parsers for daq inputs
-daqParser = argparse.ArgumentParser("stream_image_capture")
+daqParser = argparse.ArgumentParser("streamDaq")
 daqParser.add_argument("-c", "--config", help='YAML config file path: string')
 
 
