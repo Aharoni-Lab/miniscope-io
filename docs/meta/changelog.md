@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.7 - 24-06-16
+
+- https://github.com/Aharoni-Lab/miniscope-io/pull/21
+- https://github.com/Aharoni-Lab/miniscope-io/pull/15
+
+New features:
+
+- **Support for Various Image Formats**: `streamDaq` now supports multiple image formats, including different image sizes, frame rates (FPS), and bit-depths. These configurations can be provided via a YAML file. Examples of these configurations can be found in `miniscope_io.data.config`.
+- **Pydantic Model for Configuration**: Added a Pydantic model to validate the configuration of `streamDaq`.
+- **Bitstream Loader**: Added a bitstream loader to automatically configure the Opal Kelly FPGA when running `streamDaq`.
+- **Updated Command Line Script**: The command line script for running `streamDaq` has been updated. Use `streamDaq -c path/to/config/yaml/file.yml` to run the process with your YAML configuration file.
+- **Logger Module**: Added a logger module that can be configured using environmental variables or a `.env` file.
+
 ## 0.1.6 - 24-04-09
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/14
