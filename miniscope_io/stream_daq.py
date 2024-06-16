@@ -76,16 +76,28 @@ class StreamDaq:
         self.logger = init_logger('streamDaq')
         self.config = config
         self.header_fmt = header_fmt
-        px_per_frame = self.config.frame_width * self.config.frame_height
-        px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len/8
-        quotient, remainder = divmod(
-            px_per_frame,
-            px_per_buffer
-            )
-        
-        self.preamble = bytes.fromhex(self.config.preamble)
-        self.buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
-        self.nbuffer_per_fm = len(self.buffer_npix)
+        self.preamble = self.config.preamble
+        self._buffer_npix: Optional[List[int]] = None
+        self._nbuffer_per_fm: Optional[int] = None
+
+    @property
+    def buffer_npix(self) -> List[int]:
+        """List of pixels per buffer for a frame"""
+        if self._buffer_npix is None:
+            px_per_frame = self.config.frame_width * self.config.frame_height
+            px_per_buffer = self.config.buffer_block_length * self.config.block_size - self.config.header_len / 8
+            quotient, remainder = divmod(px_per_frame, px_per_buffer)
+            self._buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]
+        return self._buffer_npix
+
+    @property
+    def nbuffer_per_fm(self) -> int:
+        """
+        Number of buffers per frame, computed from :attr:`.buffer_npix`
+        """
+        if self._nbuffer_per_fm is None:
+            self._nbuffer_per_fm = len(self.buffer_npix)
+        return self._nbuffer_per_fm
 
     def _parse_header(
         self, buffer: Bits, truncate: Literal["preamble", "header", False] = False
