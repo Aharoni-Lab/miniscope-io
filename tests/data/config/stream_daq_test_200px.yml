@@ -27,3 +27,6 @@ num_buffers: 32
 
 # Temporary parameter to handle bit polarity. This is not actual LSB so need to fix later.
 LSB: True
+
+save_video: True
+show_video: False

@@ -261,6 +261,7 @@ class StreamDaq:
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
             if self.config.mode == 'RAW_REPLAY':
+                time.sleep(1) # Non-ideal. Wondering if there's a better way than checking all the queues are empty with a flag or plugging in all queues in this function.
                 self.terminate.value = True
 
     def _buffer_to_frame(
@@ -511,12 +512,17 @@ class StreamDaq:
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
 
-
+        # Video output settings
         fourcc = cv2.VideoWriter_fourcc(*'DIVX')
         frame_rate = 20.0 # this should be in the config yaml
         frame_size = (self.config.frame_width, self.config.frame_height)
         out = cv2.VideoWriter('output.avi', fourcc, frame_rate, frame_size)
 
+
+        def check_termination_flag(termination_flag):
+            input("Press enter to exit the process.")
+            termination_flag.value = True
+            
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
@@ -531,26 +537,45 @@ class StreamDaq:
                 imagearray,
             ),
         )
+        '''
+        p_terminate = multiprocessing.Process(
+            target=check_termination_flag, args=(self.terminate,))
+        '''
         p_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
-
-        while (
-            self.terminate.value == False
-        ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
-            if imagearray.qsize() > 0:
-                imagearray_plot = imagearray.get()
-                image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
-                cv2.imshow("image", image)
-                picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
-                out.write(picture)
-            if cv2.waitKey(1) == 27:
-                cv2.destroyAllWindows()
-                cv2.waitKey(100)
+        #p_terminate.start()
+        try:
+            while (
+                self.terminate.value == False
+            ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
+                if imagearray.qsize() > 0:
+                    imagearray_plot = imagearray.get()
+                    image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
+                    if self.config.show_video is True:
+                        cv2.imshow("image", image)
+                    if self.config.save_video is True:
+                        picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
+                        out.write(picture)
+                if cv2.waitKey(1) == 27 and self.config.show_video is True:
+                    cv2.destroyAllWindows()
+                    cv2.waitKey(100)
+                    break  # esc to quit
+        finally:
+            if self.config.save_video is True:
                 out.release()
-                break  # esc to quit
-        self.logger.info("End capture")
-
+                self.logger.info("out.release() excecuted")
+            self.logger.info("End capture")
+        '''
+        while True:
+            self.logger.debug("[Terminating] check_termination_flag()")
+            p_terminate.terminate()
+            time.sleep(0.1)
+            if not p_terminate.is_alive():
+                p_terminate.join(timeout=1.0)
+                self.logger.debug("[Terminated] check_termination_flag()")
+                break
+        '''            
         while True:
             self.logger.debug("[Terminating] uart/fpga_recv()")
             p_recv.terminate()
