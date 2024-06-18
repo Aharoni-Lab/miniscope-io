@@ -78,6 +78,7 @@ class StreamDaq:
         self.preamble = self.config.preamble
         self._buffer_npix: Optional[List[int]] = None
         self._nbuffer_per_fm: Optional[int] = None
+        self.terminate = multiprocessing.Value('b', False)
 
     @property
     def buffer_npix(self) -> List[int]:
@@ -214,7 +215,9 @@ class StreamDaq:
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
             )
         # determine length
-        if read_length is None:
+        if self.config.mode == 'RECORD':
+            read_length = int(max(self.buffer_npix) * self.nbuffer_per_fm * self.config.pix_depth) * 16 # get 16 frames
+        elif read_length is None:
             read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
 
         # set up fpga devices
@@ -222,21 +225,33 @@ class StreamDaq:
         if not BIT_FILE.exists():
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
-        dev = okDev()
-        dev.uploadBit(str(BIT_FILE))
-        dev.setWire(0x00, 0b0010)
-        time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
-        dev.setWire(0x00, 0b1000)
-        time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
+        if self.config.mode != 'REPLAY':
+            dev = okDev()
+            dev.uploadBit(str(BIT_FILE))
+            dev.setWire(0x00, 0b0010)
+            time.sleep(0.01)
+            dev.setWire(0x00, 0b0)
+            dev.setWire(0x00, 0b1000)
+            time.sleep(0.01)
+            dev.setWire(0x00, 0b0)
         # read loop
         cur_buffer = BitArray()
         pre = Bits(self.preamble)
         if self.config.LSB:
             pre = pre[::-1]
         while True:
-            buf = dev.readData(read_length)
+            fpga_raw_path = 'data/fpga_raw.bin'
+            if self.config.mode == 'REPLAY':
+                # Step 2: Read the bytearray back from the file
+                with open(fpga_raw_path, 'rb') as file:
+                    buf = bytearray(file.read())
+            else:
+                buf = dev.readData(read_length)
+            if self.config.mode == 'RECORD':
+                fpga_raw_path = 'data/fpga_raw.bin'
+                with open(fpga_raw_path, 'wb') as file:
+                    file.write(buf)
+                self.terminate.value = True
             dat = BitArray(buf)
             cur_buffer = cur_buffer + dat
             pre_pos = list(cur_buffer.findall(pre))
@@ -246,6 +261,8 @@ class StreamDaq:
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
+            if self.config.mode == 'REPLAY':
+                self.terminate.value = True
 
     def _buffer_to_frame(
         self,
@@ -514,7 +531,7 @@ class StreamDaq:
         p_format_frame.start()
 
         while (
-            1
+            self.terminate.value == False
         ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
             if imagearray.qsize() > 0:
                 imagearray_plot = imagearray.get()

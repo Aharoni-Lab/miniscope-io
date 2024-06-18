@@ -2,7 +2,7 @@
 Models for :mod:`miniscope_io.stream_daq`
 """
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 from pydantic import field_validator
 
@@ -16,6 +16,7 @@ from miniscope_io.types import Range
 class StreamBufferHeaderFormat(BufferHeaderFormat):
     pixel_count: Range
 
+ALLOWED_MODES: Tuple[str, ...] = ("STREAM", "RECORD", "REPLAY")
 
 class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     """
@@ -24,6 +25,8 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
 
     Parameters
     ----------
+    mode: str
+        Operation modes. Maybe having STREAM (normal operation), RECORD (for getting testdata), and REPLAY (for plugging in recorded data for testing), BER_MEASURE, makes sense. Details TBD.
     device: str
         Interface hardware used for receiving data.
         Current options are "OK" (Opal Kelly XEM 7310) and "UART" (generic UART-USB converters).
@@ -72,6 +75,8 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     ..todo::
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
+
+    mode: Optional[str] = 'STREAM'
     device: str
     bitstream: Optional[Path]
     port: Optional[str]
@@ -85,6 +90,12 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     block_size: int
     num_buffers: int
     LSB: Optional[bool]
+
+    @field_validator('mode', mode='before')
+    def check_mode_string(cls, value: str) -> str:
+        if value not in ALLOWED_MODES:
+            value = 'STREAM'
+        return value
 
     @field_validator('preamble', mode='before')
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
