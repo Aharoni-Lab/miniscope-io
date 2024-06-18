@@ -23,12 +23,11 @@ HAVE_OK = False
 ok_error = None
 try:
     from miniscope_io.devices.opalkelly import okDev
-
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError) as ok_error:
     module_logger = init_logger('streamDaq')
     module_logger.warning(
-        "Could not import OpalKelly driver, unable to read from FPGA!")
+        "Could not import OpalKelly driver, you can't read from FPGA!\nCheck out Opal Kelly's website for install info\nhttps://docs.opalkelly.com/fpsdk/getting-started/")
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("streamDaq")
