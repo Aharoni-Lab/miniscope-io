@@ -71,6 +71,12 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
         Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
         Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
+    save_video : bool, optional
+        Whether the video gets saved as an .avi file, by default False.
+    save_video_name : str, optional
+        If video is saved, , by default False.
+    show_video : bool, optional
+        Whether the video is showed in "real-time", by default True.
 
     ..todo::
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
@@ -90,11 +96,20 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     block_size: int
     num_buffers: int
     LSB: Optional[bool]
+    save_video: Optional[bool] = False
+    save_video_filename: Optional[str] = 'output'
+    show_video: Optional[bool] = True
 
     @field_validator('mode', mode='before')
     def check_mode_string(cls, value: str) -> str:
         if value not in ALLOWED_MODES:
             value = 'STREAM'
+        return value
+
+    @field_validator('save_video_filename', mode='before')
+    def check_video_filename_string(cls, value: str, values) -> str:
+        if 'save_video' in values and not values['save_video'] and value is not None:
+            raise ValueError("'save_video_filename' should be set only when 'save_video' is True")
         return value
 
     @field_validator('preamble', mode='before')

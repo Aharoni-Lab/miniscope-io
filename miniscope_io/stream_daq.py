@@ -512,6 +512,12 @@ class StreamDaq:
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
 
+
+        fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+        frame_rate = 20.0 # this should be in the config yaml
+        frame_size = (self.config.frame_width, self.config.frame_height)
+        out = cv2.VideoWriter('output.avi', fourcc, frame_rate, frame_size)
+
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
@@ -537,9 +543,12 @@ class StreamDaq:
                 imagearray_plot = imagearray.get()
                 image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
                 cv2.imshow("image", image)
+                picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
+                out.write(picture)
             if cv2.waitKey(1) == 27:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
+                out.release()
                 break  # esc to quit
         self.logger.info("End capture")
 
