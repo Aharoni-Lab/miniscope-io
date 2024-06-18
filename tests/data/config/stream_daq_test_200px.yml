@@ -1,5 +1,5 @@
-# capture device. "OK" (Opal Kelly) or "UART"
-mode: "REPLAY"
+# Mode
+mode: "RAW_REPLAY"
 
 # capture device. "OK" (Opal Kelly) or "UART"
 device: "OK"

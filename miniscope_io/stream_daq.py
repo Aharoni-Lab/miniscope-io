@@ -15,6 +15,7 @@ import serial
 from bitstring import Array, BitArray, Bits
 
 from miniscope_io import init_logger
+
 from miniscope_io.formats.stream import StreamBufferHeader
 from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
@@ -215,7 +216,7 @@ class StreamDaq:
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
             )
         # determine length
-        if self.config.mode == 'RECORD':
+        if self.config.mode == 'RAW_RECORD':
             read_length = int(max(self.buffer_npix) * self.nbuffer_per_fm * self.config.pix_depth) * 16 # get 16 frames
         elif read_length is None:
             read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
@@ -225,7 +226,7 @@ class StreamDaq:
         if not BIT_FILE.exists():
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
-        if self.config.mode != 'REPLAY':
+        if self.config.mode != 'RAW_REPLAY':
             dev = okDev()
             dev.uploadBit(str(BIT_FILE))
             dev.setWire(0x00, 0b0010)
@@ -240,15 +241,13 @@ class StreamDaq:
         if self.config.LSB:
             pre = pre[::-1]
         while True:
-            fpga_raw_path = 'data/fpga_raw.bin'
-            if self.config.mode == 'REPLAY':
-                # Step 2: Read the bytearray back from the file
-                with open(fpga_raw_path, 'rb') as file:
+            if self.config.mode == 'RAW_REPLAY':
+                with open(self.config.test_raw_data_path, 'rb') as file:
                     buf = bytearray(file.read())
             else:
                 buf = dev.readData(read_length)
-            if self.config.mode == 'RECORD':
-                fpga_raw_path = 'data/fpga_raw.bin'
+            if self.config.mode == 'RAW_RECORD':
+                fpga_raw_path = 'data/fpga_raw.bin' # Not sure where to define this because we don't want to overwrite.
                 with open(fpga_raw_path, 'wb') as file:
                     file.write(buf)
                 self.terminate.value = True
@@ -261,7 +260,7 @@ class StreamDaq:
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
-            if self.config.mode == 'REPLAY':
+            if self.config.mode == 'RAW_REPLAY':
                 self.terminate.value = True
 
     def _buffer_to_frame(

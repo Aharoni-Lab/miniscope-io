@@ -6,7 +6,7 @@ from typing import Optional, Union, Tuple
 
 from pydantic import field_validator
 
-from miniscope_io import DEVICE_DIR
+from miniscope_io import DEVICE_DIR, TESTDATA_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.buffer import BufferHeaderFormat
@@ -16,7 +16,7 @@ from miniscope_io.types import Range
 class StreamBufferHeaderFormat(BufferHeaderFormat):
     pixel_count: Range
 
-ALLOWED_MODES: Tuple[str, ...] = ("STREAM", "RECORD", "REPLAY")
+ALLOWED_MODES: Tuple[str, ...] = ("DAQ", "RAW_RECORD", "RAW_REPLAY")
 
 class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     """
@@ -26,7 +26,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     Parameters
     ----------
     mode: str
-        Operation modes. Maybe having STREAM (normal operation), RECORD (for getting testdata), and REPLAY (for plugging in recorded data for testing), BER_MEASURE, makes sense. Details TBD.
+    Operation modes. Maybe having DAQ (normal operation), RAW_RECORD (for getting testdata), and RAW_REPLAY (for plugging in recorded data for testing), BER_MEASURE, makes sense. Details TBD.
     device: str
         Interface hardware used for receiving data.
         Current options are "OK" (Opal Kelly XEM 7310) and "UART" (generic UART-USB converters).
@@ -82,7 +82,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
 
-    mode: Optional[str] = 'STREAM'
+    mode: Optional[str] = 'DAQ'
     device: str
     bitstream: Optional[Path]
     port: Optional[str]
@@ -99,11 +99,12 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     save_video: Optional[bool] = False
     save_video_filename: Optional[str] = 'output'
     show_video: Optional[bool] = True
+    test_raw_data_path: Optional[Path] = TESTDATA_DIR / 'stream_daq_test_fpga_raw_input_200px.bin'
 
     @field_validator('mode', mode='before')
     def check_mode_string(cls, value: str) -> str:
         if value not in ALLOWED_MODES:
-            value = 'STREAM'
+            value = 'DAQ'
         return value
 
     @field_validator('save_video_filename', mode='before')
