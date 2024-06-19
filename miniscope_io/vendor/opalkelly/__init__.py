@@ -1,10 +1,6 @@
-import pdb
 import sys
 from pathlib import Path
 import os
-import subprocess
-import pdb
-from miniscope_io import init_logger
 
 
 def patch_env_path(name:str, value:str):

@@ -2,11 +2,11 @@
 Models for :mod:`miniscope_io.stream_daq`
 """
 from pathlib import Path
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Literal
 
 from pydantic import field_validator
 
-from miniscope_io import DEVICE_DIR, TESTDATA_DIR
+from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.buffer import BufferHeaderFormat
@@ -16,7 +16,6 @@ from miniscope_io.types import Range
 class StreamBufferHeaderFormat(BufferHeaderFormat):
     pixel_count: Range
 
-ALLOWED_MODES: Tuple[str, ...] = ("DAQ", "RAW_RECORD", "RAW_REPLAY")
 
 class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     """
@@ -44,6 +43,8 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Frame width of transferred image. This is used to reconstruct image.
     frame_height: int
         Frame height of transferred image. This is used to reconstruct image.
+    fs: int
+        Framerate of acquired stream
     preamble: str
         32-bit preamble used to locate the start of each buffer. The header and image data follows this preamble.
         This is used as a hex but imported as a string because yaml doesn't support hex format.
@@ -82,13 +83,14 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
 
-    mode: Optional[str] = 'DAQ'
+    mode: Literal["DAQ", "RAW_RECORD", "RAW_REPLAY"] = 'DAQ'
     device: str
     bitstream: Optional[Path]
     port: Optional[str]
     baudrate: Optional[int]
     frame_width: int
     frame_height: int
+    fs: int = 20
     preamble: bytes
     header_len: int
     pix_depth: int = 8
@@ -96,22 +98,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     block_size: int
     num_buffers: int
     LSB: Optional[bool]
-    save_video: Optional[bool] = False
-    save_video_filename: Optional[str] = 'output'
     show_video: Optional[bool] = True
-    test_raw_data_path: Optional[Path] = TESTDATA_DIR / 'stream_daq_test_fpga_raw_input_200px.bin'
-
-    @field_validator('mode', mode='before')
-    def check_mode_string(cls, value: str) -> str:
-        if value not in ALLOWED_MODES:
-            value = 'DAQ'
-        return value
-
-    @field_validator('save_video_filename', mode='before')
-    def check_video_filename_string(cls, value: str, values) -> str:
-        if 'save_video' in values and not values['save_video'] and value is not None:
-            raise ValueError("'save_video_filename' should be set only when 'save_video' is True")
-        return value
 
     @field_validator('preamble', mode='before')
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
