@@ -1,14 +1,11 @@
 import argparse
 import yaml
-import logging
 import multiprocessing
-import os
 import sys
 import time
-from datetime import datetime
 from typing import Literal, Optional, Tuple, List
+from pathlib import Path
 
-import coloredlogs
 import cv2
 import numpy as np
 import serial
@@ -19,7 +16,9 @@ from miniscope_io import init_logger
 from miniscope_io.formats.stream import StreamBufferHeader
 from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
+from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 
+multiprocessing.set_start_method('fork')
 HAVE_OK = False
 ok_error = None
 try:
@@ -226,26 +225,26 @@ class StreamDaq:
         if not BIT_FILE.exists():
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
-        if self.config.mode != 'RAW_REPLAY':
-            dev = okDev()
-            dev.uploadBit(str(BIT_FILE))
-            dev.setWire(0x00, 0b0010)
-            time.sleep(0.01)
-            dev.setWire(0x00, 0b0)
-            dev.setWire(0x00, 0b1000)
-            time.sleep(0.01)
-            dev.setWire(0x00, 0b0)
+        dev = okDev()
+        dev.uploadBit(str(BIT_FILE))
+        dev.setWire(0x00, 0b0010)
+        time.sleep(0.01)
+        dev.setWire(0x00, 0b0)
+        dev.setWire(0x00, 0b1000)
+        time.sleep(0.01)
+        dev.setWire(0x00, 0b0)
         # read loop
         cur_buffer = BitArray()
         pre = Bits(self.preamble)
         if self.config.LSB:
             pre = pre[::-1]
         while True:
-            if self.config.mode == 'RAW_REPLAY':
-                with open(self.config.test_raw_data_path, 'rb') as file:
-                    buf = bytearray(file.read())
-            else:
+            try:
                 buf = dev.readData(read_length)
+            except (EndOfRecordingException, StreamReadError):
+                self.terminate.value = True
+                break
+
             if self.config.mode == 'RAW_RECORD':
                 fpga_raw_path = 'data/fpga_raw.bin' # Not sure where to define this because we don't want to overwrite.
                 with open(fpga_raw_path, 'wb') as file:
@@ -260,9 +259,6 @@ class StreamDaq:
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
-            if self.config.mode == 'RAW_REPLAY':
-                time.sleep(1) # Non-ideal. Wondering if there's a better way than checking all the queues are empty with a flag or plugging in all queues in this function.
-                self.terminate.value = True
 
     def _buffer_to_frame(
         self,
@@ -431,12 +427,31 @@ class StreamDaq:
                         "frame: {}, bits lost: {}".format(header_data.frame_num, nbit_lost)
                     )
 
-    # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
+    def init_video(self, path: Path, fourcc: str = 'DIVX', **kwargs) -> cv2.VideoWriter:
+        """
+        Create a parameterized video writer
+
+        Args:
+            path (:class:`pathlib.Path`): Video file to write to
+            fourcc (str): Fourcc code to use
+            kwargs: passed to :class:`cv2.VideoWriter`
+
+        Returns:
+            :class:`cv2.VideoWriter`
+        """
+        fourcc = cv2.VideoWriter_fourcc(*fourcc)
+        frame_rate = self.config.fs
+        frame_size = (self.config.frame_width, self.config.frame_height)
+        out = cv2.VideoWriter(str(path), fourcc, frame_rate, frame_size, **kwargs)
+        return out
+
+
     def capture(
         self,
         source: Literal["uart", "fpga"],
-        config: StreamDaqConfig,
         read_length: Optional[int] = None,
+        video: Optional[Path] = None,
+        video_kwargs: Optional[dict] = None
     ):
         """
         Entry point to start frame capture.
@@ -445,39 +460,18 @@ class StreamDaq:
         ----------
         source : Literal[uart, fpga]
             Device source.
-        config : dict
-            To write. Contains config info imported from yaml file (example: example.yml).
         read_length : Optional[int], optional
             Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
+        video: Path, optional
+            If present, a path to an output video file
+        video_options: dict, optional
+            kwargs passed to :meth:`.init_video`
 
         Raises
         ------
         ValueError
             If `source` is not in `("uart", "fpga")`.
         """
-        logdirectories = [
-            "log",
-            "log/uart_recv",
-            "log/format_frame",
-            "log/buffer_to_frame",
-        ]
-        for logpath in logdirectories:
-            if not os.path.exists(logpath):
-                os.makedirs(logpath)
-        file = logging.FileHandler(
-            datetime.now().strftime("log/logfile%Y_%m_%d_%H_%M.log")
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-
-        globallogs = logging.getLogger(__name__)
-        globallogs.setLevel(logging.DEBUG)
-
-        globallogs.addHandler(file)
-        coloredlogs.install(level=logging.DEBUG, logger=globallogs)
 
         # Queue size is hard coded
         queue_manager = multiprocessing.Manager()
@@ -496,8 +490,8 @@ class StreamDaq:
                 target=self._uart_recv,
                 args=(
                     serial_buffer_queue,
-                    config['port'],
-                    config['baudrate'],
+                    self.config['port'],
+                    self.config['baudrate'],
                 ),
             )
         elif source == "fpga":
@@ -512,11 +506,14 @@ class StreamDaq:
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
 
-        # Video output settings
-        fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-        frame_rate = 20.0 # this should be in the config yaml
-        frame_size = (self.config.frame_width, self.config.frame_height)
-        out = cv2.VideoWriter('output.avi', fourcc, frame_rate, frame_size)
+        # Video output
+        if video:
+            if video_kwargs is None:
+                video_kwargs = {}
+
+            writer = self.init_video(video, **video_kwargs)
+        else:
+            writer = None
 
 
         def check_termination_flag(termination_flag):
@@ -546,36 +543,25 @@ class StreamDaq:
         p_format_frame.start()
         #p_terminate.start()
         try:
-            while (
-                self.terminate.value == False
-            ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
+            while not self.terminate.value:
                 if imagearray.qsize() > 0:
                     imagearray_plot = imagearray.get()
                     image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
                     if self.config.show_video is True:
                         cv2.imshow("image", image)
-                    if self.config.save_video is True:
+                    if writer:
                         picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
-                        out.write(picture)
+                        writer.write(picture)
                 if cv2.waitKey(1) == 27 and self.config.show_video is True:
                     cv2.destroyAllWindows()
                     cv2.waitKey(100)
                     break  # esc to quit
         finally:
-            if self.config.save_video is True:
-                out.release()
-                self.logger.info("out.release() excecuted")
-            self.logger.info("End capture")
-        '''
-        while True:
-            self.logger.debug("[Terminating] check_termination_flag()")
-            p_terminate.terminate()
-            time.sleep(0.1)
-            if not p_terminate.is_alive():
-                p_terminate.join(timeout=1.0)
-                self.logger.debug("[Terminated] check_termination_flag()")
-                break
-        '''            
+            if writer:
+                writer.release()
+                self.logger.debug("VideoWriter released")
+            self.logger.debug("End capture")
+
         while True:
             self.logger.debug("[Terminating] uart/fpga_recv()")
             p_recv.terminate()
