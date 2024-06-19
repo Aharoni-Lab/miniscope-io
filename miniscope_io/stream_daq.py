@@ -18,7 +18,20 @@ from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 
-multiprocessing.set_start_method('fork')
+try:
+    current_method = multiprocessing.get_start_method()
+except RuntimeError:
+    available_methods = multiprocessing.get_all_start_methods()    
+    if 'fork' in available_methods:
+        multiprocessing.set_start_method('fork')
+    else:
+        if 'spawn' in available_methods:
+            multiprocessing.set_start_method('spawn')
+        elif 'forkserver' in available_methods:
+            multiprocessing.set_start_method('forkserver')
+        else:
+            raise RuntimeError("No suitable start method found for multiprocessing.")
+
 HAVE_OK = False
 ok_error = None
 try:
@@ -609,13 +622,13 @@ def main():
             print(e)
             sys.exit(1)
         #daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
-        daq_inst.capture(source="uart", config = daqConfig)
+        daq_inst.capture(source="uart")
 
     if daqConfig.device == "OK":
         if not HAVE_OK:
             raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
 
-        daq_inst.capture(source="fpga", config = daqConfig)
+        daq_inst.capture(source="fpga")
 
 
 if __name__ == "__main__":
