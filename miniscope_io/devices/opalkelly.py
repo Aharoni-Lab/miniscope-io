@@ -2,9 +2,13 @@
 Interfaces for OpalKelly (model number?) FPGAs
 """
 
-from miniscope_io.vendor import opalkelly as ok
-from miniscope_io.exceptions import StreamReadError, DeviceConfigurationError, DeviceOpenError
+from miniscope_io.exceptions import (
+    DeviceConfigurationError,
+    DeviceOpenError,
+    StreamReadError,
+)
 from miniscope_io.logging import init_logger
+from miniscope_io.vendor import opalkelly as ok
 
 
 class okDev(ok.okCFrontPanel):
@@ -20,7 +24,7 @@ class okDev(ok.okCFrontPanel):
 
     def __init__(self, serial_id: str = ""):
         super().__init__()
-        self.logger = init_logger('okDev')
+        self.logger = init_logger("okDev")
         ret = self.OpenBySerial("")
         if ret != self.NoError:
             raise DeviceOpenError(f"Cannot open device: {serial_id}")
@@ -41,7 +45,9 @@ class okDev(ok.okCFrontPanel):
         if ret == self.NoError:
             self.logger.debug(f"Succesfully uploaded {bit_file}")
         else:
-            raise DeviceConfigurationError(f"Configuration of {self.info.productName} failed")
+            raise DeviceConfigurationError(
+                f"Configuration of {self.info.productName} failed"
+            )
         self.logger.debug(
             "FrontPanel {} supported".format(
                 "is" if self.IsFrontPanelEnabled() else "not"

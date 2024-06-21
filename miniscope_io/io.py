@@ -171,7 +171,7 @@ class SDCard:
             warnings.warn(
                 "Got more frames than indicated in card header, expected "
                 f"{self._frame_count} but got {max_pos}",
-                stacklevel=1
+                stacklevel=1,
             )
             self._frame_count = int(max_pos)
 
@@ -194,7 +194,7 @@ class SDCard:
         self._last_buffer_n = 0
         self._frame = 0
 
-        self._f = open(self.drive, "rb") # noqa: SIM115 - this is a context handler
+        self._f = open(self.drive, "rb")  # noqa: SIM115 - this is a context handler
         # seek to the start of the data
         self._f.seek(self.layout.sectors.data_pos, 0)
         # store the 0th frame position
@@ -288,7 +288,7 @@ class SDCard:
             warnings.warn(
                 f"Expected buffer data length: {expected_size}, got data with shape "
                 f"{data.shape}. Padding to expected length",
-                stacklevel=1
+                stacklevel=1,
             )
 
             # trim if too long
@@ -340,14 +340,18 @@ class SDCard:
                     # blank,  and thus have a value of 0 for the header size, and we
                     # can't read 0 from the card.
                     self._f.seek(last_position, 0)
-                    raise EndOfRecordingException("Reached the end of the video!") from None
+                    raise EndOfRecordingException(
+                        "Reached the end of the video!"
+                    ) from None
                 else:
                     raise e
             except IndexError as e:
                 if "index 0 is out of bounds for axis 0 with size 0" in str(e):
                     # end of file if we are reading from a disk image without any
                     # additional space on disk
-                    raise EndOfRecordingException("Reached the end of the video!") from None
+                    raise EndOfRecordingException(
+                        "Reached the end of the video!"
+                    ) from None
                 else:
                     raise e
 
@@ -378,8 +382,8 @@ class SDCard:
 
     def to_video(
         self,
-        path: Union[Path,str],
-        fourcc: Literal['GREY', 'mp4v', 'XVID'] = 'GREY',
+        path: Union[Path, str],
+        fourcc: Literal["GREY", "mp4v", "XVID"] = "GREY",
         isColor: bool = False,
         force: bool = False,
         progress: bool = True,

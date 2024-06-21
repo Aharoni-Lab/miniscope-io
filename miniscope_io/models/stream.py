@@ -3,7 +3,7 @@ Models for :mod:`miniscope_io.stream_daq`
 """
 
 from pathlib import Path
-from typing import Optional, Union, Literal
+from typing import Literal, Optional, Union
 
 from pydantic import field_validator
 
@@ -80,7 +80,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
 
-    mode: Literal["DAQ", "RAW_RECORD", "RAW_REPLAY"] = 'DAQ'
+    mode: Literal["DAQ", "RAW_RECORD", "RAW_REPLAY"] = "DAQ"
     device: str
     bitstream: Optional[Path]
     port: Optional[str]

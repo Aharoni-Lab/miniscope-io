@@ -85,7 +85,7 @@ class Config(BaseSettings):
         v = Path(v)
         v.mkdir(exist_ok=True, parents=True)
 
-        assert v.exists(), f'{v} does not exist!'
+        assert v.exists(), f"{v} does not exist!"
         return v
 
     @model_validator(mode="after")
