@@ -17,8 +17,8 @@ from .mock.opalkelly import okDevMock
     ]
 )
 @pytest.mark.timeout(30)
-def test_video_output(config, data, video_hash, tmpdir, monkeypatch):
-    output_video = tmpdir / 'output.avi'
+def test_video_output(config, data, video_hash, tmp_path, monkeypatch):
+    output_video = tmp_path / 'output.avi'
 
     test_config_path = CONFIG_DIR / config
     daqConfig = StreamDaqConfig.from_yaml(test_config_path)
