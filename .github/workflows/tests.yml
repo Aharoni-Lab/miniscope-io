@@ -27,4 +27,5 @@ jobs:
       - uses: pavelzw/pytest-action@v2
         with:
           verbose: true
+          emoji: false
           job-summary: true
