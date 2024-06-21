@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict
 
@@ -12,7 +13,10 @@ class okDevMock():
     Recorded data file to use for simulating read.
     
     Set as class variable so that it can be monkeypatched in tests that
-    require different source data files
+    require different source data files.
+    
+    Can be set using the ``PYTEST_OKDEV_DATA_FILE`` environment variable if 
+    this mock is to be used within a separate process.
     """
 
     def __init__(self, serial_id: str = ""):
@@ -24,7 +28,15 @@ class okDevMock():
 
         # preload the data file to a byte array
         if self.DATA_FILE is None:
-            raise RuntimeError('DATA_FILE class attr must be set before using the mock')
+            if os.environ.get("PYTEST_OKDEV_DATA_FILE", False):
+                # need to get file from env variables here because on some platforms
+                # the default method for creating a new process is "spawn" which creates
+                # an entirely new python session instead of "fork" which would preserve
+                # the classvar
+                okDevMock.DATA_FILE = Path(os.environ.get("PYTEST_OKDEV_DATA_FILE"))
+            else:
+                raise RuntimeError('DATA_FILE class attr must be set before using the mock')
+
         with open(self.DATA_FILE, 'rb') as dfile:
             self._buffer = bytearray(dfile.read())
 

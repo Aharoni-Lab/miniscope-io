@@ -465,7 +465,7 @@ class StreamDaq:
         source : Literal[uart, fpga]
             Device source.
         read_length : Optional[int], optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
+            Passed to :func:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
         video: Path, optional
             If present, a path to an output video file
         video_options: dict, optional

@@ -17,14 +17,14 @@ from miniscope_io.devices.mocks import okDevMock
     ]
 )
 @pytest.mark.timeout(30)
-def test_video_output(config, data, video_hash, tmp_path, monkeypatch):
+def test_video_output(config, data, video_hash, tmp_path, set_okdev_input):
     output_video = tmp_path / 'output.avi'
 
     test_config_path = CONFIG_DIR / config
     daqConfig = StreamDaqConfig.from_yaml(test_config_path)
 
     data_file = DATA_DIR / data
-    monkeypatch.setattr(okDevMock, 'DATA_FILE', data_file)
+    set_okdev_input(data_file)
 
     daq_inst = StreamDaq(config=daqConfig)
     daq_inst.capture(source="fpga", video=output_video)

@@ -2,7 +2,7 @@
 This module is a data acquisition module that captures video streams from Miniscopes based on the `Miniscope-SAMD-Framework` firmware. The firmware repository will be published in future updates but is currently under development and private.
 
 ## Command
-After [installation](./installation.md) and customizing [configurations](#configuration) if necessary, run the following command in this Git repository to start the data acquisition process:
+After [installation](../guide/installation.md) and customizing [configurations](stream-daq-config) if necessary, run the following command in this Git repository to start the data acquisition process:
 ```bash
 >>> streamDaq -c path/to/config/yaml/file.yml
 Connected to XEM7310-A75
@@ -18,6 +18,7 @@ A window displaying the image transferred from the Miniscope should pop up. Addi
 - **Supported Operating Systems:** MacOS or Ubuntu PC (To do: specify version)
 - **Imaging hardware:** Miniscope based on the `Miniscope-SAMD-Framework` firmware. Hardware modules for feeding in data into the data capture hardware are also needed but these will be specified in future updates.
 
+(stream-daq-config)=
 ## Configuration
 A YAML file is used to configure this module. The configuration needs to match the imaging and data capture hardware for proper operation. This file is used to set up hardware, define data formats, and set data preambles. The contents of this YAML file will be parsed into a model [miniscope_io.models.stream](../api/models/stream.md), which then configures the Stream DAQ.
 

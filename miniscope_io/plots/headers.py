@@ -1,7 +1,13 @@
 from typing import TYPE_CHECKING, Optional, List
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError as e:
+    raise ImportError(
+        'matplotlib is not a required dependency of miniscope-io, '
+        'install it with the miniscope-io[plot] extra or manually in your environment :)'
+    ) from e
 
 
 def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
