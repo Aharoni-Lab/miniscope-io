@@ -8,7 +8,7 @@ from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
 from miniscope_io.data import Frame
-from miniscope_io.utils import hash_file
+from miniscope_io.utils import hash_video
 
 from .fixtures import wirefree
 
@@ -112,8 +112,8 @@ def test_relative_path():
 @pytest.mark.parametrize(
     ['file', 'fourcc', 'hash'],
     [
-        ('video.avi', 'GREY', '2315d20f3d0c0f3f53a9d38f3b99b322148b7855a3c5d9848a866988eb3fc97c'),
-        ('video.mp4', 'mp4v', '85c98346bf50a2bccc0c9aed485a2159b52e93b05ab180db0885d903fc13b143')
+        ('video.avi', 'GREY', 'de1a5a0bd06c17588cef2130c96a883a58eeedc1b46f2b89e0233ff8c4ef4e32'),
+        ('video.mp4', 'mp4v', '5814682f5b9b36f63c61f1c81622f4fbd9954dbf793ed3b9102a2e0fc90b0015')
     ]
 )
 def test_write_video(wirefree, file, fourcc, hash):
@@ -123,7 +123,7 @@ def test_write_video(wirefree, file, fourcc, hash):
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / file
         wirefree.to_video(path, fourcc=fourcc, progress=False)
-        file_hash = hash_file(path)
+        file_hash = hash_video(path)
         assert file_hash == hash
 
 
