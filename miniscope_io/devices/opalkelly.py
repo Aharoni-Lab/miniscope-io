@@ -1,6 +1,4 @@
-import time
 
-from bitstring import BitArray
 
 from miniscope_io.vendor import opalkelly as ok
 from miniscope_io.exceptions import StreamReadError, DeviceConfigurationError, DeviceOpenError

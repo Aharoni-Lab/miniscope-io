@@ -4,7 +4,7 @@ from miniscope_io.stream_daq import StreamDaqConfig, StreamDaq
 from miniscope_io.utils import hash_video
 from .conftest import DATA_DIR, CONFIG_DIR
 
-from .mock.opalkelly import okDevMock
+from miniscope_io.devices.mocks import okDevMock
 
 @pytest.mark.parametrize(
     'config,data,video_hash',

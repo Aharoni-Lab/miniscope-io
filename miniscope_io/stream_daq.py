@@ -17,14 +17,14 @@ from miniscope_io.formats.stream import StreamBufferHeader
 from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
-from tests.mock.opalkelly import okDevMock
+from miniscope_io.devices.mocks import okDevMock
 
 HAVE_OK = False
 ok_error = None
 try:
     from miniscope_io.devices.opalkelly import okDev
     HAVE_OK = True
-except (ImportError, ModuleNotFoundError) as ok_error:
+except (ImportError, ModuleNotFoundError):
     module_logger = init_logger('streamDaq')
     module_logger.warning(
         "Could not import OpalKelly driver, you can't read from FPGA!\nCheck out Opal Kelly's website for install info\nhttps://docs.opalkelly.com/fpsdk/getting-started/")

@@ -10,7 +10,7 @@ MOCK_DIR = Path(__file__).parent / 'mock'
 
 @pytest.fixture(autouse=True)
 def mock_okdev(monkeypatch):
-    from .mock.opalkelly import okDevMock
+    from miniscope_io.devices.mocks import okDevMock
     from miniscope_io.devices import opalkelly
     from miniscope_io import stream_daq
 

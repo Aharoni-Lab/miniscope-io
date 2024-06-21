@@ -1,15 +1,13 @@
 from pathlib import Path
 from typing import Dict
 
-from ..conftest import DATA_DIR
-
 from miniscope_io.exceptions import EndOfRecordingException
 
 class okDevMock():
     """
     Mock class for :class:`~miniscope_io.devices.opalkelly.okDev`
     """
-    DATA_FILE = DATA_DIR / 'stream_daq_test_fpga_raw_input_200px.bin'
+    DATA_FILE = None
     """
     Recorded data file to use for simulating read.
     
@@ -25,6 +23,8 @@ class okDevMock():
         self._buffer_position = 0
 
         # preload the data file to a byte array
+        if self.DATA_FILE is None:
+            raise RuntimeError('DATA_FILE class attr must be set before using the mock')
         with open(self.DATA_FILE, 'rb') as dfile:
             self._buffer = bytearray(dfile.read())
 
