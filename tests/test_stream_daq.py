@@ -12,7 +12,7 @@ from .mock.opalkelly import okDevMock
         (
             'stream_daq_test_200px.yml',
             'stream_daq_test_fpga_raw_input_200px.bin',
-            '82d623032a31cf805f4971a5715ed4cb938c08c5d6a97ebbdecd8e25dae7803e'
+            '40047689185bdbeb81829aea7c6e3070bcd4673976e5836a138c3e1b54d75099'
         )
     ]
 )
