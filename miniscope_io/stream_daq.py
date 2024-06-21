@@ -229,9 +229,7 @@ class StreamDaq:
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
             )
         # determine length
-        if self.config.mode == 'RAW_RECORD':
-            read_length = int(max(self.buffer_npix) * self.nbuffer_per_fm * self.config.pix_depth) * 16 # get 16 frames
-        elif read_length is None:
+        if read_length is None:
             read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
 
         # set up fpga devices
@@ -445,7 +443,7 @@ class StreamDaq:
                         "frame: {}, bits lost: {}".format(header_data.frame_num, nbit_lost)
                     )
 
-    def init_video(self, path: Path, fourcc: str = 'DIVX', **kwargs) -> cv2.VideoWriter:
+    def init_video(self, path: Path, fourcc: str = 'Y800', **kwargs) -> cv2.VideoWriter:
         """
         Create a parameterized video writer
 
