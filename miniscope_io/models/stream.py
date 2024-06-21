@@ -30,14 +30,6 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
 
     Parameters
     ----------
-    mode: str
-        Operation modes. Maybe having
-
-            - DAQ (normal operation),
-            - RAW_RECORD (for getting testdata), and
-            - RAW_REPLAY (for plugging in recorded data for testing),
-
-        makes sense. Details TBD.
     device: str
         Interface hardware used for receiving data.
         Current options are "OK" (Opal Kelly XEM 7310) and "UART" (generic UART-USB converters).
@@ -106,11 +98,10 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
 
     """
 
-    mode: Literal["DAQ", "RAW_RECORD", "RAW_REPLAY"] = "DAQ"
-    device: str
-    bitstream: Optional[Path]
-    port: Optional[str]
-    baudrate: Optional[int]
+    device: Literal["OK", "UART"]
+    bitstream: Optional[Path] = None
+    port: Optional[str] = None
+    baudrate: Optional[int] = None
     frame_width: int
     frame_height: int
     fs: int = 20
@@ -120,8 +111,8 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     buffer_block_length: int
     block_size: int
     num_buffers: int
-    LSB: Optional[bool]
-    show_video: Optional[bool] = True
+    LSB: bool = True
+    show_video: bool = True
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:

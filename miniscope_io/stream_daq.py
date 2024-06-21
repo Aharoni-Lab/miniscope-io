@@ -16,11 +16,11 @@ import serial
 from bitstring import Array, BitArray, Bits
 
 from miniscope_io import init_logger
+from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader
 from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
-from tests.mock.opalkelly import okDevMock
 
 HAVE_OK = False
 ok_error = None
@@ -198,6 +198,7 @@ class StreamDaq:
         serial_buffer_queue: multiprocessing.Queue,
         read_length: int = None,
         pre_first: bool = True,
+        capture_binary: Optional[Path] = None,
     ) -> None:
         """
         Function to read bitstream from OpalKelly device and store buffer in `serial_buffer_queue`.
@@ -217,6 +218,8 @@ class StreamDaq:
             and is an integer multiple of 16 bytes (as recommended by OpalKelly).
         pre_first : bool, optional
             Whether preamble/header is returned at the beginning of each buffer, by default True.
+        capture_binary: Path, optional
+            save binary directly from the ``okDev`` to the supplied path, if present.
 
         Raises
         ------
@@ -259,12 +262,10 @@ class StreamDaq:
                 self.terminate.value = True
                 break
 
-            if self.config.mode == "RAW_RECORD":
-                # Not sure where to define this because we don't want to overwrite.
-                fpga_raw_path = "data/fpga_raw.bin"
-                with open(fpga_raw_path, "wb") as file:
+            if capture_binary:
+                with open(capture_binary, "ab") as file:
                     file.write(buf)
-                self.terminate.value = True
+
             dat = BitArray(buf)
             cur_buffer = cur_buffer + dat
             pre_pos = list(cur_buffer.findall(pre))
@@ -461,6 +462,7 @@ class StreamDaq:
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
+        binary: Optional[Path] = None,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -470,12 +472,15 @@ class StreamDaq:
         source : Literal[uart, fpga]
             Device source.
         read_length : Optional[int], optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when
+            Passed to :func:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when
             `source == "fpga"`, by default None.
         video: Path, optional
             If present, a path to an output video file
-        video_options: dict, optional
+        video_kwargs: dict, optional
             kwargs passed to :meth:`.init_video`
+        binary: Path, optional
+            Save raw binary directly from ``okDev`` to file, if present.
+            Note that binary is captured in *append* mode, rather than rewriting an existing file.
 
         Raises
         ------
@@ -507,10 +512,7 @@ class StreamDaq:
             self.logger.debug("Starting fpga capture process")
             p_recv = multiprocessing.Process(
                 target=self._fpga_recv,
-                args=(
-                    serial_buffer_queue,
-                    read_length,
-                ),
+                args=(serial_buffer_queue, read_length, True, binary),
             )
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")

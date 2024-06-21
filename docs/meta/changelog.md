@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.9 - 24-06-21
+## 0.2
+
+### 0.2.0 - 24-06-21
+
+StreamDaq enhancements and testing
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/26
 
@@ -42,7 +46,9 @@ CI:
 - caching dependency installs
 - not using pytest-emoji, it was always annoying
 
-## 0.1.8 - 24-06-16
+## 0.1
+
+### 0.1.8 - 24-06-16
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/21
 - https://github.com/Aharoni-Lab/miniscope-io/pull/15
@@ -57,7 +63,7 @@ New features:
 
 Note: Version 0.1.7 was skipped accidentally and does not exist.
 
-## 0.1.6 - 24-04-09
+### 0.1.6 - 24-04-09
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/14
 
@@ -67,7 +73,7 @@ New features:
   initial version of code is present in `stream_daq.py`
 - Vendored opalkelly device drivers - see `devices` and `vendor`
 
-## 0.1.5 - 23-09-03
+### 0.1.5 - 23-09-03
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/9
 - https://github.com/Aharoni-Lab/miniscope-io/pull/10
@@ -86,7 +92,7 @@ Code structure:
 Tests:
 - Run tests on macos and windows
 
-## 0.1.4 - 23-09-03
+### 0.1.4 - 23-09-03
 
 https://github.com/Aharoni-Lab/miniscope-io/pull/8
 
@@ -104,16 +110,16 @@ Reverted:
 
 
 
-## 0.1.1 - 23-07-13
+### 0.1.1 - 23-07-13
 
-### Additions
+#### Additions
 
 - Added {class}`~miniscope_io.exceptions.EndOfRecordingException` when attempting to read past last frame
 - Added {attr}`~miniscope_io.io.SDCard.frame_count` property inferred from the number of buffers and buffers per frame
 - Return `self` when entering {class}`~.SDCard` context
 - Optionally return {class}`~miniscope_io.sd.DataHeader`s from frame when reading
 
-### Bugfixes
+#### Bugfixes
 
 - Index the position of the 0th frame in {attr}`~.SDCard.positions`
 - reset internal frame counter to 0 when exiting context
