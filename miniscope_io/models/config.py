@@ -89,7 +89,13 @@ class Config(BaseSettings):
     @classmethod
     def folder_exists(cls, v: Path) -> Path:
         v = Path(v)
-        v.mkdir(exist_ok=True, parents=True)
+        try:
+            v.mkdir(exist_ok=True, parents=True)
+        except OSError:
+            # on windows, this can fail with a malformed path error.
+            # that's fine, because the next assert statement is what
+            # we're interested in
+            pass
         assert v.exists()
         return v
 
