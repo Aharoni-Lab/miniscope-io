@@ -1,6 +1,54 @@
 # Changelog
 
-## 0.1.8 - 24-06-16
+## 0.2
+
+### 0.2.0 - 24-06-21
+
+StreamDaq enhancements and testing
+
+- https://github.com/Aharoni-Lab/miniscope-io/pull/26
+
+Testing:
+
+- [@t-sasatani](https://github.com/t-sasatani) - add end-to-end test for {class}`~miniscope_io.stream_daq.streamDaq`
+- Add a mock class for {class}`~miniscope_io.devices.opalkelly.okDev`
+- replace `tmpdir` fixture and `tempfile` module with `tmp_path`
+
+New:
+
+- [@t-sasatani](https://github.com/t-sasatani) - allow use of okDev on Windows
+- {meth}`~miniscope_io.stream_daq.StreamDaq.capture` can export video :)
+- More specific exceptions:
+  - {class}`~miniscope_io.exceptions.StreamError`
+  - {class}`~miniscope_io.exceptions.StreamReadError`
+  - {class}`~miniscope_io.exceptions.DeviceError`
+  - {class}`~miniscope_io.exceptions.DeviceOpenError`
+  - {class}`~miniscope_io.exceptions.DeviceConfigurationError`
+- {func}`~miniscope_io.utils.hash_video` - hash decoded video frames, rather than encoded video file
+
+
+Fixed:
+
+- Removed `print` statements in {class}`~miniscope_io.devices.opalkelly.okDev`
+- {meth}`~miniscope_io.stream_daq.StreamDaq.capture`
+  - Don't require `config`
+  - Replace logging with {func}`~miniscope_io.logging.init_logger`
+  - Use of {attr}`~miniscope_io.stream_daq.StreamDaq.terminate` to control inner loops
+
+
+Models:
+
+- added `fs` and `show_video` to {class}`~miniscope_io.models.stream.StreamDaqConfig`
+
+CI:
+
+- [@t-sasatani](https://github.com/t-sasatani) - restore windows and mac tests (oops)
+- caching dependency installs
+- not using pytest-emoji, it was always annoying
+
+## 0.1
+
+### 0.1.8 - 24-06-16
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/21
 - https://github.com/Aharoni-Lab/miniscope-io/pull/15
@@ -15,7 +63,7 @@ New features:
 
 Note: Version 0.1.7 was skipped accidentally and does not exist.
 
-## 0.1.6 - 24-04-09
+### 0.1.6 - 24-04-09
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/14
 
@@ -25,7 +73,7 @@ New features:
   initial version of code is present in `stream_daq.py`
 - Vendored opalkelly device drivers - see `devices` and `vendor`
 
-## 0.1.5 - 23-09-03
+### 0.1.5 - 23-09-03
 
 - https://github.com/Aharoni-Lab/miniscope-io/pull/9
 - https://github.com/Aharoni-Lab/miniscope-io/pull/10
@@ -44,7 +92,7 @@ Code structure:
 Tests:
 - Run tests on macos and windows
 
-## 0.1.4 - 23-09-03
+### 0.1.4 - 23-09-03
 
 https://github.com/Aharoni-Lab/miniscope-io/pull/8
 
@@ -62,16 +110,16 @@ Reverted:
 
 
 
-## 0.1.1 - 23-07-13
+### 0.1.1 - 23-07-13
 
-### Additions
+#### Additions
 
 - Added {class}`~miniscope_io.exceptions.EndOfRecordingException` when attempting to read past last frame
 - Added {attr}`~miniscope_io.io.SDCard.frame_count` property inferred from the number of buffers and buffers per frame
 - Return `self` when entering {class}`~.SDCard` context
 - Optionally return {class}`~miniscope_io.sd.DataHeader`s from frame when reading
 
-### Bugfixes
+#### Bugfixes
 
 - Index the position of the 0th frame in {attr}`~.SDCard.positions`
 - reset internal frame counter to 0 when exiting context

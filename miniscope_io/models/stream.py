@@ -2,7 +2,7 @@
 Models for :mod:`miniscope_io.stream_daq`
 """
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 
 from pydantic import field_validator
 
@@ -41,6 +41,8 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Frame width of transferred image. This is used to reconstruct image.
     frame_height: int
         Frame height of transferred image. This is used to reconstruct image.
+    fs: int
+        Framerate of acquired stream
     preamble: str
         32-bit preamble used to locate the start of each buffer. The header and image data follows this preamble.
         This is used as a hex but imported as a string because yaml doesn't support hex format.
@@ -68,23 +70,28 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
         Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
         Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
+    show_video : bool, optional
+        Whether the video is showed in "real-time", by default True.
 
     ..todo::
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
-    device: str
-    bitstream: Optional[Path]
-    port: Optional[str]
-    baudrate: Optional[int]
+
+    device: Literal['OK', 'UART']
+    bitstream: Optional[Path] = None
+    port: Optional[str] = None
+    baudrate: Optional[int] = None
     frame_width: int
     frame_height: int
+    fs: int = 20
     preamble: bytes
     header_len: int
     pix_depth: int = 8
     buffer_block_length: int
     block_size: int
     num_buffers: int
-    LSB: Optional[bool]
+    LSB: bool = True
+    show_video: bool = True
 
     @field_validator('preamble', mode='before')
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:

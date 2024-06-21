@@ -1,6 +1,11 @@
-from typing import Union
+from typing import Literal, Union, TYPE_CHECKING
 from pathlib import Path
 import hashlib
+import cv2
+
+if TYPE_CHECKING:
+    import numpy as np
+
 
 def hash_file(path: Union[Path, str]) -> str:
     """
@@ -24,3 +29,38 @@ def hash_file(path: Union[Path, str]) -> str:
                 break
             h.update(chunk)
     return h.hexdigest()
+
+
+def hash_video(
+        path: Union[Path, str],
+        method: hashlib.algorithms_available = 'blake2s',
+) -> str:
+    """
+    Create a hash of a video by digesting the byte string each of its decoded frames.
+
+    Intended to remove variability in video encodings across platforms.
+
+    Args:
+        path (:class:`pathlib.Path`): Video file
+        method (str): hashing algorithm to use (one of
+            :data:`hashlib.algorithms_available` )
+
+    Returns:
+        str
+    """
+    h = hashlib.new(method)
+
+    vid = cv2.VideoCapture(str(path))
+    while True:
+        ret, frame = vid.read()
+        if not ret:
+            break
+        h.update(frame)
+
+    return h.hexdigest()
+
+
+
+
+
+

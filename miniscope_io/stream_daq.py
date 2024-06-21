@@ -1,34 +1,33 @@
 import argparse
-import yaml
-import logging
 import multiprocessing
-import os
 import sys
+import os
 import time
-from datetime import datetime
 from typing import Literal, Optional, Tuple, List
+from pathlib import Path
 
-import coloredlogs
 import cv2
 import numpy as np
 import serial
 from bitstring import Array, BitArray, Bits
 
 from miniscope_io import init_logger
+
 from miniscope_io.formats.stream import StreamBufferHeader
 from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
+from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
+from miniscope_io.devices.mocks import okDevMock
 
 HAVE_OK = False
 ok_error = None
 try:
     from miniscope_io.devices.opalkelly import okDev
-
     HAVE_OK = True
-except (ImportError, ModuleNotFoundError) as ok_error:
+except (ImportError, ModuleNotFoundError):
     module_logger = init_logger('streamDaq')
     module_logger.warning(
-        "Could not import OpalKelly driver, unable to read from FPGA!")
+        "Could not import OpalKelly driver, you can't read from FPGA!\nCheck out Opal Kelly's website for install info\nhttps://docs.opalkelly.com/fpsdk/getting-started/")
 
 # Parsers for daq inputs
 daqParser = argparse.ArgumentParser("streamDaq")
@@ -79,6 +78,7 @@ class StreamDaq:
         self.preamble = self.config.preamble
         self._buffer_npix: Optional[List[int]] = None
         self._nbuffer_per_fm: Optional[int] = None
+        self.terminate = multiprocessing.Value('b', False)
 
     @property
     def buffer_npix(self) -> List[int]:
@@ -187,6 +187,7 @@ class StreamDaq:
         serial_buffer_queue: multiprocessing.Queue,
         read_length: int = None,
         pre_first: bool = True,
+        capture_binary: Optional[Path] = None
     ) -> None:
         """
         Function to read bitstream from OpalKelly device and store buffer in `serial_buffer_queue`.
@@ -204,6 +205,8 @@ class StreamDaq:
             If `None`, an optimal length is estimated so that it roughly covers a single buffer and is an integer multiple of 16 bytes (as recommended by OpalKelly).
         pre_first : bool, optional
             Whether preamble/header is returned at the beginning of each buffer, by default True.
+        capture_binary: Path, optional
+            save binary directly from the ``okDev`` to the supplied path, if present.
 
         Raises
         ------
@@ -223,7 +226,13 @@ class StreamDaq:
         if not BIT_FILE.exists():
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
-        dev = okDev()
+
+        # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
+        if os.environ.get("PYTEST_CURRENT_TEST") is not None:
+            dev = okDevMock()
+        else:
+            dev = okDev()
+
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)
@@ -237,7 +246,16 @@ class StreamDaq:
         if self.config.LSB:
             pre = pre[::-1]
         while True:
-            buf = dev.readData(read_length)
+            try:
+                buf = dev.readData(read_length)
+            except (EndOfRecordingException, StreamReadError):
+                self.terminate.value = True
+                break
+
+            if capture_binary:
+                with open(capture_binary, 'ab') as file:
+                    file.write(buf)
+
             dat = BitArray(buf)
             cur_buffer = cur_buffer + dat
             pre_pos = list(cur_buffer.findall(pre))
@@ -415,12 +433,32 @@ class StreamDaq:
                         "frame: {}, bits lost: {}".format(header_data.frame_num, nbit_lost)
                     )
 
-    # COM port should probably be automatically found but not sure yet how to distinguish with other devices.
+    def init_video(self, path: Path, fourcc: str = 'Y800', **kwargs) -> cv2.VideoWriter:
+        """
+        Create a parameterized video writer
+
+        Args:
+            path (:class:`pathlib.Path`): Video file to write to
+            fourcc (str): Fourcc code to use
+            kwargs: passed to :class:`cv2.VideoWriter`
+
+        Returns:
+            :class:`cv2.VideoWriter`
+        """
+        fourcc = cv2.VideoWriter_fourcc(*fourcc)
+        frame_rate = self.config.fs
+        frame_size = (self.config.frame_width, self.config.frame_height)
+        out = cv2.VideoWriter(str(path), fourcc, frame_rate, frame_size, **kwargs)
+        return out
+
+
     def capture(
         self,
         source: Literal["uart", "fpga"],
-        config: StreamDaqConfig,
         read_length: Optional[int] = None,
+        video: Optional[Path] = None,
+        video_kwargs: Optional[dict] = None,
+        binary: Optional[Path] = None
     ):
         """
         Entry point to start frame capture.
@@ -429,39 +467,21 @@ class StreamDaq:
         ----------
         source : Literal[uart, fpga]
             Device source.
-        config : dict
-            To write. Contains config info imported from yaml file (example: example.yml).
         read_length : Optional[int], optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
+            Passed to :func:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
+        video: Path, optional
+            If present, a path to an output video file
+        video_kwargs: dict, optional
+            kwargs passed to :meth:`.init_video`
+        binary: Path, optional
+            Save raw binary directly from ``okDev`` to file, if present.
+            Note that binary is captured in *append* mode, rather than rewriting an existing file.
 
         Raises
         ------
         ValueError
             If `source` is not in `("uart", "fpga")`.
         """
-        logdirectories = [
-            "log",
-            "log/uart_recv",
-            "log/format_frame",
-            "log/buffer_to_frame",
-        ]
-        for logpath in logdirectories:
-            if not os.path.exists(logpath):
-                os.makedirs(logpath)
-        file = logging.FileHandler(
-            datetime.now().strftime("log/logfile%Y_%m_%d_%H_%M.log")
-        )
-        file.setLevel(logging.DEBUG)
-        fileformat = logging.Formatter(
-            "%(asctime)s:%(levelname)s:%(message)s", datefmt="%H:%M:%S"
-        )
-        file.setFormatter(fileformat)
-
-        globallogs = logging.getLogger(__name__)
-        globallogs.setLevel(logging.DEBUG)
-
-        globallogs.addHandler(file)
-        coloredlogs.install(level=logging.DEBUG, logger=globallogs)
 
         # Queue size is hard coded
         queue_manager = multiprocessing.Manager()
@@ -480,8 +500,8 @@ class StreamDaq:
                 target=self._uart_recv,
                 args=(
                     serial_buffer_queue,
-                    config['port'],
-                    config['baudrate'],
+                    self.config['port'],
+                    self.config['baudrate'],
                 ),
             )
         elif source == "fpga":
@@ -491,11 +511,27 @@ class StreamDaq:
                 args=(
                     serial_buffer_queue,
                     read_length,
+                    True,
+                    binary
                 ),
             )
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
 
+        # Video output
+        if video:
+            if video_kwargs is None:
+                video_kwargs = {}
+
+            writer = self.init_video(video, **video_kwargs)
+        else:
+            writer = None
+
+
+        def check_termination_flag(termination_flag):
+            input("Press enter to exit the process.")
+            termination_flag.value = True
+            
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
@@ -510,22 +546,33 @@ class StreamDaq:
                 imagearray,
             ),
         )
+        '''
+        p_terminate = multiprocessing.Process(
+            target=check_termination_flag, args=(self.terminate,))
+        '''
         p_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
-
-        while (
-            1
-        ):  # Seems like GUI functions should be on main thread in scripts but not sure what it means for this case
-            if imagearray.qsize() > 0:
-                imagearray_plot = imagearray.get()
-                image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
-                cv2.imshow("image", image)
-            if cv2.waitKey(1) == 27:
-                cv2.destroyAllWindows()
-                cv2.waitKey(100)
-                break  # esc to quit
-        self.logger.info("End capture")
+        #p_terminate.start()
+        try:
+            while not self.terminate.value:
+                if imagearray.qsize() > 0:
+                    imagearray_plot = imagearray.get()
+                    image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
+                    if self.config.show_video is True:
+                        cv2.imshow("image", image)
+                    if writer:
+                        picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
+                        writer.write(picture)
+                if cv2.waitKey(1) == 27 and self.config.show_video is True:
+                    cv2.destroyAllWindows()
+                    cv2.waitKey(100)
+                    break  # esc to quit
+        finally:
+            if writer:
+                writer.release()
+                self.logger.debug("VideoWriter released")
+            self.logger.debug("End capture")
 
         while True:
             self.logger.debug("[Terminating] uart/fpga_recv()")
@@ -574,13 +621,13 @@ def main():
             print(e)
             sys.exit(1)
         #daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
-        daq_inst.capture(source="uart", config = daqConfig)
+        daq_inst.capture(source="uart")
 
     if daqConfig.device == "OK":
         if not HAVE_OK:
             raise ImportError('Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}')
 
-        daq_inst.capture(source="fpga", config = daqConfig)
+        daq_inst.capture(source="fpga")
 
 
 if __name__ == "__main__":

@@ -90,7 +90,8 @@ class Config(BaseSettings):
     def folder_exists(cls, v: Path) -> Path:
         v = Path(v)
         v.mkdir(exist_ok=True, parents=True)
-        assert v.exists()
+
+        assert v.exists(), f'{v} does not exist!'
         return v
 
     @model_validator(mode='after')
