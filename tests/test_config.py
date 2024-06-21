@@ -41,7 +41,7 @@ def test_config_from_dotenv(tmp_path):
     tmp_path.mkdir(exist_ok=True,parents=True)
     dotenv = tmp_path / '.env'
     with open(dotenv, 'w') as denvfile:
-        denvfile.write(f'MINISCOPE_IO_BASE_DIR="{tmp_path}"')
+        denvfile.write(f'MINISCOPE_IO_BASE_DIR={str(tmp_path)}')
 
     config = Config(_env_file=dotenv, _env_file_encoding='utf-8')
     assert config.base_dir == Path(tmp_path)
