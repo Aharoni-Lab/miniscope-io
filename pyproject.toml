@@ -1,13 +1,36 @@
 [tool.poetry]
 name = "miniscope_io"
 version = "0.2.0"
-description = ""
+description = "Generic I/O for miniscopes"
 authors = [
     "sneakers-the-rat <JLSaunders987@gmail.com>",
     "t-sasatani <sasatani.dev@gmail.com>",
 ]
 readme = "README.md"
 packages = [{include = "miniscope_io"}]
+license = "AGPL-3.0"
+homepage = "https://miniscope-io.readthedocs.io/"
+repository = "https://github.com/Aharoni-Lab/miniscope-io"
+documentation = "https://miniscope-io.readthedocs.io/"
+keywords = ["miniscope", "neuroscience", "io"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Video :: Capture",
+    "Topic :: Scientific/Engineering"
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
