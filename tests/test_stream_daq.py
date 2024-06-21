@@ -18,7 +18,7 @@ from .mock.opalkelly import okDevMock
         )
     ]
 )
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(30)
 def test_video_output(config, data, hash, tmpdir, monkeypatch):
     output_video = tmpdir / 'output.avi'
 

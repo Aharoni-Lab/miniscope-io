@@ -1,7 +1,7 @@
 import argparse
-import yaml
 import multiprocessing
 import sys
+import os
 import time
 from typing import Literal, Optional, Tuple, List
 from pathlib import Path
@@ -17,6 +17,7 @@ from miniscope_io.formats.stream import StreamBufferHeader
 from miniscope_io.models.buffer import BufferHeader
 from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
+from tests.mock.opalkelly import okDevMock
 
 try:
     current_method = multiprocessing.get_start_method()
@@ -238,7 +239,11 @@ class StreamDaq:
         if not BIT_FILE.exists():
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
-        dev = okDev()
+
+        if os.environ.get("PYTEST_CURRENT_TEST") is not None:
+            dev = okDevMock()
+        else:
+            dev = okDev()
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)

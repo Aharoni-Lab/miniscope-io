@@ -46,8 +46,3 @@ class okDevMock():
 
     def setWire(self, addr: int, val: int):
         self._wires[addr] = val
-
-
-
-
-
