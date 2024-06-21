@@ -187,6 +187,7 @@ class StreamDaq:
         serial_buffer_queue: multiprocessing.Queue,
         read_length: int = None,
         pre_first: bool = True,
+        capture_binary: Optional[Path] = None
     ) -> None:
         """
         Function to read bitstream from OpalKelly device and store buffer in `serial_buffer_queue`.
@@ -204,6 +205,8 @@ class StreamDaq:
             If `None`, an optimal length is estimated so that it roughly covers a single buffer and is an integer multiple of 16 bytes (as recommended by OpalKelly).
         pre_first : bool, optional
             Whether preamble/header is returned at the beginning of each buffer, by default True.
+        capture_binary: Path, optional
+            save binary directly from the ``okDev`` to the supplied path, if present.
 
         Raises
         ------
@@ -249,11 +252,10 @@ class StreamDaq:
                 self.terminate.value = True
                 break
 
-            if self.config.mode == 'RAW_RECORD':
-                fpga_raw_path = 'data/fpga_raw.bin' # Not sure where to define this because we don't want to overwrite.
-                with open(fpga_raw_path, 'wb') as file:
+            if capture_binary:
+                with open(capture_binary, 'ab') as file:
                     file.write(buf)
-                self.terminate.value = True
+
             dat = BitArray(buf)
             cur_buffer = cur_buffer + dat
             pre_pos = list(cur_buffer.findall(pre))
@@ -455,7 +457,8 @@ class StreamDaq:
         source: Literal["uart", "fpga"],
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
-        video_kwargs: Optional[dict] = None
+        video_kwargs: Optional[dict] = None,
+        binary: Optional[Path] = None
     ):
         """
         Entry point to start frame capture.
@@ -468,8 +471,11 @@ class StreamDaq:
             Passed to :func:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
         video: Path, optional
             If present, a path to an output video file
-        video_options: dict, optional
+        video_kwargs: dict, optional
             kwargs passed to :meth:`.init_video`
+        binary: Path, optional
+            Save raw binary directly from ``okDev`` to file, if present.
+            Note that binary is captured in *append* mode, rather than rewriting an existing file.
 
         Raises
         ------
@@ -505,6 +511,8 @@ class StreamDaq:
                 args=(
                     serial_buffer_queue,
                     read_length,
+                    True,
+                    binary
                 ),
             )
         else:
