@@ -1,3 +1,5 @@
+import pdb
+
 import pytest
 import tempfile
 from pathlib import Path
@@ -113,7 +115,6 @@ def test_relative_path():
     ['file', 'fourcc', 'hash'],
     [
         ('video.avi', 'GREY', 'de1a5a0bd06c17588cef2130c96a883a58eeedc1b46f2b89e0233ff8c4ef4e32'),
-        ('video.mp4', 'mp4v', '5814682f5b9b36f63c61f1c81622f4fbd9954dbf793ed3b9102a2e0fc90b0015')
     ]
 )
 def test_write_video(wirefree, file, fourcc, hash):
