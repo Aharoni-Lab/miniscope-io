@@ -38,8 +38,8 @@ def test_config_from_dotenv(tmp_path):
 
     this test can be more relaxed since its basically a repetition of previous
     """
-
-    dotenv = Path(tmp_path) / '.env'
+    tmp_path.mkdir(exist_ok=True,parents=True)
+    dotenv = tmp_path / '.env'
     with open(dotenv, 'w') as denvfile:
         denvfile.write(f'MINISCOPE_IO_BASE_DIR="{tmp_path}"')
 
