@@ -18,8 +18,8 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
     Typically returned from :meth:`.SDCard.read`
     """
 
-    data: Optional[np.ndarray] = None
-    headers: Optional[List[SDBufferHeader]] = None
+    data: np.ndarray
+    headers: List[SDBufferHeader]
 
     @field_validator("headers")
     @classmethod
@@ -34,9 +34,9 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
         return v
 
     @property
-    def frame_num(self) -> int:
+    def frame_num(self) -> Optional[int]:
         """
-        Frame number for this set of headers
+        Frame number for this set of headers, if headers are present
         """
         return self.headers[0].frame_num
 
@@ -49,10 +49,12 @@ class Frames(BaseModel):
     frames: List[Frame]
 
     @overload
-    def flatten_headers(self, as_dict: Literal[False] = False) -> List[SDBufferHeader]: ...
+    def flatten_headers(self, as_dict: Literal[False]) -> List[SDBufferHeader]:
+        ...
 
     @overload
-    def flatten_headers(self, as_dict: Literal[True] = True) -> List[dict]: ...
+    def flatten_headers(self, as_dict: Literal[True]) -> List[dict]:
+        ...
 
     def flatten_headers(self, as_dict: bool = False) -> Union[List[dict], List[SDBufferHeader]]:
         """
@@ -62,8 +64,9 @@ class Frames(BaseModel):
             as_dict (bool): If `True`, return a list of dictionaries, if `False`
                 (default), return a list of :class:`.SDBufferHeader` s.
         """
-        h = []
+        h: Union[List[dict], List[SDBufferHeader]] = []
         for frame in self.frames:
+            headers: Union[List[dict], List[SDBufferHeader]]
             if as_dict:
                 headers = [header.model_dump() for header in frame.headers]
             else:

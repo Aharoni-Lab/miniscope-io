@@ -38,7 +38,7 @@ def hash_file(path: Union[Path, str]) -> str:
 
 def hash_video(
     path: Union[Path, str],
-    method: hashlib.algorithms_available = "blake2s",
+    method: str = "blake2s",
 ) -> str:
     """
     Create a hash of a video by digesting the byte string each of its decoded frames.
@@ -60,6 +60,6 @@ def hash_video(
         ret, frame = vid.read()
         if not ret:
             break
-        h.update(frame)
+        h.update(frame)  # type: ignore
 
     return h.hexdigest()
