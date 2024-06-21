@@ -72,10 +72,6 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
         Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
         Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
-    save_video : bool, optional
-        Whether the video gets saved as an .avi file, by default False.
-    save_video_name : str, optional
-        If video is saved, , by default False.
     show_video : bool, optional
         Whether the video is showed in "real-time", by default True.
 
