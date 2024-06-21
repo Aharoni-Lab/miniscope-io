@@ -23,9 +23,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
       - name: Install dependencies
-        run: pip install .[tests] pytest pytest-md pytest-emoji
+        run: pip install .[tests] pytest pytest-md
       - uses: pavelzw/pytest-action@v2
         with:
-          emoji: true
           verbose: true
           job-summary: true

@@ -96,7 +96,7 @@ class Config(BaseSettings):
             # that's fine, because the next assert statement is what
             # we're interested in
             pass
-        assert v.exists()
+        assert v.exists(), f'{v} does not exist!'
         return v
 
     @model_validator(mode='after')
