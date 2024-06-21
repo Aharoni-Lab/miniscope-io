@@ -1,3 +1,7 @@
+"""
+Module-global configuration models
+"""
+
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -38,7 +42,10 @@ class LogConfig(MiniscopeIOModel):
 
     @field_validator("level", "level_file", "level_stdout", mode="before")
     @classmethod
-    def uppercase_levels(cls, value: Optional[str] = None):
+    def uppercase_levels(cls, value: Optional[str] = None) -> Optional[str]:
+        """
+        Ensure log level strings are uppercased
+        """
         if value is not None:
             value = value.upper()
         return value
@@ -74,7 +81,8 @@ class Config(BaseSettings):
 
     base_dir: Path = Field(
         _default_basedir,
-        description="Base directory to store configuration and other temporary files, other paths are relative to this by default",
+        description="Base directory to store configuration and other temporary files, "
+        "other paths are relative to this by default",
     )
     log_dir: Path = Field(Path("logs"), description="Location to store logs")
     logs: LogConfig = Field(LogConfig(), description="Additional settings for logs")
@@ -82,6 +90,7 @@ class Config(BaseSettings):
     @field_validator("base_dir", mode="before")
     @classmethod
     def folder_exists(cls, v: Path) -> Path:
+        """Ensure base_dir exists, make it otherwise"""
         v = Path(v)
         v.mkdir(exist_ok=True, parents=True)
 
@@ -90,6 +99,7 @@ class Config(BaseSettings):
 
     @model_validator(mode="after")
     def paths_relative_to_basedir(self) -> "Config":
+        """If relative paths are given, make them absolute relative to ``base_dir``"""
         paths = ("log_dir",)
         for path_name in paths:
             path = getattr(self, path_name)  # type: Path

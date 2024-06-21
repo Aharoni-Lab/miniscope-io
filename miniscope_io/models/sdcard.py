@@ -117,12 +117,14 @@ class SDLayout(MiniscopeConfig):
     write_key2: int = 0x0D7CBA17
     write_key3: int = 0x0D7CBA17
     """
-    These don't seem to actually be used in the existing reading/writing code, but we will leave them here for continuity's sake :)
+    These don't seem to actually be used in the existing reading/writing code, 
+    but we will leave them here for continuity's sake :)
     """
     word_size: int = 4
     """
-    I'm actually not sure what this is, but 4 is hardcoded a few times in the existing notebook and it
-    appears to be used as a word size when reading from the SD card.
+    I'm actually not sure what this is, but 4 is hardcoded a few times in the 
+    existing notebook and it appears to be used as a word size when
+    reading from the SD card.
     """
 
     header: SDHeaderPositions = SDHeaderPositions()
@@ -140,7 +142,8 @@ class SDConfig(MiniscopeConfig):
     """
     The configuration of a recording taken on this SD card.
 
-    Read from the locations given in :class:`.ConfigPositions` for an SD card with a given :class:`.SDLayout`
+    Read from the locations given in :class:`.ConfigPositions`
+    for an SD card with a given :class:`.SDLayout`
     """
 
     width: int

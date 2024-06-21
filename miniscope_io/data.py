@@ -23,20 +23,14 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
 
     @field_validator("headers")
     @classmethod
-    def frame_nums_must_be_equal(
-        cls, v: List[SDBufferHeader]
-    ) -> Optional[List[SDBufferHeader]]:
+    def frame_nums_must_be_equal(cls, v: List[SDBufferHeader]) -> Optional[List[SDBufferHeader]]:
         """
         Each frame_number field in each header must be the same
         (they come from the same frame!)
         """
 
-        if v is not None and not all(
-            [header.frame_num != v[0].frame_num for header in v]
-        ):
-            raise ValueError(
-                f"All frame numbers should be equal! Got f{[h.frame_num for h in v]}"
-            )
+        if v is not None and not all([header.frame_num != v[0].frame_num for header in v]):
+            raise ValueError(f"All frame numbers should be equal! Got f{[h.frame_num for h in v]}")
         return v
 
     @property
@@ -55,16 +49,12 @@ class Frames(BaseModel):
     frames: List[Frame]
 
     @overload
-    def flatten_headers(
-        self, as_dict: Literal[False] = False
-    ) -> List[SDBufferHeader]: ...
+    def flatten_headers(self, as_dict: Literal[False] = False) -> List[SDBufferHeader]: ...
 
     @overload
     def flatten_headers(self, as_dict: Literal[True] = True) -> List[dict]: ...
 
-    def flatten_headers(
-        self, as_dict: bool = False
-    ) -> Union[List[dict], List[SDBufferHeader]]:
+    def flatten_headers(self, as_dict: bool = False) -> Union[List[dict], List[SDBufferHeader]]:
         """
         Return flat list of headers, not grouped by frame
 

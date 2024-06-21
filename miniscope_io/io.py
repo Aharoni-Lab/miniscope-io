@@ -65,9 +65,7 @@ class SDCard:
         if self._config is None:
             with open(self.drive, "rb") as sd:
                 sd.seek(self.layout.sectors.config_pos, 0)
-                configSectorData = np.frombuffer(
-                    sd.read(self.layout.sectors.size), dtype=np.uint32
-                )
+                configSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
 
             self._config = SDConfig(
                 **{
@@ -159,8 +157,7 @@ class SDCard:
 
             self._frame_count = int(
                 np.ceil(
-                    (self.config.n_buffers_recorded + self.config.n_buffers_dropped)
-                    / len(headers)
+                    (self.config.n_buffers_recorded + self.config.n_buffers_dropped) / len(headers)
                 )
             )
 
@@ -187,9 +184,7 @@ class SDCard:
 
         # init private attrs
         # create an empty frame to hold our data!
-        self._array = np.zeros(
-            (self.config.width * self.config.height, 1), dtype=np.uint8
-        )
+        self._array = np.zeros((self.config.width * self.config.height, 1), dtype=np.uint8)
         self._pixel_count = 0
         self._last_buffer_n = 0
         self._frame = 0
@@ -202,7 +197,7 @@ class SDCard:
 
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):  # noqa: ANN001
         self._f.close()
         self._f = None
         self._frame = 0
@@ -224,9 +219,7 @@ class SDCard:
         dataHeader = np.append(
             dataHeader,
             np.frombuffer(
-                sd.read(
-                    (dataHeader[self.layout.buffer.length] - 1) * self.layout.word_size
-                ),
+                sd.read((dataHeader[self.layout.buffer.length] - 1) * self.layout.word_size),
                 dtype=np.uint32,
             ),
         )
@@ -265,9 +258,7 @@ class SDCard:
         them separate in case they are separable actions for now
         """
         n_blocks = self._n_frame_blocks(header)
-        read_size = (n_blocks * self.layout.sectors.size) - (
-            header.length * self.layout.word_size
-        )
+        read_size = (n_blocks * self.layout.sectors.size) - (header.length * self.layout.word_size)
         return read_size
 
     def _read_buffer(self, sd: BinaryIO, header: SDBufferHeader) -> np.ndarray:
@@ -340,18 +331,14 @@ class SDCard:
                     # blank,  and thus have a value of 0 for the header size, and we
                     # can't read 0 from the card.
                     self._f.seek(last_position, 0)
-                    raise EndOfRecordingException(
-                        "Reached the end of the video!"
-                    ) from None
+                    raise EndOfRecordingException("Reached the end of the video!") from None
                 else:
                     raise e
             except IndexError as e:
                 if "index 0 is out of bounds for axis 0 with size 0" in str(e):
                     # end of file if we are reading from a disk image without any
                     # additional space on disk
-                    raise EndOfRecordingException(
-                        "Reached the end of the video!"
-                    ) from None
+                    raise EndOfRecordingException("Reached the end of the video!") from None
                 else:
                     raise e
 
@@ -387,7 +374,7 @@ class SDCard:
         isColor: bool = False,
         force: bool = False,
         progress: bool = True,
-    ):
+    ) -> None:
         """
         Save contents of SD card to video with opencv
 
@@ -411,8 +398,7 @@ class SDCard:
         path = Path(path)
         if path.exists() and not force:
             raise FileExistsError(
-                f"{str(path)} already exists, not overwriting. "
-                "Use force=True to overwrite."
+                f"{str(path)} already exists, not overwriting. " "Use force=True to overwrite."
             )
 
         if progress:
@@ -454,7 +440,7 @@ class SDCard:
     # General Methods
     # --------------------------------------------------
 
-    def skip(self):
+    def skip(self) -> None:
         """
         Skip a frame
 
@@ -502,9 +488,7 @@ class SDCard:
         """
         with open(self.drive, "rb") as sd:
             sd.seek(self.layout.sectors.header_pos, 0)
-            headerSectorData = np.frombuffer(
-                sd.read(self.layout.sectors.size), dtype=np.uint32
-            )
+            headerSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
 
             valid = False
             if (

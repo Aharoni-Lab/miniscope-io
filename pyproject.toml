@@ -62,6 +62,7 @@ updateDevice = "miniscope_io.device_update:updateDevice"
 target-version = "py311"
 include = ["miniscope_io/**/*.py", "pyproject.toml"]
 exclude = ["tests", "miniscope_io/vendor"]
+line-length = 100
 
 [tool.ruff.lint]
 select = [
@@ -115,3 +116,4 @@ plugins = [
 target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
 include = "miniscope_io/.*\\.py$"
 extend-exclude = 'miniscope_io/vendor/.*'
+line-length = 100

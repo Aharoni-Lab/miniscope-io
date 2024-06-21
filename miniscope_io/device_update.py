@@ -126,9 +126,7 @@ def updateDevice() -> None:
 
     # set up serial port
     try:
-        serial_port = serial.Serial(
-            port=comport, baudrate=baudrate, timeout=5, stopbits=1
-        )
+        serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
     except Exception as e:
         logger.exception(e)
         raise e

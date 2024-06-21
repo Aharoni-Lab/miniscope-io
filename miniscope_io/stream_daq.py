@@ -1,3 +1,7 @@
+"""
+DAQ For use with FPGA and Uart streaming video sources.
+"""
+
 import argparse
 import multiprocessing
 import os
@@ -27,7 +31,9 @@ try:
 except (ImportError, ModuleNotFoundError):
     module_logger = init_logger("streamDaq")
     module_logger.warning(
-        "Could not import OpalKelly driver, you can't read from FPGA!\nCheck out Opal Kelly's website for install info\nhttps://docs.opalkelly.com/fpsdk/getting-started/"
+        "Could not import OpalKelly driver, you can't read from FPGA!\n"
+        "Check out Opal Kelly's website for install info\n"
+        "https://docs.opalkelly.com/fpsdk/getting-started/"
     )
 
 # Parsers for daq inputs
@@ -39,7 +45,8 @@ class StreamDaq:
     """
     A combined class for configuring and reading frames from a UART and FPGA source.
     Supported devices and required inputs are described in StreamDaqConfig model documentation.
-    This function's entry point is the main function, which should be used from the stream_image_capture command installed with the package.
+    This function's entry point is the main function, which should be used from the
+    stream_image_capture command installed with the package.
     Example configuration yaml files are stored in /miniscope-io/config/.
 
     Examples
@@ -48,12 +55,13 @@ class StreamDaq:
     Connected to XEM7310-A75
     Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
     FrontPanel is supported
-    [24-06-11T01:40:45] INFO     [miniscope_io.streamDaq.frame] frame: 1570, bits lost: 0                                    stream_daq.py:524
-    [24-06-11T01:40:46] INFO     [miniscope_io.streamDaq.frame] frame: 1571, bits lost: 0                                    stream_daq.py:524
 
     .. todo::
+
         Example section: add the terminal output when running the script
-        Phil/Takuya - docstrings for stream daq: what devices these correspond to, how to configure them, usage examples, tests
+        Phil/Takuya - docstrings for stream daq: what devices these correspond to,
+        how to configure them, usage examples, tests
+
     """
 
     def __init__(
@@ -71,7 +79,8 @@ class StreamDaq:
             DAQ configurations imported from the input yaml file.
             Examples and required properties can be found in /miniscope-io/config/example.yml
         header_fmt : MetadataHeaderFormat, optional
-            Header format used to parse information from buffer header, by default `MetadataHeaderFormat()`.
+            Header format used to parse information from buffer header,
+            by default `MetadataHeaderFormat()`.
         """
         self.logger = init_logger("streamDaq")
         self.config = config
@@ -148,7 +157,7 @@ class StreamDaq:
 
     def _uart_recv(
         self, serial_buffer_queue: multiprocessing.Queue, comport: str, baudrate: int
-    ):
+    ) -> None:
         """
         Receive buffers and push into serial_buffer_queue.
         Currently not supported.
@@ -165,9 +174,7 @@ class StreamDaq:
         pre_bytes = bytes(bytearray(self.preamble.tobytes())[::-1])
 
         # set up serial port
-        serial_port = serial.Serial(
-            port=comport, baudrate=baudrate, timeout=5, stopbits=1
-        )
+        serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
         self.logger.info("Serial port open: " + str(serial_port.name))
 
         # Throw away the first buffer because it won't fully come in
@@ -197,7 +204,8 @@ class StreamDaq:
 
         The bits data are read in fixed chunks defined by `read_length`.
         Then we concatenate the chunks and try to look for `self.preamble` in the data.
-        The data between every pair of `self.preamble` is considered to be a single buffer and stored in `serial_buffer_queue`.
+        The data between every pair of `self.preamble` is considered to be a single buffer and
+        stored in `serial_buffer_queue`.
 
         Parameters
         ----------
@@ -205,7 +213,8 @@ class StreamDaq:
             The queue holding the buffer data.
         read_length : int, optional
             Length of data to read in chunks (in number of bytes), by default None.
-            If `None`, an optimal length is estimated so that it roughly covers a single buffer and is an integer multiple of 16 bytes (as recommended by OpalKelly).
+            If `None`, an optimal length is estimated so that it roughly covers a single buffer
+            and is an integer multiple of 16 bytes (as recommended by OpalKelly).
         pre_first : bool, optional
             Whether preamble/header is returned at the beginning of each buffer, by default True.
 
@@ -220,23 +229,16 @@ class StreamDaq:
             )
         # determine length
         if read_length is None:
-            read_length = (
-                int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
-            )
+            read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
 
         # set up fpga devices
         BIT_FILE = self.config.bitstream
         if not BIT_FILE.exists():
-            raise RuntimeError(
-                f"Configured to use bitfile at {BIT_FILE} but no such file exists"
-            )
+            raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
 
         # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
-        if os.environ.get("PYTEST_CURRENT_TEST") is not None:
-            dev = okDevMock()
-        else:
-            dev = okDev()
+        dev = okDevMock() if os.environ.get("PYTEST_CURRENT_TEST") is not None else okDev()
 
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
@@ -258,7 +260,8 @@ class StreamDaq:
                 break
 
             if self.config.mode == "RAW_RECORD":
-                fpga_raw_path = "data/fpga_raw.bin"  # Not sure where to define this because we don't want to overwrite.
+                # Not sure where to define this because we don't want to overwrite.
+                fpga_raw_path = "data/fpga_raw.bin"
                 with open(fpga_raw_path, "wb") as file:
                     file.write(buf)
                 self.terminate.value = True
@@ -267,9 +270,9 @@ class StreamDaq:
             pre_pos = list(cur_buffer.findall(pre))
             for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
                 if not pre_first:
-                    buf_start, buf_stop = buf_start + len(
+                    buf_start, buf_stop = buf_start + len(self.preamble), buf_stop + len(
                         self.preamble
-                    ), buf_stop + len(self.preamble)
+                    )
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
@@ -278,12 +281,14 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
-    ):
+    ) -> None:
         """
         Group buffers together to make frames.
 
-        Pull out buffers in `serial_buffer_queue`, then get frame and buffer index by parsing headers in the buffer.
-        The buffers belonging to the same frame are put in the same list at corresponding buffer index.
+        Pull out buffers in `serial_buffer_queue`, then get frame and buffer index by
+        parsing headers in the buffer.
+        The buffers belonging to the same frame are put in the same list at
+        corresponding buffer index.
         The lists representing each frame are then put into `frame_buffer_queue`.
 
         Parameters
@@ -301,12 +306,8 @@ class StreamDaq:
         frame_buffer = [None] * self.nbuffer_per_fm
 
         while 1:
-            if (
-                serial_buffer_queue.qsize() > 0
-            ):  # Higher is safe but lower should be faster.
-                serial_buffer = Bits(
-                    serial_buffer_queue.get()
-                )  # grab one buffer from queue
+            if serial_buffer_queue.qsize() > 0:  # Higher is safe but lower should be faster.
+                serial_buffer = Bits(serial_buffer_queue.get())  # grab one buffer from queue
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
 
@@ -343,9 +344,7 @@ class StreamDaq:
                 ):
                     cur_fm_buffer_index = header_data.frame_buffer_count
                     frame_buffer[cur_fm_buffer_index] = serial_buffer.tobytes()
-                    locallogs.debug(
-                        "----buffer #" + str(cur_fm_buffer_index) + " stored"
-                    )
+                    locallogs.debug("----buffer #" + str(cur_fm_buffer_index) + " stored")
 
                 # if lost frame from buffer -> reset index
                 else:
@@ -355,13 +354,18 @@ class StreamDaq:
         self,
         frame_buffer_queue: multiprocessing.Queue,
         imagearray: multiprocessing.Queue,
-    ):
+    ) -> None:
         """
         Construct frame from grouped buffers.
 
-        Each frame data is concatenated from a list of buffers in `frame_buffer_queue` according to `buffer_npix`.
-        If there is any mismatch between the expected length of each buffer (defined by `buffer_npix`) and the actual length, then the buffer is either truncated or zero-padded at the end to make the length appropriate, and a warning is thrown.
-        Finally, the concatenated buffer data are converted into a 1d numpy array with uint8 dtype and put into `imagearray` queue.
+        Each frame data is concatenated from a list of buffers in `frame_buffer_queue`
+        according to `buffer_npix`.
+        If there is any mismatch between the expected length of each buffer
+        (defined by `buffer_npix`) and the actual length, then the buffer is either
+        truncated or zero-padded at the end to make the length appropriate,
+        and a warning is thrown.
+        Finally, the concatenated buffer data are converted into a 1d numpy array with
+        uint8 dtype and put into `imagearray` queue.
 
         Parameters
         ----------
@@ -386,9 +390,7 @@ class StreamDaq:
                             Bits(frame_data[i]), truncate="header"
                         )
                     else:
-                        frame_data[i] = Bits(
-                            int=0, length=npix_expected * self.config.pix_depth
-                        )
+                        frame_data[i] = Bits(int=0, length=npix_expected * self.config.pix_depth)
                         nbit_lost += npix_expected
                         continue
                     npix_header = header_data.pixel_count
@@ -397,7 +399,11 @@ class StreamDaq:
                     if npix_actual != npix_expected:
                         if i < len(self.buffer_npix) - 1:
                             locallogs.warning(
-                                f"Pixel count inconsistent for frame {header_data.frame_num} buffer {header_data.frame_buffer_count}. Expected: {npix_expected}, Header: {npix_header}, Actual: {npix_actual}"
+                                f"Pixel count inconsistent for frame {header_data.frame_num} "
+                                f"buffer {header_data.frame_buffer_count}. "
+                                f"Expected: {npix_expected}, "
+                                f"Header: {npix_header}, "
+                                f"Actual: {npix_actual}"
                             )
                         nbit_expected = npix_expected * self.config.pix_depth
                         if len(fm_dat) > nbit_expected:
@@ -414,9 +420,7 @@ class StreamDaq:
                     pixel_vector = pixel_vector + d
 
                 assert len(pixel_vector) == (
-                    self.config.frame_height
-                    * self.config.frame_width
-                    * self.config.pix_depth
+                    self.config.frame_height * self.config.frame_width * self.config.pix_depth
                 )
 
                 if self.config.LSB:
@@ -431,11 +435,9 @@ class StreamDaq:
                 imagearray.put(img)
 
                 if header_data is not None:
-                    locallogs.info(
-                        f"frame: {header_data.frame_num}, bits lost: {nbit_lost}"
-                    )
+                    locallogs.info(f"frame: {header_data.frame_num}, bits lost: {nbit_lost}")
 
-    def init_video(self, path: Path, fourcc: str = "Y800", **kwargs) -> cv2.VideoWriter:
+    def init_video(self, path: Path, fourcc: str = "Y800", **kwargs: dict) -> cv2.VideoWriter:
         """
         Create a parameterized video writer
 
@@ -459,7 +461,7 @@ class StreamDaq:
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
-    ):
+    ) -> None:
         """
         Entry point to start frame capture.
 
@@ -468,7 +470,8 @@ class StreamDaq:
         source : Literal[uart, fpga]
             Device source.
         read_length : Optional[int], optional
-            Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when `source == "fpga"`, by default None.
+            Passed to :function:`~miniscope_io.stream_daq.stream_daq._fpga_recv` when
+            `source == "fpga"`, by default None.
         video: Path, optional
             If present, a path to an output video file
         video_options: dict, optional
@@ -485,13 +488,10 @@ class StreamDaq:
         serial_buffer_queue = queue_manager.Queue(
             10
         )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        frame_buffer_queue = queue_manager.Queue(
-            5
-        )  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00'] # hand over a frame (five buffers): buffer_to_frame()
+        frame_buffer_queue = queue_manager.Queue(5)  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00']
+        # hand over a frame (five buffers): buffer_to_frame()
         imagearray = queue_manager.Queue(5)
-        imagearray.put(
-            np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8)
-        )
+        imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
@@ -523,10 +523,6 @@ class StreamDaq:
             writer = self.init_video(video, **video_kwargs)
         else:
             writer = None
-
-        def check_termination_flag(termination_flag):
-            input("Press enter to exit the process.")
-            termination_flag.value = True
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
@@ -602,7 +598,7 @@ class StreamDaq:
                 break  # watchdog process daemon gets [Terminated]
 
 
-def main():
+def main() -> None:  # noqa: D103
     args = daqParser.parse_args()
 
     daqConfig = StreamDaqConfig.from_yaml(args.config)
@@ -610,24 +606,13 @@ def main():
     daq_inst = StreamDaq(config=daqConfig)
 
     if daqConfig.device == "UART":
-        try:
-            comport = daqConfig.port
-        except (ValueError, IndexError) as e:
-            print(e)
-            sys.exit(1)
-
-        try:
-            baudrate = daqConfig.baudrate
-        except (ValueError, IndexError) as e:
-            print(e)
-            sys.exit(1)
-        # daq_inst.capture(source="uart", comport=comport, baudrate=baudrate)
         daq_inst.capture(source="uart")
 
     if daqConfig.device == "OK":
         if not HAVE_OK:
             raise ImportError(
-                "Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: {ok_error}"
+                f"Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: "
+                f"{ok_error}"
             )
 
         daq_inst.capture(source="fpga")

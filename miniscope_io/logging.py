@@ -1,3 +1,7 @@
+"""
+Logging factory and handlers
+"""
+
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -15,7 +19,7 @@ def init_logger(
     file_level: Optional[LOG_LEVELS] = None,
     log_file_n: Optional[int] = None,
     log_file_size: Optional[int] = None,
-):
+) -> logging.Logger:
     """
     Make a logger.
 
@@ -60,9 +64,7 @@ def init_logger(
 
     # Add handlers for stdout and file
     if log_dir is not False:
-        logger.addHandler(
-            _file_handler(name, file_level, log_dir, log_file_n, log_file_size)
-        )
+        logger.addHandler(_file_handler(name, file_level, log_dir, log_file_n, log_file_size))
 
     logger.addHandler(_rich_handler())
 
@@ -82,9 +84,7 @@ def _file_handler(
     file_handler = RotatingFileHandler(
         str(filename), mode="a", maxBytes=log_file_size, backupCount=log_file_n
     )
-    file_formatter = logging.Formatter(
-        "[%(asctime)s] %(levelname)s [%(name)s]: %(message)s"
-    )
+    file_formatter = logging.Formatter("[%(asctime)s] %(levelname)s [%(name)s]: %(message)s")
     file_handler.setLevel(file_level)
     file_handler.setFormatter(file_formatter)
     return file_handler

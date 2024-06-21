@@ -45,13 +45,9 @@ class okDev(ok.okCFrontPanel):
         if ret == self.NoError:
             self.logger.debug(f"Succesfully uploaded {bit_file}")
         else:
-            raise DeviceConfigurationError(
-                f"Configuration of {self.info.productName} failed"
-            )
+            raise DeviceConfigurationError(f"Configuration of {self.info.productName} failed")
         self.logger.debug(
-            "FrontPanel {} supported".format(
-                "is" if self.IsFrontPanelEnabled() else "not"
-            )
+            "FrontPanel {} supported".format("is" if self.IsFrontPanelEnabled() else "not")
         )
         ret = self.ResetFPGA()
 

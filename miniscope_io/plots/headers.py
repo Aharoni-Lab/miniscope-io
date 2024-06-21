@@ -1,8 +1,15 @@
+"""
+Plot headers from :class:`.SDCard`
+"""
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
 
 def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+    """
+    Plot number of buffers by time
+    """
     cols = ("write_buffer_count", "dropped_buffer_count", "buffer_count")
     labels = ("Write Buffer", "Dropped Buffer", "Total Buffer")
     for col, label in zip(cols, labels):
@@ -14,6 +21,9 @@ def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 
 def dropped_buffers(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+    """
+    Plot number of buffers by time
+    """
     ax.plot(headers["dropped_buffer_count"], label="Dropped buffers")
     ax.legend()
     ax.set_xlabel("Buffer index")
@@ -21,6 +31,9 @@ def dropped_buffers(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 
 def timestamps(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+    """
+    Plot frame number against time
+    """
     frames = headers["frame_num"].max() - headers["frame_num"].min()
     seconds = headers["timestamp"].max() - headers["timestamp"].min()
     fps = frames / seconds
@@ -33,6 +46,9 @@ def timestamps(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 
 def battery_voltage(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+    """
+    Plot battery voltage against time
+    """
     ax.plot(headers["timestamp"], headers["battery_voltage"], label="Battery voltage")
     ax.legend()
     ax.set_xlabel("Time [s]")
@@ -50,10 +66,7 @@ def plot_headers(headers: pd.DataFrame) -> (plt.Figure, plt.Axes):
     Arguments:
         headers (:class:`pandas.DataFrame`): headers to plot
     """
-    if "battery_voltage" in headers.columns:
-        subplots = 4
-    else:
-        subplots = 3
+    subplots = 4 if "battery_voltage" in headers.columns else 3
 
     fig, ax = plt.subplots(1, subplots)
 

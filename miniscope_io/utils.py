@@ -1,3 +1,7 @@
+"""
+The junk drawer my dogs
+"""
+
 import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
