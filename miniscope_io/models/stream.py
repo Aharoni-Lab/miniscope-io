@@ -3,7 +3,7 @@ Models for :mod:`miniscope_io.stream_daq`
 """
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 
 from pydantic import field_validator
 
@@ -25,13 +25,15 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
 
     Parameters
     ----------
+    mode: str
+    Operation modes. Maybe having DAQ (normal operation), RAW_RECORD (for getting testdata), and RAW_REPLAY (for plugging in recorded data for testing), BER_MEASURE, makes sense. Details TBD.
     device: str
         Interface hardware used for receiving data.
         Current options are "OK" (Opal Kelly XEM 7310) and "UART" (generic UART-USB converters).
         Only "OK" is supported at the moment.
     bitstream: str, optional
         Required when device is "OK".
-        Configuration file to be uploaded to Opal Kelly module.
+        The configuration bitstream file to upload to the Opal Kelly board. This uploads a Manchester decoder HDL and different bitstream files are required to configure different data rates and bit polarity. This is a binary file synthesized using Vivado, and details for generating this file will be provided in later updates.
     port: str, optional
         Required when device is "UART".
         COM port connected to the UART-USB converter.
@@ -42,6 +44,8 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Frame width of transferred image. This is used to reconstruct image.
     frame_height: int
         Frame height of transferred image. This is used to reconstruct image.
+    fs: int
+        Framerate of acquired stream
     preamble: str
         32-bit preamble used to locate the start of each buffer. The header and image data follows this preamble.
         This is used as a hex but imported as a string because yaml doesn't support hex format.
@@ -69,17 +73,21 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         If `LSB`, then the incoming bitstream is in the format that each 32-bit words are bit-wise reversed on its own.
         Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed (but the order of words in the header is preserved).
         Note that this format does not correspond to the usual LSB-first convention and the parameter name is chosen for the lack of better words.
+    show_video : bool, optional
+        Whether the video is showed in "real-time", by default True.
 
     ..todo::
         Takuya - double-check the definitions around blocks and buffers in the firmware and add description.
     """
 
+    mode: Literal["DAQ", "RAW_RECORD", "RAW_REPLAY"] = 'DAQ'
     device: str
     bitstream: Optional[Path]
     port: Optional[str]
     baudrate: Optional[int]
     frame_width: int
     frame_height: int
+    fs: int = 20
     preamble: bytes
     header_len: int
     pix_depth: int = 8
@@ -87,6 +95,7 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     block_size: int
     num_buffers: int
     LSB: Optional[bool]
+    show_video: Optional[bool] = True
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:

@@ -5,7 +5,7 @@ import yaml
 from pydantic import BaseModel
 from miniscope_io.models.mixins import YAMLMixin
 
-def test_yaml_mixin(tmpdir):
+def test_yaml_mixin(tmp_path):
     """
     YAMLMixIn should give our models a from_yaml method to read from files
     """
@@ -22,7 +22,7 @@ def test_yaml_mixin(tmpdir):
         'a_dict': {'a': 1.1, 'b': 2.5}
     }
 
-    yaml_file = tmpdir / 'temp.yaml'
+    yaml_file = tmp_path / 'temp.yaml'
     with open(yaml_file, 'w') as yfile:
         yaml.safe_dump(data, yfile)
 

@@ -3,6 +3,8 @@ Interfaces for OpalKelly (model number?) FPGAs
 """
 
 from miniscope_io.vendor import opalkelly as ok
+from miniscope_io.exceptions import StreamReadError, DeviceConfigurationError, DeviceOpenError
+from miniscope_io.logging import init_logger
 
 
 class okDev(ok.okCFrontPanel):
@@ -18,13 +20,14 @@ class okDev(ok.okCFrontPanel):
 
     def __init__(self, serial_id: str = ""):
         super().__init__()
+        self.logger = init_logger('okDev')
         ret = self.OpenBySerial("")
         if ret != self.NoError:
-            raise ValueError(f"Cannot open device: {serial_id}")
+            raise DeviceOpenError(f"Cannot open device: {serial_id}")
         self.info = ok.okTDeviceInfo()
         ret = self.GetDeviceInfo(self.info)
         if ret == self.NoError:
-            print(f"Connected to {self.info.productName}")
+            self.logger.info(f"Connected to {self.info.productName}")
 
     def uploadBit(self, bit_file: str) -> None:
         """
@@ -36,10 +39,10 @@ class okDev(ok.okCFrontPanel):
 
         ret = self.ConfigureFPGA(bit_file)
         if ret == self.NoError:
-            print(f"Succesfully uploaded {bit_file}")
+            self.logger.debug(f"Succesfully uploaded {bit_file}")
         else:
-            raise ValueError(f"Configuration of {self.info.productName} failed")
-        print(
+            raise DeviceConfigurationError(f"Configuration of {self.info.productName} failed")
+        self.logger.debug(
             "FrontPanel {} supported".format(
                 "is" if self.IsFrontPanelEnabled() else "not"
             )
@@ -61,9 +64,11 @@ class okDev(ok.okCFrontPanel):
         buf = bytearray(length)
         ret = self.ReadFromBlockPipeOut(addr, data=buf, blockSize=blockSize)
         if ret < 0:
-            raise ValueError(f"Read failed: {ret}")
+            msg = f"Read failed: {ret}"
+            self.logger.error(msg)
+            raise StreamReadError(msg)
         elif ret < length:
-            print(f"Only {ret} bytes read")
+            self.logger.warning(f"Only {ret} bytes read")
         return buf
 
     def setWire(self, addr: int, val: int) -> None:
@@ -79,4 +84,4 @@ class okDev(ok.okCFrontPanel):
         ret = self.SetWireInValue(addr, val)
         ret = self.UpdateWireIns()
         if ret != self.NoError:
-            raise ValueError(f"Wire update failed: {ret}")
+            raise DeviceConfigurationError(f"Wire update failed: {ret}")
