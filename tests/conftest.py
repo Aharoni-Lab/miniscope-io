@@ -1,4 +1,5 @@
 import pytest
+import os
 
 from pathlib import Path
 
@@ -16,3 +17,12 @@ def mock_okdev(monkeypatch):
 
     monkeypatch.setattr(opalkelly, 'okDev', okDevMock)
     monkeypatch.setattr(stream_daq, 'okDev', okDevMock)
+
+@pytest.fixture(autouse=True)
+def opencv_ffmpeg():
+    """
+    Set opencv to use ffmpeg if available for more reproducible crossplatform video
+    encoding
+    """
+    import cv2
+    os.environ['OPENCV_VIDEOIO_PRIORITY_LIST'] = f'{cv2.CAP_FFMPEG}'
