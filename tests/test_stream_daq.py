@@ -1,28 +1,26 @@
 import pytest
 
 from miniscope_io.stream_daq import StreamDaqConfig, StreamDaq
-from miniscope_io.utils import hash_file
+from miniscope_io.utils import hash_video
 from .conftest import DATA_DIR, CONFIG_DIR
 
 from .mock.opalkelly import okDevMock
 
 @pytest.mark.parametrize(
-    'config,data,test_video',
+    'config,data,video_hash',
     [
         (
             'stream_daq_test_200px.yml',
             'stream_daq_test_fpga_raw_input_200px.bin',
-            'stream_daq_test_output_200px.avi'
+            '82d623032a31cf805f4971a5715ed4cb938c08c5d6a97ebbdecd8e25dae7803e'
         )
     ]
 )
 @pytest.mark.timeout(30)
-def test_video_output(config, data, test_video, tmpdir, monkeypatch):
+def test_video_output(config, data, video_hash, tmpdir, monkeypatch):
     output_video = tmpdir / 'output.avi'
 
     test_config_path = CONFIG_DIR / config
-    test_video_path = DATA_DIR / test_video
-
     daqConfig = StreamDaqConfig.from_yaml(test_config_path)
 
     data_file = DATA_DIR / data
@@ -33,9 +31,6 @@ def test_video_output(config, data, test_video, tmpdir, monkeypatch):
 
     assert output_video.exists()
 
+    video_hash = hash_video(output_video)
 
-    video_hash = hash_file(output_video)
-    test_video_hash = hash_file(test_video_path)
-
-    assert video_hash == test_video_hash
-    #assert video_hash in hash
+    assert video_hash == video_hash

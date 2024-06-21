@@ -19,20 +19,6 @@ from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from tests.mock.opalkelly import okDevMock
 
-try:
-    current_method = multiprocessing.get_start_method()
-except RuntimeError:
-    available_methods = multiprocessing.get_all_start_methods()    
-    if 'fork' in available_methods:
-        multiprocessing.set_start_method('fork')
-    else:
-        if 'spawn' in available_methods:
-            multiprocessing.set_start_method('spawn')
-        elif 'forkserver' in available_methods:
-            multiprocessing.set_start_method('forkserver')
-        else:
-            raise RuntimeError("No suitable start method found for multiprocessing.")
-
 HAVE_OK = False
 ok_error = None
 try:
@@ -240,10 +226,12 @@ class StreamDaq:
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
         # set up fpga devices
 
+        # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
         if os.environ.get("PYTEST_CURRENT_TEST") is not None:
             dev = okDevMock()
         else:
             dev = okDev()
+
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
         time.sleep(0.01)
