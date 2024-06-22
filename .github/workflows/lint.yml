@@ -9,7 +9,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: chartboost/ruff-action@v1
-      - uses: psf/black@stable
 
   black:
     runs-on: ubuntu-latest
