@@ -6,41 +6,43 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'miniscope-io'
-copyright = '2023, Jonny'
-author = 'Jonny, Takuya'
-release = '0.1.8'
+from importlib.metadata import version as _version
+
+project = "miniscope-io"
+copyright = "2023, Jonny"
+author = "Jonny, Takuya"
+release = _version("miniscope-io")
+html_title = "miniscope-io"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.graphviz',
+    "sphinx.ext.graphviz",
     "myst_parser",
-    'sphinx.ext.napoleon',
-    'sphinx.ext.autodoc',
-    'sphinxcontrib.autodoc_pydantic',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo'
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinxcontrib.autodoc_pydantic",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'furo'
-html_static_path = ['_static']
+html_theme = "furo"
+html_static_path = ["_static"]
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'matplotlib': ('https://matplotlib.org/stable/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'pandas': ('https://pandas.pydata.org/docs/', None),
-    'rich': ('https://rich.readthedocs.io/en/stable/', None)
+    "python": ("https://docs.python.org/3", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "rich": ("https://rich.readthedocs.io/en/stable/", None),
 }
 
 # ----------
@@ -70,7 +72,7 @@ graphviz_output_format = "svg"
 # autodoc
 # Mock imports for packages we don't have yet - this one is
 # for opal kelley stuff we need to figure out the licensing for
-autodoc_mock_imports = ['routine']
+autodoc_mock_imports = ["routine"]
 
 # todo
 todo_include_todos = True

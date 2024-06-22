@@ -9,7 +9,7 @@ guide/usage
 ```
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 :caption: API:
 
 api/devices
@@ -26,6 +26,7 @@ api/vendor/index
 
 ```{toctree}
 :caption: Meta:
+:maxdepth: 1
 
 meta/changelog
 meta/contributing

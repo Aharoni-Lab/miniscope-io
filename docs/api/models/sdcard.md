@@ -1,4 +1,4 @@
-# sdCard
+# sdcard
 
 ```{eval-rst}
 .. automodule:: miniscope_io.models.sdcard
