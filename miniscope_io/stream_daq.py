@@ -3,6 +3,7 @@ DAQ For use with FPGA and Uart streaming video sources.
 """
 
 import argparse
+import logging
 import multiprocessing
 import os
 import sys
@@ -13,7 +14,7 @@ from typing import Any, Callable, Generator, List, Literal, Optional, Tuple, Uni
 import cv2
 import numpy as np
 import serial
-from bitstring import Array, BitArray, Bits
+from bitstring import BitArray, Bits
 
 from miniscope_io import init_logger
 from miniscope_io.devices.mocks import okDevMock
@@ -147,6 +148,7 @@ class StreamDaq:
             The returned header data and (optionally truncated) buffer data.
         """
         pre = Bits(self.preamble)
+        buffer = Bits(buffer)
         if self.config.LSB:
             pre = pre[::-1]
         pre_len = len(pre)
@@ -162,11 +164,30 @@ class StreamDaq:
         header_data = BufferHeader.model_construct(**header_data)
 
         if truncate == "preamble":
-            return header_data, buffer[pre_len:]
+            return header_data, buffer[pre_len:].tobytes()
         elif truncate == "header":
-            return header_data, buffer[self.config.header_len :]
+            return header_data, buffer[self.config.header_len :].tobytes()
         else:
-            return header_data, buffer
+            return header_data, buffer.tobytes()
+
+    def _trim(self, data: np.ndarray, expected_size: int, logger: logging.Logger) -> np.ndarray:
+        """
+        Trim or pad an array to match an expected size
+        """
+        if data.shape[0] != expected_size:
+            logger.warning(
+                f"Expected buffer data length: {expected_size}, got data with shape "
+                f"{data.shape}. Padding to expected length",
+            )
+
+            # trim if too long
+            if data.shape[0] > expected_size:
+                data = data[0:expected_size]
+            # pad if too short
+            else:
+                data = np.pad(data, (0, expected_size - data.shape[0]))
+
+        return data
 
     def _uart_recv(
         self, serial_buffer_queue: multiprocessing.Queue, comport: str, baudrate: int
@@ -325,16 +346,19 @@ class StreamDaq:
         cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
 
-        frame_buffer = [None] * self.nbuffer_per_fm
+        frame_buffer = []
 
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
-                serial_buffer = Bits(serial_buffer)
 
-                header_data, serial_buffer = self._parse_header(serial_buffer)
+                header_data, serial_buffer = self._parse_header(serial_buffer, truncate="header")
+                serial_buffer = np.frombuffer(serial_buffer, dtype=np.uint8)
+                serial_buffer = self._trim(
+                    serial_buffer, self.buffer_npix[header_data.frame_buffer_count], locallogs
+                )
 
                 # log metadata
-                locallogs.debug(str(header_data.model_dump()))
+                locallogs.debug(header_data)
 
                 # if first buffer of a frame
                 if header_data.frame_num != cur_fm_num:
@@ -345,19 +369,21 @@ class StreamDaq:
                     # push frame_buffer into frame_buffer queue
                     frame_buffer_queue.put(frame_buffer)
                     # init frame_buffer
-                    frame_buffer = [None] * self.nbuffer_per_fm
+                    frame_buffer = []
 
                     # update frame_num and index
                     cur_fm_num = header_data.frame_num
                     cur_fm_buffer_index = header_data.frame_buffer_count
 
-                    # update data
-                    frame_buffer[cur_fm_buffer_index] = serial_buffer.tobytes()
-
                     if cur_fm_buffer_index != 0:
                         locallogs.warning(
                             f"Frame {cur_fm_num} started with buffer {cur_fm_buffer_index}"
                         )
+                        for i in range(cur_fm_buffer_index):
+                            frame_buffer.append(np.zeros(self.buffer_npix[i], dtype=np.uint8))
+
+                    # update data
+                    frame_buffer.append(serial_buffer)
 
                 # if same frame_num with previous buffer.
                 elif (
@@ -365,7 +391,7 @@ class StreamDaq:
                     and header_data.frame_buffer_count > cur_fm_buffer_index
                 ):
                     cur_fm_buffer_index = header_data.frame_buffer_count
-                    frame_buffer[cur_fm_buffer_index] = serial_buffer.tobytes()
+                    frame_buffer.append(serial_buffer)
                     locallogs.debug("----buffer #" + str(cur_fm_buffer_index) + " stored")
 
                 # if lost frame from buffer -> reset index
@@ -399,65 +425,30 @@ class StreamDaq:
             Output image array queue.
         """
         locallogs = init_logger("streamDaq.frame")
-        header_data = None
         try:
             for frame_data in exact_iter(frame_buffer_queue.get, None):
                 locallogs.debug("Found frame in queue")
-
-                nbit_lost = 0
-
-                for i, npix_expected in enumerate(self.buffer_npix):
-                    if frame_data[i] is not None:
-                        header_data, fm_dat = self._parse_header(
-                            Bits(frame_data[i]), truncate="header"
-                        )
-                    else:
-                        frame_data[i] = Bits(int=0, length=npix_expected * self.config.pix_depth)
-                        nbit_lost += npix_expected
-                        continue
-                    npix_header = header_data.pixel_count
-                    npix_actual = len(fm_dat) / self.config.pix_depth
-
-                    if npix_actual != npix_expected:
-                        if i < len(self.buffer_npix) - 1:
-                            locallogs.warning(
-                                f"Pixel count inconsistent for frame {header_data.frame_num} "
-                                f"buffer {header_data.frame_buffer_count}. "
-                                f"Expected: {npix_expected}, "
-                                f"Header: {npix_header}, "
-                                f"Actual: {npix_actual}"
-                            )
-                        nbit_expected = npix_expected * self.config.pix_depth
-                        if len(fm_dat) > nbit_expected:
-                            fm_dat = fm_dat[:nbit_expected]
-                        else:
-                            nbit_pad = nbit_expected - len(fm_dat)
-                            fm_dat = fm_dat + Bits(int=0, length=nbit_pad)
-                            nbit_lost += nbit_pad
-
-                    frame_data[i] = fm_dat
-
-                pixel_vector = frame_data[0]
-                for d in frame_data[1:]:
-                    pixel_vector = pixel_vector + d
-
-                assert len(pixel_vector) == (
-                    self.config.frame_height * self.config.frame_width * self.config.pix_depth
-                )
-
+                if len(frame_data) == 0:
+                    continue
+                frame_data = np.concat(frame_data)
                 if self.config.LSB:
-                    pixel_vector = Array(
-                        "uint:32",
-                        [
-                            pixel_vector[i : i + 32][::-1].uint
-                            for i in reversed(range(0, len(pixel_vector), 32))
-                        ],
-                    )
-                img = np.frombuffer(pixel_vector.tobytes(), dtype=np.uint8)
-                imagearray.put(img)
+                    frame_data = np.flip(frame_data)
 
-                if header_data is not None:
-                    locallogs.info(f"frame: {header_data.frame_num}, bits lost: {nbit_lost}")
+                frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
+
+                # if self.config.LSB:
+                #     pixel_vector = Array(
+                #         "uint:32",
+                #         [
+                #             pixel_vector[i : i + 32][::-1].uint
+                #             for i in reversed(range(0, len(pixel_vector), 32))
+                #         ],
+                #     )
+                # img = np.frombuffer(pixel_vector.tobytes(), dtype=np.uint8)
+                imagearray.put(frame)
+
+                # if header_data is not None:
+                #    locallogs.info(f"frame: {header_data.frame_num}, bits lost: {nbit_lost}")
         finally:
             imagearray.put(None)
 
@@ -573,8 +564,7 @@ class StreamDaq:
         p_format_frame.start()
         # p_terminate.start()
         try:
-            for imagearray_plot in exact_iter(imagearray.get, None):
-                image = imagearray_plot.reshape(self.config.frame_width, self.config.frame_height)
+            for image in exact_iter(imagearray.get, None):
                 if self.config.show_video is True:
                     cv2.imshow("image", image)
                 if writer:
