@@ -560,6 +560,7 @@ class StreamDaq:
             for image in exact_iter(imagearray.get, None):
                 if self.config.show_video is True:
                     cv2.imshow("image", image)
+                    cv2.waitKey(1) #needed for updating interactive window. delay 1 ms for now.
                 if writer:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
