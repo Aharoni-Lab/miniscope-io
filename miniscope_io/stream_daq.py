@@ -434,7 +434,10 @@ class StreamDaq:
                 if self.config.LSB:
                     frame_data = np.flip(frame_data)
 
-                frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
+                try:
+                    frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
+                except:
+                    self.logger.warning('frame size doesn\'t match.')
 
                 # if self.config.LSB:
                 #     pixel_vector = Array(
