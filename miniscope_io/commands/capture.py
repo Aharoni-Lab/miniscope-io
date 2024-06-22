@@ -44,3 +44,6 @@ def sdaqprof(config: str, source: str, output: str) -> None:
 
     daq_inst = StreamDaq(config=daqConfig)
     daq_inst.capture(source="fpga", video=output_video)
+
+def main_sdaqprof():
+    sdaqprof()
