@@ -13,7 +13,7 @@ StreamBufferHeader = StreamBufferHeaderFormat(
     pixel_count=7,
 )
 
-''' keeping for ref
+""" keeping for ref
 StreamBufferHeader = StreamBufferHeaderFormat(
     linked_list=(0, 32),
     frame_num=(32, 64),
@@ -22,4 +22,4 @@ StreamBufferHeader = StreamBufferHeaderFormat(
     timestamp=(192, 224),
     pixel_count=(224, 256),
 )
-'''
+"""
