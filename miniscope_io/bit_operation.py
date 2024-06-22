@@ -12,55 +12,32 @@ class BufferFormatter:
     A class for formatting buffers and returning header (uint32) and payload (uint8) data.
     """
 
-    @classmethod
-    def _reverse_bits_in_byte(cls, byte: int) -> int:
+    @staticmethod
+    def _reverse_bits_in_array(arr: np.ndarray) -> np.ndarray:
         """
-        Reverse the bits in a byte.
+        Reverse the bits in each element of a numpy array.
 
         Args:
-            byte (int): The byte to reverse.
+            arr (np.ndarray): The input array.
 
         Returns:
-            int: The byte with its bits reversed.
+            np.ndarray: The array with bits in each element reversed.
         """
-        return int(f"{byte:08b}"[::-1], 2)
+        arr = np.unpackbits(arr.view(np.uint8)).reshape(-1, 32)[:, ::-1]
+        return np.packbits(arr).view(np.uint32)
 
-    @classmethod
-    def _reverse_bits_in_32bit_int(cls, x: int) -> int:
+    @staticmethod
+    def _reverse_byte_order_in_array(arr: np.ndarray) -> np.ndarray:
         """
-        Reverse the bits in each byte of a 32-bit integer.
+        Reverse the byte order of each element in a numpy array.
 
         Args:
-            x (int): The 32-bit integer.
+            arr (np.ndarray): The input array.
 
         Returns:
-            int: The 32-bit integer with bits in each byte reversed.
+            np.ndarray: The array with byte order in each element reversed.
         """
-        reversed_bytes = [cls._reverse_bits_in_byte((x >> (8 * i)) & 0xFF) for i in range(4)]
-        return (
-            (reversed_bytes[0] << 24)
-            | (reversed_bytes[1] << 16)
-            | (reversed_bytes[2] << 8)
-            | reversed_bytes[3]
-        )
-
-    @classmethod
-    def _reverse_byte_order_32bit_int(cls, x: int) -> int:
-        """
-        Reverse the byte order of a 32-bit integer.
-
-        Args:
-            x (int): The 32-bit integer.
-
-        Returns:
-            int: The 32-bit integer with byte order reversed.
-        """
-        return (
-            ((x & 0x000000FF) << 24)
-            | ((x & 0x0000FF00) << 8)
-            | ((x & 0x00FF0000) >> 8)
-            | ((x & 0xFF000000) >> 24)
-        )
+        return arr.byteswap()
 
     @classmethod
     def bytebuffer_to_ndarrays(
@@ -78,17 +55,16 @@ class BufferFormatter:
 
         Args:
             buffer (bytes): The binary buffer to format.
-            header_length_bits (int): Length of the header in bits.
+            header_length_words (int): Length of the header in words.
+            preamble_length_words (int): Length of the preamble in words.
             reverse_header_bits (bool): Reverse bits in the header if True. Default is True.
+            reverse_header_bytes (bool): Reverse byte order in the header if True. Default is True.
             reverse_body_bits (bool): Reverse bits in the body if True. Default is True.
             reverse_body_bytes (bool): Reverse byte order in the body if True. Default is True.
 
         Returns:
             tuple: A tuple containing the processed header as a numpy array of uint32
                    and the processed payload as a numpy array of uint8.
-
-        Raises:
-            ValueError: If header_length_bits is not a multiple of 32.
         """
 
         # Padding in case the buffer is not a multiple of 4 bytes (32 bits)
@@ -101,23 +77,16 @@ class BufferFormatter:
         # Process header
         header = data[preamble_length_words:header_length_words]
         if reverse_header_bits:
-            header = np.array([cls._reverse_bits_in_32bit_int(x) for x in header], dtype=np.uint32)
+            header = cls._reverse_bits_in_array(header)
         if reverse_header_bytes:
-            header = np.array(
-                [cls._reverse_byte_order_32bit_int(x) for x in header], dtype=np.uint32
-            )
+            header = cls._reverse_byte_order_in_array(header)
 
         # Process body
         payload_data = data[header_length_words:]
         if reverse_body_bits:
-            payload_data = np.array(
-                [cls._reverse_bits_in_32bit_int(x) for x in payload_data], dtype=np.uint32
-            )
-
+            payload_data = cls._reverse_bits_in_array(payload_data)
         if reverse_body_bytes:
-            payload_data = np.array(
-                [cls._reverse_byte_order_32bit_int(x) for x in payload_data], dtype=np.uint32
-            )
+            payload_data = cls._reverse_byte_order_in_array(payload_data)
 
         # Convert processed body buffer to uint8 numpy array
         payload_uint8 = payload_data.view(np.uint8)
