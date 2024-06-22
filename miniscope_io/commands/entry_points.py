@@ -1,6 +1,10 @@
+"""
+Entry points for scripts
+"""
+
 import click
 
-from miniscope_io.commands.capture import main_sdaqprof, sdaqprof
+from miniscope_io.commands.capture import main_sdaq, sdaq
 
 
 @click.group()
@@ -10,13 +14,18 @@ def cli() -> None:
     """
     pass
 
+
 # Register commands
-cli.add_command(sdaqprof)
+cli.add_command(sdaq)
 
 # Map main functions for CLI commands to ensure they work with the multiprocessing guard
 main_functions = {
-    "sdaqprof": main_sdaqprof,
+    "sdaqprof": main_sdaq,
 }
 
-def main():
+
+def main() -> None:
+    """
+    Just an entry point. Nested for multiprocessing guard which is probably not necessary now.
+    """
     cli()

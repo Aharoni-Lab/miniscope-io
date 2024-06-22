@@ -3,12 +3,9 @@ DAQ For use with FPGA and Uart streaming video sources.
 """
 
 import argparse
-import cProfile
-import io
 import logging
 import multiprocessing
 import os
-import pstats
 import sys
 import time
 from pathlib import Path
@@ -45,25 +42,6 @@ except (ImportError, ModuleNotFoundError):
 daqParser = argparse.ArgumentParser("streamDaq")
 daqParser.add_argument("-c", "--config", help="YAML config file path: string")
 
-def profile_function(fn):
-    def wrapper(*args, **kwargs):
-        import os
-        pr = cProfile.Profile()
-        pr.enable()
-        try:
-            result = fn(*args, **kwargs)
-        finally:
-            pr.disable()
-            s = io.StringIO()
-            sortby = 'cumulative'
-            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-            ps.print_stats()
-            profile_filename = f'{fn.__name__}_profile_{os.getpid()}.prof'
-            with open(profile_filename, 'w') as f:
-                f.write(s.getvalue())
-            print(f'Profile saved to {profile_filename}')
-        return result
-    return wrapper
 
 def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
     """
@@ -241,7 +219,7 @@ class StreamDaq:
     def _init_okdev(self, BIT_FILE: Path) -> Union[okDev, okDevMock]:
 
         # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
-        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_PROFILERUN"):
+        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_MOCKRUN"):
             dev = okDevMock()
         else:
             okDev()
@@ -254,8 +232,7 @@ class StreamDaq:
         time.sleep(0.01)
         dev.setWire(0x00, 0b0)
         return dev
-    
-    #@profile_function
+
     def _fpga_recv(
         self,
         serial_buffer_queue: multiprocessing.Queue,
@@ -335,7 +312,6 @@ class StreamDaq:
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
 
-    #@profile_function
     def _buffer_to_frame(
         self,
         serial_buffer_queue: multiprocessing.Queue,
@@ -398,7 +374,10 @@ class StreamDaq:
                     # update data
                     frame_buffer.append(serial_buffer)
 
-                elif header_data.frame_num == cur_fm_num and header_data.frame_buffer_count > cur_fm_buffer_index:
+                elif (
+                    header_data.frame_num == cur_fm_num
+                    and header_data.frame_buffer_count > cur_fm_buffer_index
+                ):
                     cur_fm_buffer_index = header_data.frame_buffer_count
                     # This will corrupt when a buffer is skipped. It should be padded.
                     frame_buffer.append(serial_buffer)
@@ -410,7 +389,6 @@ class StreamDaq:
         finally:
             frame_buffer_queue.put(None)
 
-    #@profile_function
     def _format_frame(
         self,
         frame_buffer_queue: multiprocessing.Queue,
@@ -447,7 +425,9 @@ class StreamDaq:
                     frame_data = np.flip(frame_data)
 
                 try:
-                    frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
+                    frame = np.reshape(
+                        frame_data, (self.config.frame_width, self.config.frame_height)
+                    )
                 except ValueError as e:
                     expected_size = self.config.frame_width * self.config.frame_height
                     provided_size = frame_data.size
@@ -457,7 +437,9 @@ class StreamDaq:
                         expected_size,
                         provided_size,
                     )
-                    frame = np.zeros((self.config.frame_width, self.config.frame_height), dtype=np.uint8)
+                    frame = np.zeros(
+                        (self.config.frame_width, self.config.frame_height), dtype=np.uint8
+                    )
 
                 imagearray.put(frame)
         finally:

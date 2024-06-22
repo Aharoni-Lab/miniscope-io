@@ -14,20 +14,24 @@ from miniscope_io.stream_daq import StreamDaq, StreamDaqConfig
 @click.option("-c", "--config", required=True, help="YAML file to configure the streamDaq (str)")
 @click.option("-s", "--source", required=False, help="RAW FPGA data to plug into okDevMock (str)")
 @click.option("-o", "--output", default="output", help="Video output filename (str)")
-def sdaqprof(config: str, source: str, output: str) -> None:
+@click.option(
+    "-p", "--profile", is_flag=True, default=False, help="Run with profiler (not implemented yet)"
+)
+def sdaq(config: str, source: str, output: str, profile: bool) -> None:
     """
-    Command to profile stream data acquisition.
+    Command for running streamDaq
 
-    This command profiles stream data acquisition based on the provided configuration and
+    This command runs the stream DAQ module based on the provided configuration and
     optional source file.
 
     Usage:
-        mio sdaqprof -c path/to/config.yml -s path/to/rawdata.bin -o output_filename
+        mio sdaq -c path/to/config.yml -s path/to/rawdata.bin -o output_filename
 
     Parameters:
     -c, --config (str): Path to the main YAML configuration file.
-    -s, --source (str or None): Optional path to a source configuration file for stream data mock.
+    -s, --source (str or None): Optional source raw data path when using mock ok device.
     -o, --output (str): Name of the output video file (without extension).
+    -p, --profile (bool): Run with profiler. Default is False. (not implemented yet).
 
     Returns:
     None
@@ -37,7 +41,7 @@ def sdaqprof(config: str, source: str, output: str) -> None:
 
     if source:
         # environment variable to allow import okDevMock
-        os.environ["STREAMDAQ_PROFILERUN"] = "just_placeholder"
+        os.environ["STREAMDAQ_MOCKRUN"] = "just_placeholder"
         os.environ["PYTEST_OKDEV_DATA_FILE"] = source
 
     daqConfig = StreamDaqConfig.from_yaml(config)
@@ -45,5 +49,9 @@ def sdaqprof(config: str, source: str, output: str) -> None:
     daq_inst = StreamDaq(config=daqConfig)
     daq_inst.capture(source="fpga", video=output_video)
 
-def main_sdaqprof():
-    sdaqprof()
+
+def main_sdaq() -> None:
+    """
+    entry point of this sdaqprof()
+    """
+    sdaq()
