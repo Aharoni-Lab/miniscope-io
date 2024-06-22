@@ -254,7 +254,8 @@ class StreamDaq:
         time.sleep(0.01)
         dev.setWire(0x00, 0b0)
         return dev
-
+    
+    #@profile_function
     def _fpga_recv(
         self,
         serial_buffer_queue: multiprocessing.Queue,
@@ -334,7 +335,7 @@ class StreamDaq:
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
 
-    @profile_function
+    #@profile_function
     def _buffer_to_frame(
         self,
         serial_buffer_queue: multiprocessing.Queue,
@@ -397,11 +398,7 @@ class StreamDaq:
                     # update data
                     frame_buffer.append(serial_buffer)
 
-                # if same frame_num with previous buffer.
-                elif (
-                    header_data.frame_num == cur_fm_num
-                    and header_data.frame_buffer_count > cur_fm_buffer_index
-                ):
+                elif header_data.frame_num == cur_fm_num and header_data.frame_buffer_count > cur_fm_buffer_index:
                     cur_fm_buffer_index = header_data.frame_buffer_count
                     # This will corrupt when a buffer is skipped. It should be padded.
                     frame_buffer.append(serial_buffer)
@@ -413,7 +410,7 @@ class StreamDaq:
         finally:
             frame_buffer_queue.put(None)
 
-    @profile_function
+    #@profile_function
     def _format_frame(
         self,
         frame_buffer_queue: multiprocessing.Queue,
@@ -446,27 +443,23 @@ class StreamDaq:
                     continue
                 frame_data = np.concatenate(frame_data, axis=0)
 
-                # I'm not sure if we need this but for consistency with the current test function
                 if self.config.LSB:
                     frame_data = np.flip(frame_data)
 
                 try:
-                    frame = np.reshape(
-                        frame_data, (self.config.frame_width, self.config.frame_height)
-                    )
+                    frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
                 except ValueError as e:
-                    expected_size = (self.config.frame_width, self.config.frame_height)
-                    provided_size = np.size(frame_data)
+                    expected_size = self.config.frame_width * self.config.frame_height
+                    provided_size = frame_data.size
                     locallogs.warning(
-                        "Frame size doesn't match: %s. Expected size: %s, got size: %d elements.",
+                        "Frame size doesn't match: %s. Expected size: %d, got size: %d elements.",
                         e,
                         expected_size,
                         provided_size,
                     )
-                imagearray.put(frame)
+                    frame = np.zeros((self.config.frame_width, self.config.frame_height), dtype=np.uint8)
 
-            # if header_data is not None:
-            # locallogs.info(f"frame: {header_data.frame_num}, bits lost: {nbit_lost}")
+                imagearray.put(frame)
         finally:
             imagearray.put(None)
 
