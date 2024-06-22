@@ -3,9 +3,12 @@ DAQ For use with FPGA and Uart streaming video sources.
 """
 
 import argparse
+import cProfile
+import io
 import logging
 import multiprocessing
 import os
+import pstats
 import sys
 import time
 from pathlib import Path
@@ -34,7 +37,7 @@ except (ImportError, ModuleNotFoundError):
     module_logger = init_logger("streamDaq")
     module_logger.warning(
         "Could not import OpalKelly driver, you can't read from FPGA!\n"
-        "Check out Opal Kelly's website for install info\n"
+        "Check out Opal Kelly's website for troubleshooting\n"
         "https://docs.opalkelly.com/fpsdk/getting-started/"
     )
 
@@ -42,6 +45,25 @@ except (ImportError, ModuleNotFoundError):
 daqParser = argparse.ArgumentParser("streamDaq")
 daqParser.add_argument("-c", "--config", help="YAML config file path: string")
 
+def profile_function(fn):
+    def wrapper(*args, **kwargs):
+        import os
+        pr = cProfile.Profile()
+        pr.enable()
+        try:
+            result = fn(*args, **kwargs)
+        finally:
+            pr.disable()
+            s = io.StringIO()
+            sortby = 'cumulative'
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            profile_filename = f'{fn.__name__}_profile_{os.getpid()}.prof'
+            with open(profile_filename, 'w') as f:
+                f.write(s.getvalue())
+            print(f'Profile saved to {profile_filename}')
+        return result
+    return wrapper
 
 def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
     """
@@ -312,6 +334,7 @@ class StreamDaq:
             if pre_pos:
                 cur_buffer = cur_buffer[pre_pos[-1] :]
 
+    @profile_function
     def _buffer_to_frame(
         self,
         serial_buffer_queue: multiprocessing.Queue,
@@ -390,6 +413,7 @@ class StreamDaq:
         finally:
             frame_buffer_queue.put(None)
 
+    @profile_function
     def _format_frame(
         self,
         frame_buffer_queue: multiprocessing.Queue,
