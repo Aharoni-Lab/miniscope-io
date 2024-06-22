@@ -12,7 +12,24 @@ from miniscope_io.utils import hash_video, hash_file
 @click.option('-s', '--source', required=False, help='RAW FPGA data to plug into okDevMock')
 @click.option('-o', '--output', default='output', help='Video output filename')
 def sdaqprof(config, source, output):
+    """
+    Command to profile stream data acquisition.
 
+    This command profiles stream data acquisition based on the provided configuration and
+    optional source file.
+
+    Usage: 
+        mio sdaqprof -c path/to/config.yml -s path/to/rawdata.bin -o output_filename
+
+    Parameters:
+    -c, --config (str): Path to the main YAML configuration file.
+    -s, --source (str or None): Optional path to a source configuration file for stream data mock.
+    -o, --output (str): Name of the output video file (without extension).
+
+    Returns:
+    None
+    """
+ 
     output_video = Path("output") / (output + ".avi")
 
     if source:
