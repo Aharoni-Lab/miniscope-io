@@ -10,8 +10,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from miniscope_io.data import Frame
 from miniscope_io.exceptions import EndOfRecordingException
+from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
 

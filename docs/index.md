@@ -12,7 +12,6 @@ guide/usage
 :maxdepth: 2
 :caption: API:
 
-api/data
 api/devices
 api/formats/index
 api/io
