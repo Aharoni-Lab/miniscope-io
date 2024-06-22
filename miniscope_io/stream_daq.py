@@ -146,23 +146,20 @@ class StreamDaq:
         Tuple[BufferHeader, bytes]
             The returned header data and (optionally truncated) buffer data.
         """
-        pre = Bits(self.preamble)
-        pre_len = len(pre)
         locallogs = init_logger("streamDaq._parse_header")
-
-        locallogs.debug(f'self.preamble: {self.preamble}')
-        locallogs.debug(f'buffer[:pre_len]: {buffer[:pre_len]}')
-
-        assert buffer[:pre_len] == pre
+       
         header, payload = BufferFormatter.bytebuffer_to_ndarrays(buffer=buffer, 
-                                                                 header_length_bits=self.config.header_len,
+                                                                 header_length_words=int(self.config.header_len/32),
+                                                                 preamble_length_words=int(len(Bits(self.config.preamble))/32),
                                                                  reverse_header_bits=True,
+                                                                 reverse_header_bytes=True,
                                                                  reverse_body_bits=True,
                                                                  reverse_body_bytes=True)
-
+        #locallogs.debug(f'len(payload): {len(payload)}')
         header_data = dict()
         for hd, header_index in self.header_fmt.model_dump().items():
             header_data[hd] = header[header_index]
+            #locallogs.debug(f'{header_data}')
 
         header_data = BufferHeader.model_construct(**header_data)
 
@@ -355,7 +352,7 @@ class StreamDaq:
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
                 # log metadata
-                locallogs.debug(header_data)
+                # locallogs.debug(header_data)
 
                 serial_buffer = self._trim(
                     serial_buffer, self.buffer_npix[header_data.frame_buffer_count], locallogs
@@ -433,9 +430,9 @@ class StreamDaq:
                     continue
                 frame_data = np.concat(frame_data)
 
-                # Shouldn't be bad but kind of weird
-                #if self.config.LSB:
-                #    frame_data = np.flip(frame_data)
+                # I'm not sure if we need this but for consistency with the current test function
+                if self.config.LSB:
+                    frame_data = np.flip(frame_data)
 
                 try:
                     frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
