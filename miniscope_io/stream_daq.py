@@ -72,9 +72,7 @@ class StreamDaq:
 
     .. todo::
 
-        Example section: add the terminal output when running the script
-        Phil/Takuya - docstrings for stream daq: what devices these correspond to,
-        how to configure them, usage examples, tests
+        Make it fast and understandable.
 
     """
 
@@ -166,7 +164,7 @@ class StreamDaq:
         if truncate == "preamble":
             return header_data, buffer[pre_len:].tobytes()
         elif truncate == "header":
-            return header_data, buffer[self.config.header_len :].tobytes()
+            return header_data, (buffer[self.config.header_len :])[::-1].tobytes()
         else:
             return header_data, buffer.tobytes()
 
