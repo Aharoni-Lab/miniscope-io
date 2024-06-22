@@ -1,5 +1,6 @@
 import click
 import os
+import pdb
 
 from pathlib import Path
 
@@ -30,7 +31,7 @@ def sdaqprof(config, source, output):
     None
     """
  
-    output_video = Path("output") / (output + ".avi")
+    output_video = Path(output + ".avi")
 
     if source:
         # environment variable to allow import okDevMock

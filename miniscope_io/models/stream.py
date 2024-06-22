@@ -20,7 +20,7 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     :class:`~miniscope_io.stream_daq.StreamDaq`
     """
 
-    pixel_count: Range
+    pixel_count: int
 
 
 class StreamDaqConfig(MiniscopeConfig, YAMLMixin):

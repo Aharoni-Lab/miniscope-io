@@ -17,6 +17,7 @@ import serial
 from bitstring import BitArray, Bits
 
 from miniscope_io import init_logger
+from miniscope_io.bit_operation import BufferFormatter
 from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader
@@ -123,10 +124,10 @@ class StreamDaq:
         if self._nbuffer_per_fm is None:
             self._nbuffer_per_fm = len(self.buffer_npix)
         return self._nbuffer_per_fm
-
+        
     def _parse_header(
-        self, buffer: Bits, truncate: Literal["preamble", "header", False] = False
-    ) -> Tuple[BufferHeader, bytes]:
+        self, buffer: bytes, truncate: Literal["preamble", "header", False] = False
+    ) -> Tuple[BufferHeader, np.ndarray]:
         """
         Function to parse header from each buffer.
 
@@ -146,27 +147,27 @@ class StreamDaq:
             The returned header data and (optionally truncated) buffer data.
         """
         pre = Bits(self.preamble)
-        buffer = Bits(buffer)
-        if self.config.LSB:
-            pre = pre[::-1]
         pre_len = len(pre)
+        locallogs = init_logger("streamDaq._parse_header")
+
+        locallogs.debug(f'self.preamble: {self.preamble}')
+        locallogs.debug(f'buffer[:pre_len]: {buffer[:pre_len]}')
+
         assert buffer[:pre_len] == pre
+        header, payload = BufferFormatter.bytebuffer_to_ndarrays(buffer=buffer, 
+                                                                 header_length_bits=self.config.header_len,
+                                                                 reverse_header_bits=True,
+                                                                 reverse_body_bits=True,
+                                                                 reverse_body_bytes=True)
+
         header_data = dict()
-        for hd, bit_range in self.header_fmt.model_dump().items():
-            b = buffer[pre_len + bit_range[0] : pre_len + bit_range[1]]
-            if self.config.LSB:
-                header_data[hd] = b[::-1].uint
-            else:
-                header_data[hd] = b.uint
+        for hd, header_index in self.header_fmt.model_dump().items():
+            header_data[hd] = header[header_index]
 
         header_data = BufferHeader.model_construct(**header_data)
 
-        if truncate == "preamble":
-            return header_data, buffer[pre_len:].tobytes()
-        elif truncate == "header":
-            return header_data, (buffer[self.config.header_len :])[::-1].tobytes()
-        else:
-            return header_data, buffer.tobytes()
+        # I'm not sure if other options were needed so just did this
+        return header_data, payload
 
     def _trim(self, data: np.ndarray, expected_size: int, logger: logging.Logger) -> np.ndarray:
         """
@@ -228,7 +229,10 @@ class StreamDaq:
     def _init_okdev(self, BIT_FILE: Path) -> Union[okDev, okDevMock]:
 
         # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
-        dev = okDevMock() if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_PROFILERUN") else okDev()
+        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_PROFILERUN"):
+            dev = okDevMock() 
+        else:
+            okDev()
 
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
@@ -349,14 +353,13 @@ class StreamDaq:
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
 
-                header_data, serial_buffer = self._parse_header(serial_buffer, truncate="header")
-                serial_buffer = np.frombuffer(serial_buffer, dtype=np.uint8)
+                header_data, serial_buffer = self._parse_header(serial_buffer)
+                # log metadata
+                locallogs.debug(header_data)
+
                 serial_buffer = self._trim(
                     serial_buffer, self.buffer_npix[header_data.frame_buffer_count], locallogs
                 )
-
-                # log metadata
-                locallogs.debug(header_data)
 
                 # if first buffer of a frame
                 if header_data.frame_num != cur_fm_num:
@@ -429,13 +432,20 @@ class StreamDaq:
                 if len(frame_data) == 0:
                     continue
                 frame_data = np.concat(frame_data)
-                if self.config.LSB:
-                    frame_data = np.flip(frame_data)
+
+                # Shouldn't be bad but kind of weird
+                #if self.config.LSB:
+                #    frame_data = np.flip(frame_data)
 
                 try:
                     frame = np.reshape(frame_data, (self.config.frame_width, self.config.frame_height))
-                except:
-                    self.logger.warning('frame size doesn\'t match.')
+                except ValueError as e:
+                    expected_size = (self.config.frame_width, self.config.frame_height)
+                    provided_size = np.size(frame_data)
+                    self.logger.warning(
+                        'Frame size doesn\'t match: %s. Expected size: %s, got size: %d elements.',
+                        e, expected_size, provided_size
+            )
 
                 # if self.config.LSB:
                 #     pixel_vector = Array(
