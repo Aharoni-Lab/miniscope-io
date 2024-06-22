@@ -1,26 +1,27 @@
 """
 I/O functions for the SD card
 """
-from typing import Union, BinaryIO, Optional, Tuple, List, Literal, overload
-from pathlib import Path
-import cv2
-import warnings
 
+import warnings
+from pathlib import Path
+from typing import BinaryIO, Literal, Optional, Union, overload
+
+import cv2
 import numpy as np
 from tqdm import tqdm
 
-from miniscope_io.models.sdcard import SDLayout, SDConfig, SDBufferHeader
-from miniscope_io.exceptions import InvalidSDException, EndOfRecordingException
 from miniscope_io.data import Frame
+from miniscope_io.exceptions import EndOfRecordingException
+from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
 
 class SDCard:
     """
     I/O for data on an SDCard
 
-    an instance of :class:`.sdcard.SDLayout` (typically in :mod:`.formats` ) configures how
-    the data is laid out on the SD card. This class makes the i/o operations abstract over
-    multiple layouts
+    an instance of :class:`.sdcard.SDLayout` (typically in :mod:`.formats` )
+    configures how the data is laid out on the SD card. This class makes the i/o
+    operations abstract over multiple layouts
 
     Args:
         drive (str, :class:`pathlib.Path`): Path to the SD card drive
@@ -28,11 +29,7 @@ class SDCard:
 
     """
 
-    def __init__(
-            self,
-            drive: Union[str, Path],
-            layout: SDLayout
-        ):
+    def __init__(self, drive: Union[str, Path], layout: SDLayout):
 
         self.drive = drive
         self.layout = layout
@@ -41,26 +38,20 @@ class SDCard:
         self._config = None  # type: Optional[SDConfig]
         self._f = None  # type: Optional[BinaryIO]
         self._frame = None  # type: Optional[int]
-        self._frame_count = None # type: Optional[int]
+        self._frame_count = None  # type: Optional[int]
         self._array = None  # type: Optional[np.ndarray]
         """
         n_pix x 1 array used to store pixels while reading buffers
         """
         self.positions = {}
         """
-        A mapping between frame number and byte position in the video that makes for faster seeking :)
+        A mapping between frame number and byte position in the video that makes for 
+        faster seeking :)
         
-        As we read, we store the locations of each frame before reading it. Later, we can assign to
-        `frame` to seek back to those positions. Assigning to `frame` works without caching position, but
-        has to manually iterate through each frame.
+        As we read, we store the locations of each frame before reading it. Later, 
+        we can assign to `frame` to seek back to those positions. Assigning to `frame` 
+        works without caching position, but has to manually iterate through each frame.
         """
-
-
-
-        # this doesn't seem to be true anymore? but the WRITE_KEYs are still in
-        # both the firmware and reading code, just unused?
-        #if not self.check_valid():
-        #    raise InvalidSDException(f"The SD card at path {str(self.drive)} does not have the correct WRITEKEYs in its header!")
 
     # --------------------------------------------------
     # Properties
@@ -68,8 +59,11 @@ class SDCard:
 
     @property
     def config(self) -> SDConfig:
+        """
+        Read configuration from SD Card
+        """
         if self._config is None:
-            with open(self.drive, 'rb') as sd:
+            with open(self.drive, "rb") as sd:
                 sd.seek(self.layout.sectors.config_pos, 0)
                 configSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
 
@@ -86,18 +80,19 @@ class SDCard:
     @property
     def position(self) -> Optional[int]:
         """
-        When entered as context manager, the current position of the internal file descriptor
+        When entered as context manager, the current position of the internal file
+        descriptor
         """
         if self._f is None:
             return None
 
         return self._f.tell()
 
-
     @property
     def frame(self) -> Optional[int]:
         """
-        When reading, the number of the frame that would be read if we were to call :meth:`.read`
+        When reading, the number of the frame that would be read if we were to call
+        :meth:`.read`
         """
         if self._f is None:
             return None
@@ -105,7 +100,7 @@ class SDCard:
         return self._frame
 
     @frame.setter
-    def frame(self, frame:int):
+    def frame(self, frame: int) -> None:
         """
         Seek to a specific frame
 
@@ -113,12 +108,14 @@ class SDCard:
             frame (int): The frame to seek to!
         """
         if self._f is None:
-            raise RuntimeError("Havent entered context manager yet! Cant change position without that!")
+            raise RuntimeError(
+                "Havent entered context manager yet! Cant change position without that!"
+            )
 
         if frame == self.frame:
             return
 
-        if frame in self.positions.keys():
+        if frame in self.positions:
             self._f.seek(self.positions[frame], 0)
             self._frame = frame
             return
@@ -127,13 +124,14 @@ class SDCard:
             pass
 
         if frame < self.frame:
-            # hard to go back, esp if we haven't already been here (we should have stashed the position)
+            # hard to go back, esp if we haven't already been here
+            # (we should have stashed the position)
             # just go to start of data and seek like normally (next case)
             self._f.seek(self.layout.sectors.data_pos, 0)
             self._frame = 0
 
         if frame > self.frame:
-            for i in range(frame - self.frame):
+            for _ in range(frame - self.frame):
                 self.skip()
 
     @property
@@ -157,39 +155,41 @@ class SDCard:
                 headers = frame.headers
                 self.frame = last_frame
 
-            self._frame_count = int(np.ceil(
-                (self.config.n_buffers_recorded + self.config.n_buffers_dropped) / len(headers)
-            ))
+            self._frame_count = int(
+                np.ceil(
+                    (self.config.n_buffers_recorded + self.config.n_buffers_dropped) / len(headers)
+                )
+            )
 
-        # if we have since read more frames than should be there, we update the frame count with a warning
+        # if we have since read more frames than should be there, we update the
+        # frame count with a warning
         max_pos = np.max(list(self.positions.keys()))
         if max_pos > self._frame_count:
-            warnings.warn(f'Got more frames than indicated in card header, expected {self._frame_count} but got {max_pos}')
+            warnings.warn(
+                "Got more frames than indicated in card header, expected "
+                f"{self._frame_count} but got {max_pos}",
+                stacklevel=1,
+            )
             self._frame_count = int(max_pos)
 
         return self._frame_count
-
-
 
     # --------------------------------------------------
     # Context Manager methods
     # --------------------------------------------------
 
-    def __enter__(self) -> 'SDCard':
+    def __enter__(self) -> "SDCard":
         if self._f is not None:
             raise RuntimeError("Cant enter context, and open the file twice!")
 
         # init private attrs
         # create an empty frame to hold our data!
-        self._array = np.zeros(
-            (self.config.width * self.config.height, 1),
-            dtype=np.uint8
-        )
+        self._array = np.zeros((self.config.width * self.config.height, 1), dtype=np.uint8)
         self._pixel_count = 0
         self._last_buffer_n = 0
         self._frame = 0
 
-        self._f = open(self.drive, 'rb')
+        self._f = open(self.drive, "rb")  # noqa: SIM115 - this is a context handler
         # seek to the start of the data
         self._f.seek(self.layout.sectors.data_pos, 0)
         # store the 0th frame position
@@ -197,7 +197,7 @@ class SDCard:
 
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):  # noqa: ANN001
         self._f.close()
         self._f = None
         self._frame = 0
@@ -205,31 +205,33 @@ class SDCard:
     # --------------------------------------------------
     # read methods
     # --------------------------------------------------
-    def _read_data_header(self, sd:BinaryIO) -> SDBufferHeader:
+    def _read_data_header(self, sd: BinaryIO) -> SDBufferHeader:
         """
         Given an already open file buffer opened in bytes mode,
          seeked to the start of a frame, read the data header
         """
 
         # read one word first, I think to get the size of the rest of the header,
-        # that sort of breaks the abstraction (it assumes the buffer length is always at position 0)
+        # that sort of breaks the abstraction
+        # (it assumes the buffer length is always at position 0)
         # but we'll roll with it for now
         dataHeader = np.frombuffer(sd.read(self.layout.word_size), dtype=np.uint32)
         dataHeader = np.append(
             dataHeader,
             np.frombuffer(
                 sd.read((dataHeader[self.layout.buffer.length] - 1) * self.layout.word_size),
-                dtype=np.uint32
-            )
+                dtype=np.uint32,
+            ),
         )
         # use construct because we're already sure these are ints from the numpy casting
-        #https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
+        # https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
         header = SDBufferHeader.model_construct(
             **{
                 k: dataHeader[v]
                 for k, v in self.layout.buffer.model_dump().items()
                 if v is not None
-            })
+            }
+        )
         return header
 
     def _n_frame_blocks(self, header: SDBufferHeader) -> int:
@@ -240,10 +242,11 @@ class SDCard:
         """
         n_blocks = int(
             (
-                header.data_length +
-                (header.length * self.layout.word_size) +
-                (self.layout.sectors.size - 1)
-            ) / self.layout.sectors.size
+                header.data_length
+                + (header.length * self.layout.word_size)
+                + (self.layout.sectors.size - 1)
+            )
+            / self.layout.sectors.size
         )
         return n_blocks
 
@@ -255,29 +258,29 @@ class SDCard:
         them separate in case they are separable actions for now
         """
         n_blocks = self._n_frame_blocks(header)
-        read_size = (n_blocks * self.layout.sectors.size) - \
-            (header.length * self.layout.word_size)
+        read_size = (n_blocks * self.layout.sectors.size) - (header.length * self.layout.word_size)
         return read_size
 
     def _read_buffer(self, sd: BinaryIO, header: SDBufferHeader) -> np.ndarray:
         """
         Read a single buffer from a frame.
 
-        Each frame has several buffers, so for a given frame we read them until we get another that's zero!
+        Each frame has several buffers, so for a given frame we read them until we
+        get another that's zero!
         """
-        data = np.frombuffer(
-            sd.read(self._read_size(header)),
-            dtype=np.uint8
-        )
+        data = np.frombuffer(sd.read(self._read_size(header)), dtype=np.uint8)
         return data
 
-    def _trim(self, data:np.ndarray, expected_size:int) -> np.ndarray:
+    def _trim(self, data: np.ndarray, expected_size: int) -> np.ndarray:
         """
         Trim or pad an array to match an expected size
         """
         if data.shape[0] != expected_size:
             warnings.warn(
-                f"Expected buffer data length: {expected_size}, got data with shape {data.shape}. Padding to expected length")
+                f"Expected buffer data length: {expected_size}, got data with shape "
+                f"{data.shape}. Padding to expected length",
+                stacklevel=1,
+            )
 
             # trim if too long
             if data.shape[0] > expected_size:
@@ -289,26 +292,29 @@ class SDCard:
         return data
 
     @overload
-    def read(self, return_header: Literal[True]= True) -> Frame: ...
+    def read(self, return_header: Literal[True] = True) -> Frame: ...
 
     @overload
     def read(self, return_header: Literal[False] = False) -> np.ndarray: ...
 
-    def read(
-            self,
-            return_header:bool = False
-         ) -> Union[np.ndarray, Frame]:
+    def read(self, return_header: bool = False) -> Union[np.ndarray, Frame]:
         """
         Read a single frame
 
         Arguments:
-            return_header (bool): If `True`, return headers from individual buffers (default `False`)
+            return_header (bool): If `True`, return headers from individual buffers
+                (default `False`)
 
         Return:
-            :class:`numpy.ndarray` , or a tuple(ndarray, List[:class:`~.SDBufferHeader`]) if `return_header` is `True`
+            :class:`numpy.ndarray` ,
+            or a tuple(ndarray, List[:class:`~.SDBufferHeader`]) if `return_header`
+            is `True`
         """
         if self._f is None:
-            raise RuntimeError('File is not open! Try entering the reader context by using it like `with sdcard:`')
+            raise RuntimeError(
+                "File is not open! Try entering the reader context by using it like "
+                "`with sdcard:`"
+            )
 
         self._array[:] = 0
         pixel_count = 0
@@ -320,17 +326,19 @@ class SDCard:
             try:
                 header = self._read_data_header(self._f)
             except ValueError as e:
-                if 'read length must be non-negative' in str(e):
-                    # end of file! Value error thrown because the dataHeader will be blank,
-                    # and thus have a value of 0 for the header size, and we can't read 0 from the card.
+                if "read length must be non-negative" in str(e):
+                    # end of file! Value error thrown because the dataHeader will be
+                    # blank,  and thus have a value of 0 for the header size, and we
+                    # can't read 0 from the card.
                     self._f.seek(last_position, 0)
-                    raise EndOfRecordingException("Reached the end of the video!")
+                    raise EndOfRecordingException("Reached the end of the video!") from None
                 else:
                     raise e
             except IndexError as e:
-                if 'index 0 is out of bounds for axis 0 with size 0' in str(e):
-                    # end of file if we are reading from a disk image without any additional space on disk
-                    raise EndOfRecordingException("Reached the end of the video!")
+                if "index 0 is out of bounds for axis 0 with size 0" in str(e):
+                    # end of file if we are reading from a disk image without any
+                    # additional space on disk
+                    raise EndOfRecordingException("Reached the end of the video!") from None
                 else:
                     raise e
 
@@ -351,7 +359,7 @@ class SDCard:
             headers.append(header)
             data = self._read_buffer(self._f, header)
             data = self._trim(data, header.data_length)
-            self._array[pixel_count:pixel_count + header.data_length, 0] = data
+            self._array[pixel_count : pixel_count + header.data_length, 0] = data
             pixel_count += header.data_length
             last_buffer_n = header.frame_buffer_count
 
@@ -361,28 +369,37 @@ class SDCard:
 
     def to_video(
         self,
-        path: Union[Path,str],
-        fourcc: Literal['GREY', 'AVC1', 'XVID'] = 'GREY',
+        path: Union[Path, str],
+        fourcc: Literal["GREY", "mp4v", "XVID"] = "GREY",
         isColor: bool = False,
         force: bool = False,
-        progress: bool = True
-    ):
+        progress: bool = True,
+    ) -> None:
         """
         Save contents of SD card to video with opencv
 
         Args:
-            path (:class:`pathlib.Path`): Output video path, with video extension ``.avi`` or ``.mp4``
-            fourcc (str): FourCC code used with opencv. Other codecs may be available depending on your opencv installation, but by default opencv supports one of:
+            path (:class:`pathlib.Path`): Output video path, with video extension
+                ``.avi`` or ``.mp4``
+            fourcc (str): FourCC code used with opencv. Other codecs may be available
+                depending on your opencv installation, but by default opencv supports
+                one of:
+
                 * ``GREY`` (default)
                 * ``mp4v``
                 * ``XVID``
-            isColor (bool): Indicates whether output video is in color (default: `False`)
-            force (bool): If `True`, overwrite output video if one already exists (default: `False`)
+
+            isColor (bool): Indicates whether output video is in color
+                (default: `False`)
+            force (bool): If `True`, overwrite output video if one already exists
+                (default: `False`)
             progress (bool): If `True` (default) show progress bar.
         """
         path = Path(path)
         if path.exists() and not force:
-            raise FileExistsError(f"{str(path)} already exists, not overwriting. Use force=True to overwrite.")
+            raise FileExistsError(
+                f"{str(path)} already exists, not overwriting. " "Use force=True to overwrite."
+            )
 
         if progress:
             pbar = tqdm(total=self.frame_count)
@@ -392,7 +409,7 @@ class SDCard:
             cv2.VideoWriter_fourcc(*fourcc),
             self.config.fs,
             (self.config.width, self.config.height),
-            isColor=isColor
+            isColor=isColor,
         )
 
         # wrap in try block so we always close video writer class
@@ -423,22 +440,27 @@ class SDCard:
     # General Methods
     # --------------------------------------------------
 
-
-    def skip(self):
+    def skip(self) -> None:
         """
         Skip a frame
 
         Read the buffer headers to determine buffer sizes and just seek ahead
         """
         if self._f is None:
-            raise RuntimeError('File is not open! Try entering the reader context by using it like `with sdcard:`')
+            raise RuntimeError(
+                "File is not open! Try entering the reader context by using it like "
+                "`with sdcard:`"
+            )
 
         last_position = self._f.tell()
         header = self._read_data_header(self._f)
 
         if header.frame_buffer_count != 0:
             self._f.seek(last_position, 0)
-            raise RuntimeError("Did not start at the first buffer of a frame! Something is wrong with the way seeking is working. Rewound to where we started")
+            raise RuntimeError(
+                "Did not start at the first buffer of a frame! Something is wrong with "
+                "the way seeking is working. Rewound to where we started"
+            )
 
         while True:
             # jump ahead according to the last header we read
@@ -464,15 +486,17 @@ class SDCard:
         Returns:
             bool - True if valid, False if not
         """
-        with open(self.drive, 'rb') as sd:
+        with open(self.drive, "rb") as sd:
             sd.seek(self.layout.sectors.header_pos, 0)
             headerSectorData = np.frombuffer(sd.read(self.layout.sectors.size), dtype=np.uint32)
 
             valid = False
-            if headerSectorData[0] == self.layout.write_key0 and \
-                    headerSectorData[1] == self.layout.write_key1 and \
-                    headerSectorData[2] == self.layout.write_key2 and \
-                    headerSectorData[3] == self.layout.write_key3:
+            if (
+                headerSectorData[0] == self.layout.write_key0
+                and headerSectorData[1] == self.layout.write_key1
+                and headerSectorData[2] == self.layout.write_key2
+                and headerSectorData[3] == self.layout.write_key3
+            ):
                 valid = True
 
         return valid

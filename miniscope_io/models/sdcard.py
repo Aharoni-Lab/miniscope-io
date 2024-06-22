@@ -6,7 +6,7 @@ for consuming code to use a consistent, introspectable API
 
 from typing import Optional
 
-from miniscope_io.models import MiniscopeConfig, Container
+from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader
 
 
@@ -45,15 +45,15 @@ class SectorConfig(MiniscopeConfig):
     The size of an individual sector
     """
 
-    def __getattr__(self, item:str) -> int:
+    def __getattr__(self, item: str) -> int:
         """
         Get positions by multiplying by sector size
         (__getattr__ is only called if the name can't be found, so we don't need to handle
         the base case of the existing attributes)
         """
-        split = item.split('_')
+        split = item.split("_")
         if len(split) == 2 and split[1] == "pos":
-            return getattr(self, split[0]) * getattr(self, 'size')
+            return getattr(self, split[0]) * self.size
         else:
             raise AttributeError()
 
@@ -62,6 +62,7 @@ class ConfigPositions(MiniscopeConfig):
     """
     Image acquisition configuration positions
     """
+
     width: int = 0
     height: int = 1
     fs: int = 2
@@ -74,6 +75,7 @@ class SDHeaderPositions(MiniscopeConfig):
     """
     Positions in the header for the whole SD card
     """
+
     gain: int = 4
     led: int = 5
     ewl: int = 6
@@ -88,8 +90,9 @@ class BufferHeaderPositions(MiniscopeConfig):
     """
     Positions in the header for each frame
     """
+
     length: int = 0
-    linked_list:int = 1
+    linked_list: int = 1
     frame_num: int = 2
     buffer_count: int = 3
     frame_buffer_count: int = 4
@@ -107,18 +110,21 @@ class SDLayout(MiniscopeConfig):
 
     Used by the :class:`.io.SDCard` class to tell it how data on the SD card is laid out.
     """
+
     sectors: SectorConfig
     write_key0: int = 0x0D7CBA17
     write_key1: int = 0x0D7CBA17
     write_key2: int = 0x0D7CBA17
     write_key3: int = 0x0D7CBA17
     """
-    These don't seem to actually be used in the existing reading/writing code, but we will leave them here for continuity's sake :)
+    These don't seem to actually be used in the existing reading/writing code, 
+    but we will leave them here for continuity's sake :)
     """
     word_size: int = 4
     """
-    I'm actually not sure what this is, but 4 is hardcoded a few times in the existing notebook and it
-    appears to be used as a word size when reading from the SD card.
+    I'm actually not sure what this is, but 4 is hardcoded a few times in the 
+    existing notebook and it appears to be used as a word size when
+    reading from the SD card.
     """
 
     header: SDHeaderPositions = SDHeaderPositions()
@@ -136,8 +142,10 @@ class SDConfig(MiniscopeConfig):
     """
     The configuration of a recording taken on this SD card.
 
-    Read from the locations given in :class:`.ConfigPositions` for an SD card with a given :class:`.SDLayout`
+    Read from the locations given in :class:`.ConfigPositions`
+    for an SD card with a given :class:`.SDLayout`
     """
+
     width: int
     height: int
     fs: int
@@ -150,6 +158,7 @@ class SDBufferHeader(BufferHeader):
     """
     Header data at the start of each frame
     """
+
     length: int
     write_buffer_count: int
     dropped_buffer_count: int

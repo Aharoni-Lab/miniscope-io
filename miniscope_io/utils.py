@@ -1,10 +1,15 @@
-from typing import Literal, Union, TYPE_CHECKING
-from pathlib import Path
+"""
+The junk drawer my dogs
+"""
+
 import hashlib
+from pathlib import Path
+from typing import TYPE_CHECKING, Union
+
 import cv2
 
 if TYPE_CHECKING:
-    import numpy as np
+    pass
 
 
 def hash_file(path: Union[Path, str]) -> str:
@@ -22,7 +27,7 @@ def hash_file(path: Union[Path, str]) -> str:
         https://stackoverflow.com/a/44873382
     """
     h = hashlib.sha256()
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         while True:
             chunk = f.read(h.block_size)
             if not chunk:
@@ -32,8 +37,8 @@ def hash_file(path: Union[Path, str]) -> str:
 
 
 def hash_video(
-        path: Union[Path, str],
-        method: hashlib.algorithms_available = 'blake2s',
+    path: Union[Path, str],
+    method: str = "blake2s",
 ) -> str:
     """
     Create a hash of a video by digesting the byte string each of its decoded frames.
@@ -55,12 +60,6 @@ def hash_video(
         ret, frame = vid.read()
         if not ret:
             break
-        h.update(frame)
+        h.update(frame)  # type: ignore
 
     return h.hexdigest()
-
-
-
-
-
-

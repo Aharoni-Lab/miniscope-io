@@ -4,10 +4,12 @@ Base and meta model classes.
 
 from pydantic import BaseModel
 
+
 class MiniscopeIOModel(BaseModel):
     """
     Root model for all miniscope_io models
     """
+
 
 class MiniscopeConfig(MiniscopeIOModel):
     """
@@ -21,6 +23,7 @@ class MiniscopeConfig(MiniscopeIOModel):
     See also: :class:`.Container`
     """
 
+
 class Container(MiniscopeIOModel):
     """
     Root model for models intended to be used as runtime data containers,
@@ -29,6 +32,3 @@ class Container(MiniscopeIOModel):
 
     See also: :class:`.MiniscopeConfig`
     """
-
-
-

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "miniscope_io"
-version = "0.2.0"
+version = "0.2.1"
 description = "Generic I/O for miniscopes"
 authors = [
     "sneakers-the-rat <JLSaunders987@gmail.com>",
@@ -36,7 +36,6 @@ classifiers = [
 python = "^3.9"
 opencv-python = "^4.7.0.72"
 numpy = ">=1.25.0"
-
 pandas = "^2.1.0"
 pydantic = "^2.3.0"
 pyserial = "^3.5"
@@ -52,11 +51,22 @@ sphinx = {version=">=6.2.1", optional=true}
 furo = {version=">2023.07.26", optional=true}
 myst-parser = {version=">3.0.0", optional=true}
 autodoc-pydantic = {version="^2.0.1", optional=true}
+black = {version="^24.1.1", optional=true}
+ruff = {version="^0.2.0", optional=true}
+pre-commit = {version = "^3.7.1", optional = true}
+nox = {version = ">=2024.4.15", optional = true}
 
 [tool.poetry.extras]
 tests = ["pytest", "pytest-timeout", "matplotlib"]
 docs = ["sphinx", "furo", "myst-parser", "autodoc-pydantic", "matplotlib"]
 plot = ["matplotlib"]
+dev = [
+    "black", "ruff", "pre-commit", "nox",
+    # tests
+    "pytest", "pytest-timeout", "matplotlib",
+    # docs
+    "sphinx", "furo", "myst-parser", "autodoc-pydantic"
+]
 
 [build-system]
 requires = ["poetry-core"]
@@ -65,3 +75,72 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 streamDaq = "miniscope_io.stream_daq:main"
 updateDevice = "miniscope_io.device_update:updateDevice"
+
+
+[tool.ruff]
+target-version = "py311"
+include = ["miniscope_io/**/*.py", "pyproject.toml"]
+exclude = ["tests", "miniscope_io/vendor", "noxfile.py"]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # annotations
+    "ANN",
+    ## ----------
+    # pydocstyle
+    # undocumented public objects
+    "D100", "D101", "D102", "D103", "D104", "D106", "D107",
+    # indentation
+    "D207", "D208",
+    # whitespace
+    "D210", "D211",
+    # emptiness
+    "D419",
+
+
+]
+ignore = [
+    "ANN101", "ANN102", "ANN401", "ANN204",
+    # explicit strict arg for zip
+    "B905",
+    # builtin type annotations
+    "UP006", "UP035",
+    # | for Union types (only supported >=3.10
+    "UP007", "UP038",
+    # docstrings for __init__
+    "D107",
+]
+
+fixable = ["ALL"]
+
+[tool.mypy]
+plugins = [
+    "pydantic.mypy"
+]
+packages = [
+    "miniscope_io"
+]
+exclude = [
+    '.*vendor.*'
+]
+follow_imports = "silent"
+warn_unreachable = true
+
+[tool.black]
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = "miniscope_io/.*\\.py$"
+extend-exclude = 'miniscope_io/vendor/.*'
+line-length = 100

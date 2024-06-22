@@ -2,6 +2,16 @@
 
 ## 0.2
 
+### 0.2.1 - 24-06-21
+
+Linting and code formatting :)
+
+Added `black` and `ruff` for linting and formatting, 
+reformatted the package.
+
+See the [Contributing](./contributing.md) documentation for 
+details and usage.
+
 ### 0.2.0 - 24-06-21
 
 StreamDaq enhancements and testing

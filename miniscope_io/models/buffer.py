@@ -5,13 +5,15 @@ containers, etc.
 
 from typing import Union
 
-from miniscope_io.models import MiniscopeConfig, Container
+from miniscope_io.models import Container, MiniscopeConfig
 from miniscope_io.types import Range
+
 
 class BufferHeaderFormat(MiniscopeConfig):
     """
     Format model used to parse header at the beginning of every buffer.
     """
+
     linked_list: Union[int, Range]
     frame_num: Union[int, Range]
     buffer_count: Union[int, Range]
