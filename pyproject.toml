@@ -55,6 +55,7 @@ black = {version="^24.1.1", optional=true}
 ruff = {version="^0.2.0", optional=true}
 pre-commit = {version = "^3.7.1", optional = true}
 nox = {version = ">=2024.4.15", optional = true}
+click = "^8.1.7"
 
 [tool.poetry.extras]
 tests = ["pytest", "pytest-timeout", "matplotlib"]
@@ -73,6 +74,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
+mio = "miniscope_io.cli:cli"
 streamDaq = "miniscope_io.stream_daq:main"
 updateDevice = "miniscope_io.device_update:updateDevice"
 

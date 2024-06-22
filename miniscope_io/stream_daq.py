@@ -230,7 +230,7 @@ class StreamDaq:
     def _init_okdev(self, BIT_FILE: Path) -> Union[okDev, okDevMock]:
 
         # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
-        dev = okDevMock() if os.environ.get("PYTEST_CURRENT_TEST") is not None else okDev()
+        dev = okDevMock() if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_PROFILERUN") else okDev()
 
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
