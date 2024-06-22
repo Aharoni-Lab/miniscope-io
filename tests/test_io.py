@@ -9,7 +9,7 @@ from miniscope_io.models.sdcard import SDBufferHeader
 from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
-from miniscope_io.data import Frame
+from miniscope_io.models.data import Frame
 from miniscope_io.utils import hash_video
 
 from .fixtures import wirefree
