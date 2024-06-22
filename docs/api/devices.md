@@ -1,4 +1,4 @@
-# Devices
+# devices
 
 Interfaces to external devices like miniscopes and DAQs
 

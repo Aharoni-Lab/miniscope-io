@@ -1,6 +1,0 @@
-# Guide
-
-```{toctree}
-installation
-usage
-```

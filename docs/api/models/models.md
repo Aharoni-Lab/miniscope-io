@@ -1,4 +1,4 @@
-# Models
+# models
 
 ```{eval-rst}
 .. automodule:: miniscope_io.models.models

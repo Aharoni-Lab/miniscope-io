@@ -1,4 +1,4 @@
-# Formats
+# formats
 
 ```{eval-rst}
 .. automodule:: miniscope_io.formats

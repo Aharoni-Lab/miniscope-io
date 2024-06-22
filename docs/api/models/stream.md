@@ -1,4 +1,4 @@
-# Stream
+# stream
 
 ```{eval-rst}
 .. automodule:: miniscope_io.models.stream

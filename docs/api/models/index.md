@@ -1,4 +1,4 @@
-# Models
+# models
 
 Pydantic models used throughout `miniscope_io`.
 

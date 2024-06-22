@@ -1,4 +1,4 @@
-# Logging
+# logging
 
 ```{eval-rst}
 .. automodule:: miniscope_io.logging

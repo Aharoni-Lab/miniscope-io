@@ -1,27 +1,36 @@
-.. miniscope-io documentation master file, created by
-   sphinx-quickstart on Tue Jun 27 10:52:50 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 # miniscope-io
 
 ```{toctree}
 :caption: Guide:
+:maxdepth: 2
 
-guide/index
+guide/installation
+guide/usage
 ```
 
 ```{toctree}
 :maxdepth: 2
-:caption: Contents:
+:caption: API:
 
-api/index
+api/data
+api/devices
+api/formats/index
+api/io
+api/logging
+api/models/index
+api/exceptions
+api/plots/index
+api/utils
+api/stream_daq
+api/vendor/index
 ```
 
 ```{toctree}
 :caption: Meta:
 
-meta/index
+meta/changelog
+meta/contributing
+meta/todo
 ```
  
 

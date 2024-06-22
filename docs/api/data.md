@@ -1,4 +1,4 @@
-# Data
+# data
 
 ```{eval-rst}
 .. automodule:: miniscope_io.data

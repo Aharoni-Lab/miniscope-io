@@ -1,4 +1,4 @@
-# Stream DAQ
+# stream_daq
 This module is a data acquisition module that captures video streams from Miniscopes based on the `Miniscope-SAMD-Framework` firmware. The firmware repository will be published in future updates but is currently under development and private.
 
 ## Command

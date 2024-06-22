@@ -1,4 +1,4 @@
-# Buffer
+# buffer
 
 ```{eval-rst}
 .. automodule:: miniscope_io.models.buffer

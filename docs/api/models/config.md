@@ -1,4 +1,4 @@
-# Config
+# config
 
 ```{eval-rst}
 .. automodule:: miniscope_io.models.config
