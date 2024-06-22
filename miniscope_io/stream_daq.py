@@ -66,7 +66,7 @@ class StreamDaq:
 
     Examples
     --------
-    >>> streamDaq -c path/to/config/yaml/file.yml
+    >>> mio sdaq -c path/to/config.yml -o output_filename
     Connected to XEM7310-A75
     Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
     FrontPanel is supported

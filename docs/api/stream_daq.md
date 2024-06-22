@@ -4,7 +4,7 @@ This module is a data acquisition module that captures video streams from Minisc
 ## Command
 After [installation](../guide/installation.md) and customizing [configurations](stream-daq-config) if necessary, run the following command in this Git repository to start the data acquisition process:
 ```bash
->>> streamDaq -c path/to/config/yaml/file.yml
+>>> mio sdaq -c path/to/config.yml -o output_filename
 Connected to XEM7310-A75
 Successfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
 FrontPanel is supported
