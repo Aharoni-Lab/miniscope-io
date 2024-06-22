@@ -49,12 +49,10 @@ class Frames(BaseModel):
     frames: List[Frame]
 
     @overload
-    def flatten_headers(self, as_dict: Literal[False]) -> List[SDBufferHeader]:
-        ...
+    def flatten_headers(self, as_dict: Literal[False]) -> List[SDBufferHeader]: ...
 
     @overload
-    def flatten_headers(self, as_dict: Literal[True]) -> List[dict]:
-        ...
+    def flatten_headers(self, as_dict: Literal[True]) -> List[dict]: ...
 
     def flatten_headers(self, as_dict: bool = False) -> Union[List[dict], List[SDBufferHeader]]:
         """
