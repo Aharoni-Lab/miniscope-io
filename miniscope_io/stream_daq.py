@@ -526,7 +526,7 @@ class StreamDaq:
             p_recv = multiprocessing.Process(
                 target=self._fpga_recv,
                 args=(serial_buffer_queue, read_length, True, binary),
-                name="_fpga_recv"
+                name="_fpga_recv",
             )
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
@@ -546,7 +546,7 @@ class StreamDaq:
                 serial_buffer_queue,
                 frame_buffer_queue,
             ),
-            name="_buffer_to_frame"
+            name="_buffer_to_frame",
         )
         p_format_frame = multiprocessing.Process(
             target=self._format_frame,
@@ -554,12 +554,9 @@ class StreamDaq:
                 frame_buffer_queue,
                 imagearray,
             ),
-            name="_format_frame"
+            name="_format_frame",
         )
-        """
-        p_terminate = multiprocessing.Process(
-            target=check_termination_flag, args=(self.terminate,))
-        """
+
         p_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
@@ -568,7 +565,7 @@ class StreamDaq:
             for image in exact_iter(imagearray.get, None):
                 if self.config.show_video is True:
                     cv2.imshow("image", image)
-                    if cv2.waitKey(1) == 27: # get out with ESC key
+                    if cv2.waitKey(1) == 27:  # get out with ESC key
                         self.terminate.set()
                         break
                 if writer:
@@ -586,18 +583,16 @@ class StreamDaq:
             if self.config.show_video:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
-           
-            # Give some time for processes to clean up
-            time.sleep(1)
 
             # Join child processes with a timeout
             for p in [p_recv, p_buffer_to_frame, p_format_frame]:
                 p.join(timeout=2)
                 if p.is_alive():
-                    self.logger.warning(f"Process {p.name} did not terminate in time and will be terminated forcefully.")
+                    self.logger.warning(f"Termination timeout: force terminating process {p.name}.")
                     p.terminate()
                     p.join()
             self.logger.info("Child processes joined. End capture.")
+
 
 def main() -> None:  # noqa: D103
     args = daqParser.parse_args()
