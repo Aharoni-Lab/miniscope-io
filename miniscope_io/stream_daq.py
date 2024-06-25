@@ -222,7 +222,7 @@ class StreamDaq:
         if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_MOCKRUN"):
             dev = okDevMock()
         else:
-            okDev()
+            dev = okDev()
 
         dev.uploadBit(str(BIT_FILE))
         dev.setWire(0x00, 0b0010)
@@ -342,6 +342,8 @@ class StreamDaq:
 
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
+                if self.terminate.is_set():
+                    break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
                 serial_buffer = self._trim(
@@ -416,6 +418,9 @@ class StreamDaq:
         locallogs = init_logger("streamDaq.frame")
         try:
             for frame_data in exact_iter(frame_buffer_queue.get, None):
+                if self.terminate.is_set():
+                    break
+
                 locallogs.debug("Found frame in queue")
                 if len(frame_data) == 0:
                     continue
@@ -521,6 +526,7 @@ class StreamDaq:
             p_recv = multiprocessing.Process(
                 target=self._fpga_recv,
                 args=(serial_buffer_queue, read_length, True, binary),
+                name="_fpga_recv"
             )
         else:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
@@ -540,6 +546,7 @@ class StreamDaq:
                 serial_buffer_queue,
                 frame_buffer_queue,
             ),
+            name="_buffer_to_frame"
         )
         p_format_frame = multiprocessing.Process(
             target=self._format_frame,
@@ -547,6 +554,7 @@ class StreamDaq:
                 frame_buffer_queue,
                 imagearray,
             ),
+            name="_format_frame"
         )
         """
         p_terminate = multiprocessing.Process(
@@ -560,11 +568,16 @@ class StreamDaq:
             for image in exact_iter(imagearray.get, None):
                 if self.config.show_video is True:
                     cv2.imshow("image", image)
-                    cv2.waitKey(1) #needed for updating interactive window. delay 1 ms for now.
+                    if cv2.waitKey(1) == 27: # get out with ESC key
+                        self.terminate.set()
+                        break
                 if writer:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
         except KeyboardInterrupt:
+            self.terminate.set()
+        except Exception as e:
+            self.logger.exception(f"Error during capture: {e}")
             self.terminate.set()
         finally:
             if writer:
@@ -572,9 +585,19 @@ class StreamDaq:
                 self.logger.debug("VideoWriter released")
             if self.config.show_video:
                 cv2.destroyAllWindows()
+                cv2.waitKey(100)
+           
+            # Give some time for processes to clean up
+            time.sleep(1)
 
-            self.logger.debug("End capture")
-
+            # Join child processes with a timeout
+            for p in [p_recv, p_buffer_to_frame, p_format_frame]:
+                p.join(timeout=2)
+                if p.is_alive():
+                    self.logger.warning(f"Process {p.name} did not terminate in time and will be terminated forcefully.")
+                    p.terminate()
+                    p.join()
+            self.logger.info("Child processes joined. End capture.")
 
 def main() -> None:  # noqa: D103
     args = daqParser.parse_args()
