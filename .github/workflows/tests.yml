@@ -8,9 +8,9 @@ on:
       - main
 
 # Don't run duplicates - eg. if pushing to an open PR
-concurrency:
-  group: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
+#concurrency:
+#  group: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+#  cancel-in-progress: true
 
 jobs:
   test:
