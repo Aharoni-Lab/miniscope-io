@@ -30,7 +30,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
       - name: Install dependencies
-        run: pip install .[tests] pytest pytest-md
+        run: pip install -e .[tests]
       - name: Run tests
         uses: pavelzw/pytest-action@v2
         with:
