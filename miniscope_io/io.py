@@ -70,7 +70,7 @@ class SDCard:
             self._config = SDConfig(
                 **{
                     k: configSectorData[v]
-                    for k, v in self.layout.config.dict().items()
+                    for k, v in self.layout.config.model_dump().items()
                     if v is not None
                 }
             )

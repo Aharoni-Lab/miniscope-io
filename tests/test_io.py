@@ -5,11 +5,11 @@ import tempfile
 from pathlib import Path
 import os
 
+from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader
 from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
-from miniscope_io.data import Frame
 from miniscope_io.utils import hash_video
 
 from .fixtures import wirefree
@@ -61,6 +61,7 @@ def test_read(wirefree):
     # but we should keep our positions
     assert len(wirefree.positions) == n_frames + 1
 
+
 def test_return_headers(wirefree):
     """
     We can return the headers for the individual buffers in a frame
@@ -71,6 +72,7 @@ def test_return_headers(wirefree):
 
         assert len(frame_object.headers) == 5
         assert all([isinstance(b, SDBufferHeader) for b in frame_object.headers])
+
 
 def test_frame_count(wirefree):
     """
@@ -85,17 +87,18 @@ def test_frame_count(wirefree):
         with pytest.raises(EndOfRecordingException):
             frame = wirefree.read()
 
+
 def test_relative_path():
     """
     Test that we can use both relative and absolute paths in the SD card model
     """
     # get absolute path of working directory, then get relative path to data from there
     abs_cwd = Path(os.getcwd()).resolve()
-    abs_child = Path(__file__).parent.parent / 'data' / 'wirefree_example.img'
+    abs_child = Path(__file__).parent.parent / "data" / "wirefree_example.img"
     rel_path = abs_child.relative_to(abs_cwd)
 
     assert not rel_path.is_absolute()
-    sdcard = SDCard(drive = rel_path, layout = WireFreeSDLayout)
+    sdcard = SDCard(drive=rel_path, layout=WireFreeSDLayout)
 
     # check we can do something basic like read config
     assert sdcard.config is not None
@@ -106,16 +109,16 @@ def test_relative_path():
     # now try with an absolute path
     abs_path = rel_path.resolve()
     assert abs_path.is_absolute()
-    sdcard_abs = SDCard(drive= abs_path, layout= WireFreeSDLayout)
+    sdcard_abs = SDCard(drive=abs_path, layout=WireFreeSDLayout)
     assert sdcard_abs.config is not None
     assert sdcard_abs.drive.is_absolute()
 
 
 @pytest.mark.parametrize(
-    ['file', 'fourcc', 'hash'],
+    ["file", "fourcc", "hash"],
     [
-        ('video.avi', 'GREY', 'de1a5a0bd06c17588cef2130c96a883a58eeedc1b46f2b89e0233ff8c4ef4e32'),
-    ]
+        ("video.avi", "GREY", "de1a5a0bd06c17588cef2130c96a883a58eeedc1b46f2b89e0233ff8c4ef4e32"),
+    ],
 )
 def test_write_video(wirefree, file, fourcc, hash):
     """
@@ -126,37 +129,3 @@ def test_write_video(wirefree, file, fourcc, hash):
         wirefree.to_video(path, fourcc=fourcc, progress=False)
         file_hash = hash_video(path)
         assert file_hash == hash
-
-
-
-
-#
-# @pytest.mark.parametrize(
-#     ['data', 'header', 'sector', 'word'],
-#     list(itertools.product(
-#         (63964, 49844),
-#         (9, 10),
-#         (512,),
-#         (4,)
-#     ))
-# )
-# def test_n_blocks(data, header, sector, word):
-#     """
-#     Original:
-#
-#     numBlocks = int((dataHeader[BUFFER_HEADER_DATA_LENGTH_POS] + \
-#       (dataHeader[BUFFER_HEADER_HEADER_LENGTH_POS] * 4) + (512 - 1)) / 512)
-#     data = np.fromstring(
-#       f.read(
-#         numBlocks*512 - dataHeader[BUFFER_HEADER_HEADER_LENGTH_POS] * 4
-#       ),
-#       dtype=np.uint8
-#     )
-#
-#     """
-#     n_blocks = int(
-#         (data + (header * word) + (sector - 1)) / sector
-#     )
-#     read_bytes = n_blocks * sector - header * word
-#
-#     assert read_bytes == data
