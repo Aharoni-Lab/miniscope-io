@@ -21,4 +21,4 @@ restrictive licenses. Those licenses can be found
 in the `LICENSE` files in the respective directories 
 containing the unmodified source material
 
-* `miniscope_io/vendor/opalkelly`
+* `miniscope_io/vendor/opalkelly` 
