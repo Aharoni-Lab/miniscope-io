@@ -79,7 +79,7 @@ class StreamDaq:
 
     def __init__(
         self,
-        config: StreamDaqConfig,
+        config: Union[StreamDaqConfig, Path],
         header_fmt: StreamBufferHeaderFormat = StreamBufferHeader,
     ) -> None:
         """
@@ -88,13 +88,18 @@ class StreamDaq:
 
         Parameters
         ----------
-        config : StreamDaqConfig
+        config : StreamDaqConfig | Path
             DAQ configurations imported from the input yaml file.
             Examples and required properties can be found in /miniscope-io/config/example.yml
+
+            Passed either as the instantiated config object or a path to on-disk yaml configuration
         header_fmt : MetadataHeaderFormat, optional
             Header format used to parse information from buffer header,
             by default `MetadataHeaderFormat()`.
         """
+        if isinstance(config, (str, Path)):
+            config = StreamDaqConfig.from_yaml(config)
+
         self.logger = init_logger("streamDaq")
         self.config = config
         self.header_fmt = header_fmt
