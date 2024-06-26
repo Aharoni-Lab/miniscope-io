@@ -4,6 +4,7 @@
 [![Documentation Status](https://readthedocs.org/projects/miniscope-io/badge/?version=latest)](https://miniscope-io.readthedocs.io/en/latest/?badge=latest)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/miniscope-io)
 ![PyPI - Status](https://img.shields.io/pypi/status/miniscope-io)
+[![Coverage Status](https://coveralls.io/repos/github/Aharoni-Lab/miniscope-io/badge.svg?branch=main)](https://coveralls.io/github/Aharoni-Lab/miniscope-io?branch=main)
 
 Generic i/o interfaces for miniscopes.
 
