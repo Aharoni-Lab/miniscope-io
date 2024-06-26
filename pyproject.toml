@@ -46,6 +46,7 @@ rich = "^13.6.0"
 pyyaml = "^6.0.1"
 matplotlib = {version="^3.7.1", optional=true}
 pytest = {version="^8.2.2", optional=true}
+pytest-cov = {version = "^5.0.0", optional = true}
 pytest-timeout = {version="^2.3.1", optional=true}
 sphinx = {version=">=6.2.1", optional=true}
 furo = {version=">2023.07.26", optional=true}
@@ -57,13 +58,13 @@ pre-commit = {version = "^3.7.1", optional = true}
 nox = {version = ">=2024.4.15", optional = true}
 
 [tool.poetry.extras]
-tests = ["pytest", "pytest-timeout", "matplotlib"]
+tests = ["pytest", "pytest-cov", "pytest-timeout", "matplotlib"]
 docs = ["sphinx", "furo", "myst-parser", "autodoc-pydantic", "matplotlib"]
 plot = ["matplotlib"]
 dev = [
     "black", "ruff", "pre-commit", "nox",
     # tests
-    "pytest", "pytest-timeout", "matplotlib",
+    "pytest", "pytest-cov", "pytest-timeout", "matplotlib",
     # docs
     "sphinx", "furo", "myst-parser", "autodoc-pydantic"
 ]
@@ -76,6 +77,20 @@ build-backend = "poetry.core.masonry.api"
 streamDaq = "miniscope_io.stream_daq:main"
 updateDevice = "miniscope_io.device_update:updateDevice"
 
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=miniscope_io",
+    "--cov-append",
+]
+testpaths = [
+    "tests"
+]
+
+[tool.coverage.run]
+omit = [
+    "miniscope_io/vendor/*",
+    "miniscope_io/devices/opalkelly.py", # can't test hardware interface directly
+]
 
 [tool.ruff]
 target-version = "py311"
