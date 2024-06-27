@@ -432,8 +432,9 @@ class StreamDaq:
                 except ValueError as e:
                     expected_size = self.config.frame_width * self.config.frame_height
                     provided_size = frame_data.size
-                    locallogs.warning(
-                        "Frame size doesn't match: %s. Expected size: %d, got size: %d elements.",
+                    locallogs.exception(
+                        "Frame size doesn't match: %s. Expected size: %d, got size: %d elements. "
+                        "Replacing with zeros.",
                         e,
                         expected_size,
                         provided_size,
