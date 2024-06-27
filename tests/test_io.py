@@ -1,18 +1,19 @@
-import pdb
-
 import pytest
 import tempfile
 from pathlib import Path
 import os
 
+import numpy as np
+import warnings
+
 from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader
-from miniscope_io.formats import WireFreeSDLayout
+from miniscope_io.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
 from miniscope_io.io import SDCard
 from miniscope_io.exceptions import EndOfRecordingException
-from miniscope_io.utils import hash_video
+from miniscope_io.utils import hash_file, hash_video
 
-from .fixtures import wirefree
+from .fixtures import wirefree, wirefree_battery
 
 
 def test_read(wirefree):
@@ -129,3 +130,38 @@ def test_write_video(wirefree, file, fourcc, hash):
         wirefree.to_video(path, fourcc=fourcc, progress=False)
         file_hash = hash_video(path)
         assert file_hash == hash
+
+
+@pytest.mark.parametrize(
+    ["n_frames", "hash"], [(50, "9b48a4ae3458187072d73840b51c9de6f986dd2f175c566dbb1d44216c313e19")]
+)
+def test_to_img(wirefree_battery, n_frames, hash, tmp_path):
+    out_file = tmp_path / "test_toimg.img"
+    wirefree_battery.to_img(out_file, n_frames, force=True)
+    out_hash = hash_file(out_file)
+
+    assert out_hash == hash
+
+    sd = SDCard(out_file, WireFreeSDLayout_Battery)
+
+    # we should be able to read all the frames!
+    frames = []
+    with sd:
+        for i in range(n_frames):
+            frames.append(sd.read(return_header=True))
+
+    assert not any([f.frame is None for f in frames])
+    assert all([np.nonzero(f.frame) for f in frames])
+
+    # we should not write to file if it exists and force is False
+    assert out_file.exists()
+    mtime = os.path.getmtime(out_file)
+
+    with pytest.raises(FileExistsError):
+        wirefree_battery.to_img(out_file, n_frames, force=False)
+
+    assert mtime == os.path.getmtime(out_file)
+
+    # forcing should overwrite the file
+    wirefree_battery.to_img(out_file, n_frames, force=True)
+    assert mtime != os.path.getmtime(out_file)
