@@ -2,6 +2,8 @@
 Plot headers from :class:`.SDCard`
 """
 
+from typing import Optional, Tuple
+
 import pandas as pd
 
 try:
@@ -20,7 +22,7 @@ def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     cols = ("write_buffer_count", "dropped_buffer_count", "buffer_count")
     labels = ("Write Buffer", "Dropped Buffer", "Total Buffer")
     for col, label in zip(cols, labels):
-        ax[0].plot(headers[col], label=label)
+        ax.plot(headers[col], label=label)
     ax.legend()
     ax.set_xlabel("Buffer index")
     ax.set_xlabel("Buffer count")
@@ -63,7 +65,9 @@ def battery_voltage(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def plot_headers(headers: pd.DataFrame) -> (plt.Figure, plt.Axes):
+def plot_headers(
+    headers: pd.DataFrame, size: Optional[Tuple[int, int]] = None
+) -> (plt.Figure, plt.Axes):
     """
     Plot the headers (generated from :meth:`.Frame.to_df` )
 
@@ -72,6 +76,7 @@ def plot_headers(headers: pd.DataFrame) -> (plt.Figure, plt.Axes):
 
     Arguments:
         headers (:class:`pandas.DataFrame`): headers to plot
+        size (tuple[int, int]): Manually override plot ``(width, height)`` . Arbitrary units
     """
     subplots = 4 if "battery_voltage" in headers.columns else 3
 
@@ -88,5 +93,11 @@ def plot_headers(headers: pd.DataFrame) -> (plt.Figure, plt.Axes):
 
     if "battery_voltage" in headers.columns:
         ax[3] = battery_voltage(headers, ax[3])
+
+    if size is None:
+        size = ((subplots * 3) + 1, 3)
+
+    fig.set_figwidth(size[0])
+    fig.set_figheight(size[1])
 
     return fig, ax
