@@ -1,4 +1,4 @@
-# Plots
+# plots
 
 ```{toctree}
 :caption: Plots

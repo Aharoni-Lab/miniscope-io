@@ -1,6 +1,6 @@
 import pytest
 
-from miniscope_io.sdcard import SectorConfig
+from miniscope_io.models.sdcard import SectorConfig
 import numpy as np
 
 @pytest.fixture

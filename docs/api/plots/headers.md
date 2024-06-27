@@ -1,4 +1,4 @@
-# Headers
+# headers
 
 ```{eval-rst}
 .. automodule:: miniscope_io.plots.headers
