@@ -230,13 +230,7 @@ class SDCard:
         # use construct because we're already sure these are ints from the numpy casting
         # https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
         try:
-            header = SDBufferHeader.model_construct(
-                **{
-                    k: dataHeader[v]
-                    for k, v in self.layout.buffer.model_dump().items()
-                    if v is not None
-                }
-            )
+            header = SDBufferHeader.from_format(dataHeader, self.layout.buffer, construct=True)
         except IndexError as e:
             raise ReadHeaderException(
                 "Could not read header, expected header to have "

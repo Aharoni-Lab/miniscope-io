@@ -6,8 +6,9 @@ import pandas as pd
 from miniscope_io.models.sdcard import SDBufferHeader
 
 
+@pytest.mark.filterwarnings("ignore:Pydantic serializer warnings")
 def test_header_df(wirefree_frames):
-    header_df = wirefree_frames.to_df(what='headers')
+    header_df = wirefree_frames.to_df(what="headers")
     assert isinstance(header_df, pd.DataFrame)
 
     # check columns present

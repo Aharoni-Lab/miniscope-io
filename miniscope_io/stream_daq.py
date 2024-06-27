@@ -20,9 +20,14 @@ from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
 from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
-from miniscope_io.formats.stream import StreamBufferHeader
-from miniscope_io.models.buffer import BufferHeader
-from miniscope_io.models.stream import StreamBufferHeaderFormat, StreamDaqConfig
+from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
+from miniscope_io.models.stream import (
+    StreamBufferHeader,
+    StreamDaqConfig,
+)
+from miniscope_io.models.stream import (
+    StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
+)
 
 HAVE_OK = False
 ok_error = None
@@ -80,7 +85,7 @@ class StreamDaq:
     def __init__(
         self,
         config: Union[StreamDaqConfig, Path],
-        header_fmt: StreamBufferHeaderFormat = StreamBufferHeader,
+        header_fmt: StreamBufferHeaderFormatType = StreamBufferHeaderFormat,
     ) -> None:
         """
         Constructer for the class.
@@ -130,7 +135,7 @@ class StreamDaq:
             self._nbuffer_per_fm = len(self.buffer_npix)
         return self._nbuffer_per_fm
 
-    def _parse_header(self, buffer: bytes) -> Tuple[BufferHeader, np.ndarray]:
+    def _parse_header(self, buffer: bytes) -> Tuple[StreamBufferHeader, np.ndarray]:
         """
         Function to parse header from each buffer.
 
@@ -155,13 +160,8 @@ class StreamDaq:
             reverse_body_bytes=True,
         )
 
-        header_data = dict()
-        for hd, header_index in self.header_fmt.model_dump().items():
-            header_data[hd] = header[header_index]
+        header_data = StreamBufferHeader.from_format(header, self.header_fmt, construct=True)
 
-        header_data = BufferHeader.model_construct(**header_data)
-
-        # I don't think other truncate options were needed so just left this
         return header_data, payload
 
     def _trim(self, data: np.ndarray, expected_size: int, logger: logging.Logger) -> np.ndarray:
