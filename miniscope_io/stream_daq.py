@@ -340,11 +340,10 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.buffer")
 
-        cur_fm_buffer_index = -1  # Index of buffer within frame
         cur_fm_num = -1  # Frame number
 
-        frame_buffer = []
-
+        frame_buffer_prealloc = [np.zeros(bufsize, dtype=np.uint8) for bufsize in self.buffer_npix]
+        frame_buffer = frame_buffer_prealloc.copy()
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
                 if self.terminate.is_set():
@@ -365,34 +364,26 @@ class StreamDaq:
                     frame_buffer_queue.put(frame_buffer)
 
                     # init new frame_buffer
-                    frame_buffer = []
+                    frame_buffer = frame_buffer_prealloc.copy()
 
                     # update frame_num and index
                     cur_fm_num = header_data.frame_num
-                    cur_fm_buffer_index = header_data.frame_buffer_count
 
-                    if cur_fm_buffer_index != 0:
+                    if header_data.frame_buffer_count != 0:
                         locallogs.warning(
-                            f"Frame {cur_fm_num} started with buffer {cur_fm_buffer_index}"
+                            f"Frame {cur_fm_num} started with buffer "
+                            f"{header_data.frame_buffer_count}"
                         )
-                        for i in range(cur_fm_buffer_index):
-                            frame_buffer.append(np.zeros(self.buffer_npix[i], dtype=np.uint8))
 
                     # update data
-                    frame_buffer.append(serial_buffer)
+                    frame_buffer[header_data.frame_buffer_count] = serial_buffer
 
-                elif (
-                    header_data.frame_num == cur_fm_num
-                    and header_data.frame_buffer_count > cur_fm_buffer_index
-                ):
-                    cur_fm_buffer_index = header_data.frame_buffer_count
-                    # This will corrupt when a buffer is skipped. It should be padded.
-                    frame_buffer.append(serial_buffer)
-                    locallogs.debug("----buffer #" + str(cur_fm_buffer_index) + " stored")
-
-                # if lost frame from buffer -> reset index
                 else:
-                    cur_fm_buffer_index = 0
+                    frame_buffer[header_data.frame_buffer_count] = serial_buffer
+                    locallogs.debug(
+                        "----buffer #" + str(header_data.frame_buffer_count) + " stored"
+                    )
+
         finally:
             frame_buffer_queue.put(None)
 
