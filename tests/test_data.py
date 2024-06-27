@@ -3,7 +3,8 @@ import pdb
 import pytest
 from .fixtures import wirefree_frames, wirefree
 import pandas as pd
-from miniscope_io.sdcard import DataHeader
+from miniscope_io.models.sdcard import SDBufferHeader
+
 
 def test_header_df(wirefree_frames):
     header_df = wirefree_frames.to_df(what='headers')
@@ -11,6 +12,6 @@ def test_header_df(wirefree_frames):
 
     # check columns present
     for col in header_df.columns:
-        assert col in DataHeader.model_fields
+        assert col in SDBufferHeader.model_fields
 
     assert len(header_df) == 1937
