@@ -2,7 +2,7 @@
 I/O functions for the SD card
 """
 
-import warnings
+import contextlib
 from pathlib import Path
 from typing import BinaryIO, Literal, Optional, Union, overload
 
@@ -10,7 +10,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from miniscope_io.exceptions import EndOfRecordingException
+from miniscope_io.exceptions import EndOfRecordingException, ReadHeaderException
+from miniscope_io.logging import init_logger
 from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
@@ -33,6 +34,7 @@ class SDCard:
 
         self.drive = drive
         self.layout = layout
+        self.logger = init_logger("SDCard")
 
         # Private attributes used when the file reading context is entered
         self._config = None  # type: Optional[SDConfig]
@@ -70,7 +72,7 @@ class SDCard:
             self._config = SDConfig(
                 **{
                     k: configSectorData[v]
-                    for k, v in self.layout.config.dict().items()
+                    for k, v in self.layout.config.model_dump().items()
                     if v is not None
                 }
             )
@@ -151,6 +153,8 @@ class SDCard:
             else:
                 # If we're already open, great, just return to the last frame
                 last_frame = self.frame
+                # Go one frame back in case we are at the end of the data
+                self.frame = max(last_frame - 1, 0)
                 frame = self.read(return_header=True)
                 headers = frame.headers
                 self.frame = last_frame
@@ -165,10 +169,9 @@ class SDCard:
         # frame count with a warning
         max_pos = np.max(list(self.positions.keys()))
         if max_pos > self._frame_count:
-            warnings.warn(
+            self.logger.warning(
                 "Got more frames than indicated in card header, expected "
-                f"{self._frame_count} but got {max_pos}",
-                stacklevel=1,
+                f"{self._frame_count} but got {max_pos}"
             )
             self._frame_count = int(max_pos)
 
@@ -223,15 +226,26 @@ class SDCard:
                 dtype=np.uint32,
             ),
         )
+
         # use construct because we're already sure these are ints from the numpy casting
         # https://docs.pydantic.dev/latest/usage/models/#creating-models-without-validation
-        header = SDBufferHeader.model_construct(
-            **{
-                k: dataHeader[v]
-                for k, v in self.layout.buffer.model_dump().items()
-                if v is not None
-            }
-        )
+        try:
+            header = SDBufferHeader.model_construct(
+                **{
+                    k: dataHeader[v]
+                    for k, v in self.layout.buffer.model_dump().items()
+                    if v is not None
+                }
+            )
+        except IndexError as e:
+            raise ReadHeaderException(
+                "Could not read header, expected header to have "
+                f"{len(self.layout.buffer.model_dump().keys())} fields, "
+                f"got {len(dataHeader)}. Likely mismatch between specified "
+                "and actual SD Card layout or reached end of data.\n"
+                f"Header Data: {dataHeader}"
+            ) from e
+
         return header
 
     def _n_frame_blocks(self, header: SDBufferHeader) -> int:
@@ -276,9 +290,10 @@ class SDCard:
         Trim or pad an array to match an expected size
         """
         if data.shape[0] != expected_size:
-            warnings.warn(
-                f"Expected buffer data length: {expected_size}, got data with shape "
-                f"{data.shape}. Padding to expected length",
+            self.logger.warning(
+                f"Frame: {self._frame}: Expected buffer data length: {expected_size}, "
+                f"got data with shape {data.shape}. "
+                "Padding to expected length",
                 stacklevel=1,
             )
 
@@ -338,6 +353,12 @@ class SDCard:
                 if "index 0 is out of bounds for axis 0 with size 0" in str(e):
                     # end of file if we are reading from a disk image without any
                     # additional space on disk
+                    raise EndOfRecordingException("Reached the end of the video!") from None
+                else:
+                    raise e
+            except ReadHeaderException as e:
+                # if we are on the last frame, normal! signal end of iteration
+                if self._frame == self.frame_count - 1:
                     raise EndOfRecordingException("Reached the end of the video!") from None
                 else:
                     raise e
@@ -401,6 +422,13 @@ class SDCard:
                 f"{str(path)} already exists, not overwriting. " "Use force=True to overwrite."
             )
 
+        if path.suffix == ".mp4" and fourcc.lower() == "grey":
+            self.logger.warning("Cannot use .mp4 with GREY fourcc code. Using .avi instead")
+            path = path.with_suffix(".avi")
+        elif path.suffix == ".avi" and fourcc.lower() == "mp4v":
+            self.logger.warning("Cannot use .avi with mp4v fourcc code, using .mp4 instead")
+            path = path.with_suffix(".mp4")
+
         if progress:
             pbar = tqdm(total=self.frame_count)
 
@@ -435,6 +463,78 @@ class SDCard:
             writer.release()
             if progress:
                 pbar.close()
+
+    def to_img(
+        self,
+        path: Optional[Union[Path, str]],
+        frame: Optional[int] = None,
+        force: bool = False,
+        chunk_size: int = 1e6,
+        progress: bool = True,
+    ) -> None:
+        """
+        Create a new disk image that is truncated to the actual size of the video data
+
+        Typically, making disk images using dd or other tools will create an image
+        file that is the full size of the media it's stored on. Rather than
+        sending a bunch of 30GB image files around, we can instead create an
+        image that is truncated to just the size of the data that has actually been recorded
+
+        Args:
+            path (:class:`pathlib.Path`): Path to write .img file to
+            frame (int): Optional, if present only write the first n frames. If
+                ``None`` , write all frames
+            force (bool): If ``True``, overwrite an existing file. If ``False`` , (default)
+                don't.
+            chunk_size (int): Number of bytes to read/write at once (default ``1e6`` )
+            progress (bool): If ``True`` (default), show progress bar
+        """
+        path = Path(path)
+        if path.exists() and not force:
+            raise FileExistsError("File exists, use force=True to overwrite")
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        start_frame = self.frame
+
+        if frame is None:
+            frame = self.frame_count - 1
+
+        # read it to move the file position to the end of the frame
+        with self:
+            # go to one before the requested frame to make sure we have its position
+            self.frame = frame - 1
+            # read advances us to the end of the requested frame -- where we want to truncate
+            with contextlib.suppress(EndOfRecordingException):
+                _ = self.read(return_header=True)
+            # now we can take the diff of the positions to get the expected offset
+            # for the end of the last frame
+            # these should be populated from the read and frame reposition
+            diff = self.positions[frame] - self.positions[frame - 1]
+            final_position = self._f.tell() + diff
+
+        # try block to ensure closing pbar
+        pos = 0
+        pbar = tqdm(total=final_position) if progress else None
+
+        try:
+            with open(self.drive, "rb") as readfile, open(path, "wb") as writefile:
+                while pos < final_position:
+                    readsize = int(np.min([final_position - pos, chunk_size]))
+                    data = readfile.read(readsize)
+                    writefile.write(data)
+                    pos = readfile.tell()
+                    if progress:
+                        pbar.update(readsize)
+
+        finally:
+            if progress:
+                pbar.close()
+
+        # return frame to the place it was before we wrote
+        if start_frame is not None:
+            with self:
+                self.frame = start_frame
 
     # --------------------------------------------------
     # General Methods

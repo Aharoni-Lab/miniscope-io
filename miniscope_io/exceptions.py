@@ -16,6 +16,18 @@ class EndOfRecordingException(StopIteration):
     """
 
 
+class SDException(Exception):
+    """
+    Base class for SDcard-specific errors
+    """
+
+
+class ReadHeaderException(SDException, RuntimeError):
+    """
+    Raised when a given frame's header cannot be read!
+    """
+
+
 class StreamError(RuntimeError):
     """
     Base class for errors while streaming data

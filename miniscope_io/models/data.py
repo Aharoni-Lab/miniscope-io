@@ -18,7 +18,7 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
     Typically returned from :meth:`.SDCard.read`
     """
 
-    data: np.ndarray
+    frame: np.ndarray
     headers: List[SDBufferHeader]
 
     @field_validator("headers")
