@@ -2,7 +2,6 @@
 DAQ For use with FPGA and Uart streaming video sources.
 """
 
-import argparse
 import logging
 import multiprocessing
 import os
@@ -43,10 +42,6 @@ except (ImportError, ModuleNotFoundError):
         "https://docs.opalkelly.com/fpsdk/getting-started/"
     )
 
-# Parsers for daq inputs
-daqParser = argparse.ArgumentParser("streamDaq")
-daqParser.add_argument("-c", "--config", help="YAML config file path: string")
-
 
 def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
     """
@@ -71,7 +66,7 @@ class StreamDaq:
 
     Examples
     --------
-    >>> mio sdaq -c path/to/config.yml -o output_filename
+    >>> mio stream capture -c path/to/config.yml -o output_filename.avi
     Connected to XEM7310-A75
     Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
     FrontPanel is supported
@@ -591,25 +586,13 @@ class StreamDaq:
             self.logger.info("Child processes joined. End capture.")
 
 
-def main() -> None:  # noqa: D103
-    args = daqParser.parse_args()
-
-    daqConfig = StreamDaqConfig.from_yaml(args.config)
-
-    daq_inst = StreamDaq(config=daqConfig)
-
-    if daqConfig.device == "UART":
-        daq_inst.capture(source="uart")
-
-    if daqConfig.device == "OK":
-        if not HAVE_OK:
-            raise ImportError(
-                f"Requested Opal Kelly DAQ, but okDAQ could not be imported, got exception: "
-                f"{ok_error}"
-            )
-
-        daq_inst.capture(source="fpga")
-
-
+# DEPRECATION: v0.3.0
 if __name__ == "__main__":
-    main()
+    import warnings
+
+    warnings.warn(
+        "Calling the stream_daq.py module directly is deprecated - use the `mio` cli. "
+        "try:\n\n  mio stream capture --help",
+        stacklevel=1,
+    )
+    sys.exit(1)

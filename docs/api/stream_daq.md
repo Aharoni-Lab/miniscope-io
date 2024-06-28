@@ -4,7 +4,7 @@ This module is a data acquisition module that captures video streams from Minisc
 ## Command
 After [installation](../guide/installation.md) and customizing [configurations](stream-daq-config) if necessary, run the following command in this Git repository to start the data acquisition process:
 ```bash
->>> mio sdaq -c path/to/config.yml -o output_filename
+>>> mio stream capture -c path/to/config.yml -o output_filename.avi
 [24-06-25T04:19:46] INFO     [miniscope_io.okDev] Connected to           opalkelly.py:34
                              XEM7310-A75
 Connected to XEM7310-A75
