@@ -9,9 +9,8 @@ from pydantic import field_validator
 
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
-from miniscope_io.models.buffer import BufferHeaderFormat
+from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 from miniscope_io.models.mixins import YAMLMixin
-from miniscope_io.types import Range
 
 
 class StreamBufferHeaderFormat(BufferHeaderFormat):
@@ -20,7 +19,16 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     :class:`~miniscope_io.stream_daq.StreamDaq`
     """
 
-    pixel_count: Range
+    pixel_count: int
+
+
+class StreamBufferHeader(BufferHeader):
+    """
+    Refinements of :class:`.BufferHeader` for
+    :class:`~miniscope_io.stream_daq.StreamDaq`
+    """
+
+    pixel_count: int
 
 
 class StreamDaqConfig(MiniscopeConfig, YAMLMixin):

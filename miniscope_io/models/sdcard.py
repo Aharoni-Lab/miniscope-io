@@ -7,7 +7,7 @@ for consuming code to use a consistent, introspectable API
 from typing import Optional
 
 from miniscope_io.models import MiniscopeConfig
-from miniscope_io.models.buffer import BufferHeader
+from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 
 
 class SectorConfig(MiniscopeConfig):
@@ -86,7 +86,7 @@ class SDHeaderPositions(MiniscopeConfig):
     battery_cutoff: Optional[int] = None
 
 
-class BufferHeaderPositions(MiniscopeConfig):
+class SDBufferHeaderFormat(BufferHeaderFormat):
     """
     Positions in the header for each frame
     """
@@ -129,7 +129,7 @@ class SDLayout(MiniscopeConfig):
 
     header: SDHeaderPositions = SDHeaderPositions()
     config: ConfigPositions = ConfigPositions()
-    buffer: BufferHeaderPositions = BufferHeaderPositions()
+    buffer: SDBufferHeaderFormat = SDBufferHeaderFormat()
 
     version: Optional[str] = None
     """

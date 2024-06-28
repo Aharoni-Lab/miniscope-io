@@ -1,3 +1,5 @@
+import pdb
+
 import pytest
 
 from miniscope_io.stream_daq import StreamDaqConfig, StreamDaq

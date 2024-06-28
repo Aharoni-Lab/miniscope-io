@@ -23,6 +23,7 @@ api/exceptions
 api/plots/index
 api/utils
 api/stream_daq
+api/bit_operation
 api/vendor/index
 ```
 
