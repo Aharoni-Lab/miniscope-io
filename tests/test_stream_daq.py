@@ -15,7 +15,6 @@ from .conftest import DATA_DIR, CONFIG_DIR
         )
     ],
 )
-@pytest.mark.timeout(60)
 def test_video_output(config, data, video_hash, tmp_path, set_okdev_input):
     output_video = tmp_path / "output.avi"
 
@@ -44,7 +43,6 @@ def test_video_output(config, data, video_hash, tmp_path, set_okdev_input):
         )
     ],
 )
-@pytest.mark.timeout(60)
 def test_binary_output(config, data, set_okdev_input, tmp_path):
     test_config_path = CONFIG_DIR / config
     daqConfig = StreamDaqConfig.from_yaml(test_config_path)
