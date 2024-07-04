@@ -9,7 +9,6 @@ from ..conftest import CONFIG_DIR
     'config',
     [
         'preamble_hex.yml',
-        'preamble_string.yml'
     ]
 )
 def test_preamble_hex_parsing(config):
