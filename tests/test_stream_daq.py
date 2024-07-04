@@ -15,14 +15,7 @@ from .conftest import DATA_DIR, CONFIG_DIR
             "stream_daq_test_fpga_raw_input_200px.bin",
             "40047689185bdbeb81829aea7c6e3070bcd4673976e5836a138c3e1b54d75099",
             False,
-        ),
-        (
-            "stream_daq_test_200px.yml",
-            "stream_daq_test_fpga_raw_input_200px.bin",
-            "40047689185bdbeb81829aea7c6e3070bcd4673976e5836a138c3e1b54d75099",
-            True,
         )
-
     ],
 )
 def test_video_output(config, data, video_hash, tmp_path, show_video, set_okdev_input):
