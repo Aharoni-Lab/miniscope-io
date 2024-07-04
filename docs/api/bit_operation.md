@@ -3,5 +3,5 @@
 ```{eval-rst}
 .. automodule:: miniscope_io.bit_operation
     :members:
-    :undoc-members:
+    :private-members:
 ```

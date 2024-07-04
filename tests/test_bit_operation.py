@@ -37,7 +37,7 @@ def test_bytebuffer_to_ndarrays(
     header, payload = BufferFormatter.bytebuffer_to_ndarrays(test_input, header_length_words, preamble_length_words, reverse_header_bits, reverse_header_bytes, reverse_payload_bits, reverse_payload_bytes)
     """
     Test for ensuring that the conversion and optional bit/byte reversals are performed correctly.
-    The bytearray buffer is a concat of a 32-bit array for metadata and an 8-bit array for payload.
+    The buffer is a concat of a 32-bit array for metadata and an 8-bit array for payload.
     The input/output in the reverseed bit/bytes is non-intuitive so don't think what it means.
     """
     np.testing.assert_array_equal(header, expected_header)
