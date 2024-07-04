@@ -76,7 +76,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 mio = "miniscope_io.cli.main:cli"
-updateDevice = "miniscope_io.device_update:updateDevice"
 
 [tool.pytest.ini_options]
 addopts = [
