@@ -8,16 +8,24 @@ from .conftest import DATA_DIR, CONFIG_DIR
 
 
 @pytest.mark.parametrize(
-    "config,data,video_hash",
+    "config,data,video_hash,show_video",
     [
         (
             "stream_daq_test_200px.yml",
             "stream_daq_test_fpga_raw_input_200px.bin",
             "40047689185bdbeb81829aea7c6e3070bcd4673976e5836a138c3e1b54d75099",
+            False,
+        ),
+        (
+            "stream_daq_test_200px.yml",
+            "stream_daq_test_fpga_raw_input_200px.bin",
+            "40047689185bdbeb81829aea7c6e3070bcd4673976e5836a138c3e1b54d75099",
+            True,
         )
+
     ],
 )
-def test_video_output(config, data, video_hash, tmp_path, set_okdev_input):
+def test_video_output(config, data, video_hash, tmp_path, show_video, set_okdev_input):
     output_video = tmp_path / "output.avi"
 
     test_config_path = CONFIG_DIR / config
@@ -27,7 +35,7 @@ def test_video_output(config, data, video_hash, tmp_path, set_okdev_input):
     set_okdev_input(data_file)
 
     daq_inst = StreamDaq(device_config=daqConfig)
-    daq_inst.capture(source="fpga", video=output_video)
+    daq_inst.capture(source="fpga", video=output_video, show_video=show_video)
 
     assert output_video.exists()
 
@@ -55,7 +63,7 @@ def test_binary_output(config, data, set_okdev_input, tmp_path):
     output_file = tmp_path / "output.bin"
 
     daq_inst = StreamDaq(device_config=daqConfig)
-    daq_inst.capture(source="fpga", binary=output_file)
+    daq_inst.capture(source="fpga", binary=output_file, show_video=False)
 
     assert output_file.exists()
 
