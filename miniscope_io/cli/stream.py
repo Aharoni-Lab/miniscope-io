@@ -22,9 +22,9 @@ def stream() -> None:
 def _common_options(fn: Callable) -> Callable:
     fn = click.option(
         "-c",
-        "--config",
+        "--device_config",
         required=True,
-        help="Path to YAML file to configure the streamDaq (see models.stream.StreamDaqConfig)",
+        help="Path to device config YAML file for streamDaq (see models.stream.StreamDevConfig)",
         type=click.Path(exists=True),
     )(fn)
     return fn
@@ -42,6 +42,7 @@ def _capture_options(fn: Callable) -> Callable:
         multiple=True,
         type=(str, Any),
     )(fn)
+    fn = click.option("--no-display", is_flag=True, help="Don't show video in real time")(fn)
     fn = click.option("-b", "--binary", help="Path (.bin) to save raw binary output to")(fn)
     return fn
 
@@ -50,18 +51,25 @@ def _capture_options(fn: Callable) -> Callable:
 @_common_options
 @_capture_options
 def capture(
-    config: Path,
+    device_config: Path,
     output: Optional[Path],
     okwarg: Optional[dict],
     binary: Optional[Path],
+    no_display: Optional[bool],
     **kwargs: dict,
 ) -> None:
     """
     Capture video from a StreamDaq device, optionally saving as an encoded video or as raw binary
     """
-    daq_inst = StreamDaq(config=config)
+    daq_inst = StreamDaq(device_config=device_config)
     okwargs = dict(okwarg)
-    daq_inst.capture(source="fpga", video=output, video_kwargs=okwargs, binary=binary)
+    daq_inst.capture(
+        source="fpga",
+        video=output,
+        video_kwargs=okwargs,
+        binary=binary,
+        show_video= not no_display
+        )
 
 
 @stream.command()

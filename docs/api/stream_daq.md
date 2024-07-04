@@ -2,9 +2,9 @@
 This module is a data acquisition module that captures video streams from Miniscopes based on the `Miniscope-SAMD-Framework` firmware. The firmware repository will be published in future updates but is currently under development and private.
 
 ## Command
-After [installation](../guide/installation.md) and customizing [configurations](stream-daq-config) if necessary, run the following command in this Git repository to start the data acquisition process:
+After [installation](../guide/installation.md) and customizing [device configurations](stream-dev-config) if necessary, run the following command in this Git repository to start the data acquisition process:
 ```bash
->>> mio stream capture -c path/to/config.yml -o output_filename.avi
+>>> mio stream capture -c path/to/device/config.yml -o output_filename.avi
 [24-06-25T04:19:46] INFO     [miniscope_io.okDev] Connected to           opalkelly.py:34
                              XEM7310-A75
 Connected to XEM7310-A75
@@ -20,11 +20,11 @@ A window displaying the image transferred from the Miniscope should pop up. Addi
 - **Supported Operating Systems:** MacOS or Ubuntu PC (To do: specify version)
 - **Imaging hardware:** Miniscope based on the `Miniscope-SAMD-Framework` firmware. Hardware modules for feeding in data into the data capture hardware are also needed but these will be specified in future updates.
 
-(stream-daq-config)=
-## Configuration
-A YAML file is used to configure this module. The configuration needs to match the imaging and data capture hardware for proper operation. This file is used to set up hardware, define data formats, and set data preambles. The contents of this YAML file will be parsed into a model [miniscope_io.models.stream](../api/models/stream.md), which then configures the Stream DAQ.
+(stream-dev-config)=
+## Device configuration
+A YAML file is used to configure Stream DAQ based on the device configuration. The device configuration needs to match the imaging and data capture hardware for proper operation. This file is used to set up hardware, define data formats, and set data preambles. The contents of this YAML file will be parsed into a model [miniscope_io.models.stream](../api/models/stream.md), which then configures the Stream DAQ.
 
-### Example Configuration
+### Example device configuration
 Below is an example configuration YAML file. More examples can be found in `miniscope_io.data.config`.
 
 ```yaml
@@ -38,7 +38,7 @@ bitstream: "USBInterface-6mhz-3v3-INVERSE.bit"
 port: null
 baudrate: null
 
-# Preamble for each data buffer. This is actually converted to bytes in the StreamDaq but has to be imported as a string because .yaml doesn't support hexadecimal formats.
+# Preamble for each data buffer.
 preamble: 0x12345678
 
 # Image format. StreamDaq will calculate buffer size, etc. based on these parameters

@@ -22,7 +22,7 @@ from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
 from miniscope_io.models.stream import (
     StreamBufferHeader,
-    StreamDaqConfig,
+    StreamDevConfig,
 )
 from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
@@ -59,7 +59,7 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
 class StreamDaq:
     """
     A combined class for configuring and reading frames from a UART and FPGA source.
-    Supported devices and required inputs are described in StreamDaqConfig model documentation.
+    Supported devices and required inputs are described in StreamDevConfig model documentation.
     This function's entry point is the main function, which should be used from the
     stream_image_capture command installed with the package.
     Example configuration yaml files are stored in /miniscope-io/config/.
@@ -79,7 +79,7 @@ class StreamDaq:
 
     def __init__(
         self,
-        config: Union[StreamDaqConfig, Path],
+        device_config: Union[StreamDevConfig, Path],
         header_fmt: StreamBufferHeaderFormatType = StreamBufferHeaderFormat,
     ) -> None:
         """
@@ -88,7 +88,7 @@ class StreamDaq:
 
         Parameters
         ----------
-        config : StreamDaqConfig | Path
+        config : StreamDevConfig | Path
             DAQ configurations imported from the input yaml file.
             Examples and required properties can be found in /miniscope-io/config/example.yml
 
@@ -97,11 +97,11 @@ class StreamDaq:
             Header format used to parse information from buffer header,
             by default `MetadataHeaderFormat()`.
         """
-        if isinstance(config, (str, Path)):
-            config = StreamDaqConfig.from_yaml(config)
+        if isinstance(device_config, (str, Path)):
+            device_config = StreamDevConfig.from_yaml(device_config)
 
         self.logger = init_logger("streamDaq")
-        self.config = config
+        self.config = device_config
         self.header_fmt = header_fmt
         self.preamble = self.config.preamble
         self._buffer_npix: Optional[List[int]] = None
@@ -467,6 +467,7 @@ class StreamDaq:
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
         binary: Optional[Path] = None,
+        show_video: Optional[bool] = True,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -555,7 +556,7 @@ class StreamDaq:
         # p_terminate.start()
         try:
             for image in exact_iter(imagearray.get, None):
-                if self.config.show_video is True:
+                if show_video is True:
                     cv2.imshow("image", image)
                     if cv2.waitKey(1) == 27:  # get out with ESC key
                         self.terminate.set()
@@ -572,7 +573,7 @@ class StreamDaq:
             if writer:
                 writer.release()
                 self.logger.debug("VideoWriter released")
-            if self.config.show_video:
+            if show_video:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
 

@@ -31,7 +31,7 @@ class StreamBufferHeader(BufferHeader):
     pixel_count: int
 
 
-class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
+class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     """
     Format model used to parse DAQ configuration yaml file (examples are in ./config)
     The model attributes are key-value pairs needed for reconstructing frames from data streams.
@@ -96,14 +96,9 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         (but the order of words in the header is preserved).
         Note that this format does not correspond to the usual LSB-first convention
         and the parameter name is chosen for the lack of better words.
-    show_video : bool, optional
-        Whether the video is showed in "real-time", by default True.
 
     ..todo::
-
-        Takuya - double-check the definitions around blocks and buffers in the
-        firmware and add description.
-
+        Move port (for USART) to a user config area. This should make this pure device config.
     """
 
     device: Literal["OK", "UART"]
@@ -120,7 +115,6 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     block_size: int
     num_buffers: int
     LSB: bool = True
-    show_video: bool = True
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
