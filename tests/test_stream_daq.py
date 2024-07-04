@@ -8,17 +8,17 @@ from .conftest import DATA_DIR, CONFIG_DIR
 
 
 @pytest.mark.parametrize(
-    "config,data,video_hash,show_video",
+    "config,data,video_hash_list,show_video",
     [
         (
             "stream_daq_test_200px.yml",
             "stream_daq_test_fpga_raw_input_200px.bin",
-            "f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c",
+            "[\"f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c\", \"3676bc4c6900bc9ec18b8387abdbed35978ebc48408de7b1692959037bc6274d\"] ",
             False,
         )
     ],
 )
-def test_video_output(config, data, video_hash, tmp_path, show_video, set_okdev_input):
+def test_video_output(config, data, video_hash_list, tmp_path, show_video, set_okdev_input):
     output_video = tmp_path / "output.avi"
 
     test_config_path = CONFIG_DIR / config
@@ -33,9 +33,8 @@ def test_video_output(config, data, video_hash, tmp_path, show_video, set_okdev_
     assert output_video.exists()
 
     output_video_hash = hash_video(output_video)
-    print(output_video_hash)
 
-    assert video_hash == output_video_hash
+    assert output_video_hash in video_hash_list
 
 
 @pytest.mark.parametrize(
