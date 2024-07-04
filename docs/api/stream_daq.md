@@ -42,18 +42,22 @@ baudrate: null
 preamble: 0x12345678
 
 # Image format. StreamDaq will calculate buffer size, etc. based on these parameters
-frame_width: 304
-frame_height: 304
+frame_width: 200
+frame_height: 200
 pix_depth: 8
 
 # Buffer data format. These have to match the firmware value
-header_len: 12
-buffer_block_length: 40
+header_len: 384 # 12 * 32 (in bits)
+buffer_block_length: 10
 block_size: 512
-num_buffers: 8
+num_buffers: 32
 
-# Temporary parameter to handle bit polarity. This is not actual LSB, so it needs to be fixed later.
-LSB: True
+# Flags to flip bit/byte order when recovering headers and data. See model document for details.
+reverse_header_bits: True
+reverse_header_bytes: True
+reverse_payload_bits: True
+reverse_payload_bytes: True
+
 ```
 
 ```{eval-rst}
