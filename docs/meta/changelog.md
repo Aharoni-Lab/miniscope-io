@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3
+
+### 0.3.0 - 24-07-04
+
+Enhancements to `StreamDaq` and improved CI processes.
+
+Contributors: [@sneakers-the-rat](https://github.com/sneakers-the-rat),  [@t-sasatani](https://github.com/t-sasatani).
+Related PRs and Issues: https://github.com/Aharoni-Lab/miniscope-io/pull/29, https://github.com/Aharoni-Lab/miniscope-io/pull/31, https://github.com/Aharoni-Lab/miniscope-io/issues/27
+
+#### Features: 
+- **Performance enhancements**: Refactoring of streamDaq to eliminate delays in the default configuration.
+- **New CLI**: Introduced a `click`-based CLI offering greater flexibility and scalability.
+- **Test coverage**: Integrated Coveralls to display test coverage statistics.
+- **BufferFormatter class**: Added for flexible bit/byte operations and decoding incoming buffers.
+
+#### Models/Formats:
+- **Configuration changes**: Isolated device config and user config. device config is now stored in `StreamDevConfig` (renamed from `StreamDaqConfig`). User configs are segregated to the CLI.
+
+#### CI:
+- **Python 3.12 compatibility**: Added tests for Python 3.12.
+- **StreamDaq tests**: Fixed issues with video hash assert tests in `streamDaq`.
+- **Global test timeout**: added global timeout for all tests.
+
 ## 0.2
 
 ### 0.2.1 - 24-06-21
