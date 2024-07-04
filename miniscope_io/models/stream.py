@@ -96,6 +96,20 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
         (but the order of words in the header is preserved).
         Note that this format does not correspond to the usual LSB-first convention
         and the parameter name is chosen for the lack of better words.
+    reverse_header_bits : bool, optional
+        If True, reverse the bits within each byte of the header.
+        Default is False.
+    reverse_header_bytes : bool, optional
+        If True, reverse the byte order within each 32-bit word of the header.
+        This is used for handling endianness in systems where the byte order needs to be swapped.
+        Default is False.
+    reverse_payload_bits : bool, optional
+        If True, reverse the bits within each byte of the payload.
+        Default is False.
+    reverse_payload_bytes : bool, optional
+        If True, reverse the byte order within each 32-bit word of the payload.
+        This is used for handling endianness in systems where the byte order needs to be swapped.
+        Default is False.
 
     ..todo::
         Move port (for USART) to a user config area. This should make this pure device config.
@@ -115,6 +129,10 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     block_size: int
     num_buffers: int
     LSB: bool = True
+    reverse_header_bits: bool = False
+    reverse_header_bytes: bool = False
+    reverse_payload_bits: bool = False
+    reverse_payload_bytes: bool = False
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:

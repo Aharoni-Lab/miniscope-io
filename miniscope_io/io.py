@@ -31,7 +31,6 @@ class SDCard:
     """
 
     def __init__(self, drive: Union[str, Path], layout: SDLayout):
-
         self.drive = drive
         self.layout = layout
         self.logger = init_logger("SDCard")

@@ -22,5 +22,8 @@ buffer_block_length: 40
 block_size: 512
 num_buffers: 8
 
-# Temporary parameter to handle bit polarity. This is not actual LSB so need to fix later.
-LSB: True
+# Flags to flip bit/byte order when recovering headers and data. See model document for details.
+reverse_header_bits: True
+reverse_header_bytes: True
+reverse_payload_bits: True
+reverse_payload_bytes: True

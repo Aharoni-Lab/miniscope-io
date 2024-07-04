@@ -45,10 +45,10 @@ class BufferFormatter:
         buffer: bytes,
         header_length_words: int,
         preamble_length_words: int,
-        reverse_header_bits: bool = True,
-        reverse_header_bytes: bool = True,
-        reverse_body_bits: bool = True,
-        reverse_body_bytes: bool = True,
+        reverse_header_bits: bool,
+        reverse_header_bytes: bool,
+        reverse_payload_bits: bool,
+        reverse_payload_bytes: bool,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Format the buffer by optionally reversing bits in the header and body.
@@ -59,8 +59,8 @@ class BufferFormatter:
             preamble_length_words (int): Length of the preamble in words.
             reverse_header_bits (bool): Reverse bits in the header if True. Default is True.
             reverse_header_bytes (bool): Reverse byte order in the header if True. Default is True.
-            reverse_body_bits (bool): Reverse bits in the body if True. Default is True.
-            reverse_body_bytes (bool): Reverse byte order in the body if True. Default is True.
+            reverse_payload_bits (bool): Reverse bits in the body if True. Default is True.
+            reverse_payload_bytes (bool): Reverse byte order in the body if True. Default is True.
 
         Returns:
             tuple: A tuple containing the processed header as a numpy array of uint32
@@ -83,9 +83,9 @@ class BufferFormatter:
 
         # Process body
         payload_data = data[header_length_words:]
-        if reverse_body_bits:
+        if reverse_payload_bits:
             payload_data = cls._reverse_bits_in_array(payload_data)
-        if reverse_body_bytes:
+        if reverse_payload_bytes:
             payload_data = cls._reverse_byte_order_in_array(payload_data)
 
         # Convert processed body buffer to uint8 numpy array

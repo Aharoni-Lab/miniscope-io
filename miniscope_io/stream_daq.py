@@ -149,10 +149,10 @@ class StreamDaq:
             buffer=buffer,
             header_length_words=int(self.config.header_len / 32),
             preamble_length_words=int(len(Bits(self.config.preamble)) / 32),
-            reverse_header_bits=True,
-            reverse_header_bytes=True,
-            reverse_body_bits=True,
-            reverse_body_bytes=True,
+            reverse_header_bits=self.config.reverse_header_bits,
+            reverse_header_bytes=self.config.reverse_header_bytes,
+            reverse_payload_bits=self.config.reverse_payload_bits,
+            reverse_payload_bytes=self.config.reverse_payload_bytes,
         )
 
         header_data = StreamBufferHeader.from_format(header, self.header_fmt, construct=True)
@@ -217,7 +217,6 @@ class StreamDaq:
             sys.exit(1)
 
     def _init_okdev(self, BIT_FILE: Path) -> Union[okDev, okDevMock]:
-
         # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
         if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_MOCKRUN"):
             dev = okDevMock()
@@ -305,8 +304,9 @@ class StreamDaq:
             pre_pos = list(cur_buffer.findall(pre))
             for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
                 if not pre_first:
-                    buf_start, buf_stop = buf_start + len(self.preamble), buf_stop + len(
-                        self.preamble
+                    buf_start, buf_stop = (
+                        buf_start + len(self.preamble),
+                        buf_stop + len(self.preamble),
                     )
                 serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
             if pre_pos:

@@ -64,12 +64,8 @@ def capture(
     daq_inst = StreamDaq(device_config=device_config)
     okwargs = dict(okwarg)
     daq_inst.capture(
-        source="fpga",
-        video=output,
-        video_kwargs=okwargs,
-        binary=binary,
-        show_video= not no_display
-        )
+        source="fpga", video=output, video_kwargs=okwargs, binary=binary, show_video=not no_display
+    )
 
 
 @stream.command()
