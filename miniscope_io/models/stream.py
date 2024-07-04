@@ -9,9 +9,8 @@ from pydantic import field_validator
 
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
-from miniscope_io.models.buffer import BufferHeaderFormat
+from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 from miniscope_io.models.mixins import YAMLMixin
-from miniscope_io.types import Range
 
 
 class StreamBufferHeaderFormat(BufferHeaderFormat):
@@ -20,10 +19,19 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     :class:`~miniscope_io.stream_daq.StreamDaq`
     """
 
-    pixel_count: Range
+    pixel_count: int
 
 
-class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
+class StreamBufferHeader(BufferHeader):
+    """
+    Refinements of :class:`.BufferHeader` for
+    :class:`~miniscope_io.stream_daq.StreamDaq`
+    """
+
+    pixel_count: int
+
+
+class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     """
     Format model used to parse DAQ configuration yaml file (examples are in ./config)
     The model attributes are key-value pairs needed for reconstructing frames from data streams.
@@ -78,24 +86,23 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
         Defines the data buffer structure. This value needs to match the Miniscope firmware.
         This is the number of buffers that the source microcontroller cycles around.
         This isn't strictly required for data reconstruction but useful for debugging.
-    LSB : bool, optional
-        Whether the sourse is in "LSB" mode or not, by default True.
-        If `not LSB`, then the incoming bitstream is expected to be in Most Significant Bit first
-        mode and data are transmitted in normal order.
-        If `LSB`, then the incoming bitstream is in the format that each 32-bit words are
-        bit-wise reversed on its own.
-        Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed
-        (but the order of words in the header is preserved).
-        Note that this format does not correspond to the usual LSB-first convention
-        and the parameter name is chosen for the lack of better words.
-    show_video : bool, optional
-        Whether the video is showed in "real-time", by default True.
+    reverse_header_bits : bool, optional
+        If True, reverse the bits within each byte of the header.
+        Default is False.
+    reverse_header_bytes : bool, optional
+        If True, reverse the byte order within each 32-bit word of the header.
+        This is used for handling endianness in systems where the byte order needs to be swapped.
+        Default is False.
+    reverse_payload_bits : bool, optional
+        If True, reverse the bits within each byte of the payload.
+        Default is False.
+    reverse_payload_bytes : bool, optional
+        If True, reverse the byte order within each 32-bit word of the payload.
+        This is used for handling endianness in systems where the byte order needs to be swapped.
+        Default is False.
 
     ..todo::
-
-        Takuya - double-check the definitions around blocks and buffers in the
-        firmware and add description.
-
+        Move port (for USART) to a user config area. This should make this pure device config.
     """
 
     device: Literal["OK", "UART"]
@@ -111,8 +118,10 @@ class StreamDaqConfig(MiniscopeConfig, YAMLMixin):
     buffer_block_length: int
     block_size: int
     num_buffers: int
-    LSB: bool = True
-    show_video: bool = True
+    reverse_header_bits: bool = False
+    reverse_header_bytes: bool = False
+    reverse_payload_bits: bool = False
+    reverse_payload_bytes: bool = False
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:

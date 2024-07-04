@@ -410,7 +410,7 @@ files = [
 name = "click"
 version = "8.1.7"
 description = "Composable command line interface toolkit"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "click-8.1.7-py3-none-any.whl", hash = "sha256:ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28"},
@@ -2180,4 +2180,4 @@ tests = ["matplotlib", "pytest", "pytest-cov", "pytest-timeout"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "c451d6ab263d75ac80fc3c372521c6ef43c23f7f887760a4fb8cc3c426fd5e1b"
+content-hash = "fe42465fb582d9ac8f392abb7ec407f9f32b13924a62041f217fe21fd2345ed7"

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "miniscope_io"
-version = "0.2.1"
+version = "0.3.0"
 description = "Generic I/O for miniscopes"
 authors = [
     "sneakers-the-rat <JLSaunders987@gmail.com>",
@@ -56,6 +56,7 @@ black = {version="^24.1.1", optional=true}
 ruff = {version="^0.2.0", optional=true}
 pre-commit = {version = "^3.7.1", optional = true}
 nox = {version = ">=2024.4.15", optional = true}
+click = "^8.1.7"
 
 [tool.poetry.extras]
 tests = ["pytest", "pytest-cov", "pytest-timeout", "matplotlib"]
@@ -74,13 +75,16 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-streamDaq = "miniscope_io.stream_daq:main"
-updateDevice = "miniscope_io.device_update:updateDevice"
+mio = "miniscope_io.cli.main:cli"
 
 [tool.pytest.ini_options]
 addopts = [
     "--cov=miniscope_io",
     "--cov-append",
+]
+filterwarnings = [
+    'ignore:builtin type SwigPyPacked',
+    'ignore:builtin type SwigPyObject',
 ]
 testpaths = [
     "tests"
@@ -125,8 +129,6 @@ select = [
     "D210", "D211",
     # emptiness
     "D419",
-
-
 ]
 ignore = [
     "ANN101", "ANN102", "ANN401", "ANN204",
