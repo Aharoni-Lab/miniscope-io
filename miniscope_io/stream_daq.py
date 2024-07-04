@@ -419,9 +419,6 @@ class StreamDaq:
                     continue
                 frame_data = np.concatenate(frame_data, axis=0)
 
-                if self.config.reverse_header_bits:
-                    frame_data = np.flip(frame_data)
-
                 try:
                     frame = np.reshape(
                         frame_data, (self.config.frame_width, self.config.frame_height)
