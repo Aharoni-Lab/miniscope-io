@@ -86,16 +86,6 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
         Defines the data buffer structure. This value needs to match the Miniscope firmware.
         This is the number of buffers that the source microcontroller cycles around.
         This isn't strictly required for data reconstruction but useful for debugging.
-    LSB : bool, optional
-        Whether the sourse is in "LSB" mode or not, by default True.
-        If `not LSB`, then the incoming bitstream is expected to be in Most Significant Bit first
-        mode and data are transmitted in normal order.
-        If `LSB`, then the incoming bitstream is in the format that each 32-bit words are
-        bit-wise reversed on its own.
-        Furthermore, the order of 32-bit words in the pixel data within the buffer is reversed
-        (but the order of words in the header is preserved).
-        Note that this format does not correspond to the usual LSB-first convention
-        and the parameter name is chosen for the lack of better words.
     reverse_header_bits : bool, optional
         If True, reverse the bits within each byte of the header.
         Default is False.
@@ -128,7 +118,6 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     buffer_block_length: int
     block_size: int
     num_buffers: int
-    LSB: bool = True
     reverse_header_bits: bool = False
     reverse_header_bytes: bool = False
     reverse_payload_bits: bool = False

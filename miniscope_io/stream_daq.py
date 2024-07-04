@@ -194,7 +194,9 @@ class StreamDaq:
         baudrate : int
             _description_
         """
-        pre_bytes = bytes(bytearray(self.preamble.tobytes())[::-1])
+        pre_bytes = self.preamble.tobytes()
+        if self.config.reverse_header_bits:
+            pre_bytes = bytes(bytearray(pre_bytes)[::-1])
 
         # set up serial port
         serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
@@ -284,7 +286,7 @@ class StreamDaq:
         # read loop
         cur_buffer = BitArray()
         pre = Bits(self.preamble)
-        if self.config.LSB:
+        if self.config.reverse_header_bits:
             pre = pre[::-1]
 
         while not self.terminate.is_set():
@@ -417,7 +419,7 @@ class StreamDaq:
                     continue
                 frame_data = np.concatenate(frame_data, axis=0)
 
-                if self.config.LSB:
+                if self.config.reverse_header_bits:
                     frame_data = np.flip(frame_data)
 
                 try:
