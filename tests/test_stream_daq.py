@@ -32,9 +32,10 @@ def test_video_output(config, data, video_hash, tmp_path, show_video, set_okdev_
 
     assert output_video.exists()
 
-    video_hash = hash_video(output_video)
+    output_video_hash = hash_video(output_video)
+    print(output_video_hash)
 
-    assert video_hash == video_hash
+    assert video_hash == output_video_hash
 
 
 @pytest.mark.parametrize(
