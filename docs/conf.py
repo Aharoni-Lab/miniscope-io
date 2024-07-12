@@ -7,6 +7,11 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 from importlib.metadata import version as _version
+import sys
+from unittest.mock import Mock
+
+# Mock _ok module
+sys.modules['_ok'] = Mock()
 
 project = "miniscope-io"
 copyright = "2023, Jonny"
