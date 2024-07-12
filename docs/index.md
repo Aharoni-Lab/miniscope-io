@@ -7,7 +7,7 @@ Generic I/O interfaces for miniscopes :)
 :maxdepth: 2
 
 guide/installation
-guide/usage
+cli/main
 ```
 
 ```{toctree}

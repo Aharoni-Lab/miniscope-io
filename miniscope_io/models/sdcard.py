@@ -14,7 +14,7 @@ class SectorConfig(MiniscopeConfig):
     """
     Configuration of sector layout on the SD card.
 
-    For each sector, one can retrieve the position with the attribute *_pos,
+    For each sector, one can retrieve the position with the attribute ``_pos``,
 
     Examples:
 
