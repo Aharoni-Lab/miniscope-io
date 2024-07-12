@@ -49,6 +49,7 @@ pytest = {version="^8.2.2", optional=true}
 pytest-cov = {version = "^5.0.0", optional = true}
 pytest-timeout = {version="^2.3.1", optional=true}
 sphinx = {version=">=6.2.1", optional=true}
+sphinx-click = {version="^6.0.0", optional=true}
 furo = {version=">2023.07.26", optional=true}
 myst-parser = {version=">3.0.0", optional=true}
 autodoc-pydantic = {version="^2.0.1", optional=true}
@@ -60,14 +61,14 @@ click = "^8.1.7"
 
 [tool.poetry.extras]
 tests = ["pytest", "pytest-cov", "pytest-timeout", "matplotlib"]
-docs = ["sphinx", "furo", "myst-parser", "autodoc-pydantic", "matplotlib"]
+docs = ["sphinx", "sphinx-click", "furo", "myst-parser", "autodoc-pydantic", "matplotlib"]
 plot = ["matplotlib"]
 dev = [
     "black", "ruff", "pre-commit", "nox",
     # tests
     "pytest", "pytest-cov", "pytest-timeout", "matplotlib",
     # docs
-    "sphinx", "furo", "myst-parser", "autodoc-pydantic"
+    "sphinx", "sphinx-click", "furo", "myst-parser", "autodoc-pydantic"
 ]
 
 [build-system]

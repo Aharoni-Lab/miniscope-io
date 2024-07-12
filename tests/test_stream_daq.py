@@ -13,7 +13,7 @@ from .conftest import DATA_DIR, CONFIG_DIR
         (
             "stream_daq_test_200px.yml",
             "stream_daq_test_fpga_raw_input_200px.bin",
-            "[\"f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c\", \"3676bc4c6900bc9ec18b8387abdbed35978ebc48408de7b1692959037bc6274d\"] ",
+            "[\"f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c\",\"8a6f6dc69275ec3fbcd69d1e1f467df8503306fa0778e4b9c1d41668a7af4856\",\"3676bc4c6900bc9ec18b8387abdbed35978ebc48408de7b1692959037bc6274d\"] ",
             False,
         )
     ],
