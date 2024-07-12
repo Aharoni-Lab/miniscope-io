@@ -66,7 +66,7 @@ class StreamDaq:
 
     Examples
     --------
-    >>> mio stream capture -c path/to/config.yml -o output_filename.avi
+    $ mio stream capture -c path/to/config.yml -o output_filename.avi
     Connected to XEM7310-A75
     Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
     FrontPanel is supported
