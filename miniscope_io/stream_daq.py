@@ -329,6 +329,7 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
+        metadata_queue: multiprocessing.Queue,
         metadata: Optional[Path] = None,
         show_metadata: Optional[bool] = False,
     ) -> None:
@@ -347,6 +348,8 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
+        metadata_queue : multiprocessing.Queue[StreamBufferHeader]
+            Metadata queue. Planned to be used for controlling devices based on metadata.
         metadata : Optional[Path], optional
             Path to save metadata, by default None.
         show_metadata : Optional[bool], optional
@@ -370,6 +373,7 @@ class StreamDaq:
                     break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
+                metadata_queue.put(header_data)
                 if metadata:
                     buffered_writer.append(list(header_data.model_dump().values()))
 
@@ -540,6 +544,7 @@ class StreamDaq:
 
         # Queue size is hard coded
         queue_manager = multiprocessing.Manager()
+        metadata_queue = queue_manager.Queue(1000) # For injecting metadata into callbacks, etc.
         serial_buffer_queue = queue_manager.Queue(
             10
         )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
@@ -585,6 +590,7 @@ class StreamDaq:
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
+                metadata_queue,
                 metadata,
                 save_metadata,
             ),
