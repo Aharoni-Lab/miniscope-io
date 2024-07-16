@@ -65,6 +65,10 @@ def capture(
     """
     daq_inst = StreamDaq(device_config=device_config)
     okwargs = dict(okwarg)
+
+    output = get_unique_filepath(Path(output)) if output else None
+    binary = get_unique_filepath(Path(binary)) if binary else None
+
     daq_inst.capture(
         source="fpga",
         video=output,
@@ -100,3 +104,16 @@ def test(ctx: click.Context, source: Path, profile: bool, **kwargs: dict) -> Non
     os.environ["PYTEST_OKDEV_DATA_FILE"] = str(source)
 
     ctx.forward(capture)
+
+def get_unique_filepath(output: Path) -> Path:
+    """
+    Check if the path already exists, and if so, append a number to the path.
+    """
+    base_output = output
+    index = 1
+
+    while output.exists():
+        output = base_output.with_stem(f"{base_output.stem}-{index}") if base_output.suffix else output
+        index += 1
+
+    return output
