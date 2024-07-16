@@ -167,7 +167,7 @@ class StreamDaq:
         data: np.ndarray,
         expected_size: int,
         header: StreamBufferHeader,
-        logger: logging.Logger
+        logger: logging.Logger,
     ) -> np.ndarray:
         """
         Trim or pad an array to match an expected size
@@ -358,11 +358,10 @@ class StreamDaq:
 
         if metadata:
             buffered_writer = BufferedCSVWriter(
-                metadata, 
-                buffer_size=runtime_config.csvwriter_buffer
-                )
+                metadata, buffer_size=runtime_config.csvwriter_buffer
+            )
             buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
-            
+
         frame_buffer_prealloc = [np.zeros(bufsize, dtype=np.uint8) for bufsize in self.buffer_npix]
         frame_buffer = frame_buffer_prealloc.copy()
         try:
@@ -379,19 +378,17 @@ class StreamDaq:
                         serial_buffer,
                         self.buffer_npix[header_data.frame_buffer_count],
                         header_data,
-                        locallogs
+                        locallogs,
                     )
-                except IndexError as e:
+                except IndexError:
                     locallogs.warning(
                         f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
                         f"(#{header_data.frame_buffer_count} in frame)\n"
                         f"Frame buffer count {header_data.frame_buffer_count} "
                         f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
-                        f"Discarding buffer."                       
+                        f"Discarding buffer."
                     )
                     continue
-
-
 
                 # if first buffer of a frame
                 if header_data.frame_num != cur_fm_num:
