@@ -506,10 +506,9 @@ class StreamDaq:
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
-        metadata: Optional[Path] = None,
-        show_metadata: Optional[bool] = False,
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
+        save_metadata: Optional[bool] = True,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -525,13 +524,12 @@ class StreamDaq:
             If present, a path to an output video file
         video_kwargs: dict, optional
             kwargs passed to :meth:`.init_video`
-        metadata: Path, optional
-            If present, a path to an output metadata file
-        show_metadata: bool, optional
-            If True, display metadata information during capture
         binary: Path, optional
             Save raw binary directly from ``okDev`` to file, if present.
             Note that binary is captured in *append* mode, rather than rewriting an existing file.
+        save_metadata: bool, optional
+            If True, save metadata information during capture.
+            This flag is only available when the video path is present.
 
         Raises
         ------
@@ -576,8 +574,7 @@ class StreamDaq:
                 video_kwargs = {}
             if isinstance(video, str):
                 video = Path(video)
-            metadata = video.with_suffix(".csv")
-
+            metadata = video.with_suffix(".csv") if save_metadata else None
             writer = self.init_video(video, **video_kwargs)
         else:
             writer = None
@@ -589,7 +586,7 @@ class StreamDaq:
                 serial_buffer_queue,
                 frame_buffer_queue,
                 metadata,
-                show_metadata,
+                save_metadata,
             ),
             name="_buffer_to_frame",
         )

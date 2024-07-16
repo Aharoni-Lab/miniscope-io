@@ -43,6 +43,7 @@ def _capture_options(fn: Callable) -> Callable:
         type=(str, Any),
     )(fn)
     fn = click.option("--no-display", is_flag=True, help="Don't show video in real time")(fn)
+    fn = click.option("--no-metadata", is_flag=True, help="Don't save metadata to a csv file")(fn)
     fn = click.option("-b", "--binary", help="Path (.bin) to save raw binary output to")(fn)
     return fn
 
@@ -56,6 +57,7 @@ def capture(
     okwarg: Optional[dict],
     binary: Optional[Path],
     no_display: Optional[bool],
+    no_metadata: Optional[bool],
     **kwargs: dict,
 ) -> None:
     """
@@ -64,7 +66,12 @@ def capture(
     daq_inst = StreamDaq(device_config=device_config)
     okwargs = dict(okwarg)
     daq_inst.capture(
-        source="fpga", video=output, video_kwargs=okwargs, binary=binary, show_video=not no_display
+        source="fpga",
+        video=output,
+        video_kwargs=okwargs,
+        binary=binary,
+        show_video=not no_display,
+        save_metadata=not no_metadata
     )
 
 
