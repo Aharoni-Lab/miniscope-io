@@ -37,19 +37,13 @@ class BufferedCSVWriter:
         The number of rows to buffer before writing to the file.
     buffer : list
         The buffer for storing rows before writing.
-    csvfile : file object
-        The file object for writing to the CSV file.
-    writer : csv.writer object
-        The CSV writer object for writing rows to the CSV file.
     """
 
     def __init__(self, file_path: Union[str, Path], buffer_size: int = 100):
         self.file_path = file_path
         self.buffer_size = buffer_size
         self.buffer = []
-
-        self.csvfile = open(self.file_path, "a", newline="")  # noqa: SIM115
-        self.writer = csv.writer(self.csvfile)
+        self.logger = init_logger("BufferedCSVWriter")
 
         # Ensure the buffer is flushed when the program exits
         atexit.register(self.flush_buffer)
@@ -72,21 +66,29 @@ class BufferedCSVWriter:
         """
         Write all buffered rows to the CSV file.
         """
-        if self.buffer:
-            self.writer.writerows(self.buffer)
-            self.buffer.clear()
+        if not self.buffer:
+            return
+
+        try:          
+            with open(self.file_path, "a", newline="") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerows(self.buffer)
+                self.buffer.clear()
+        except Exception as e:
+            # Handle exceptions, e.g., log them
+            self.logger.error(f"Failed to write to file {self.file_path}: {e}")
 
     def close(self) -> None:
         """
         Close the CSV file and flush any remaining data.
         """
         self.flush_buffer()
-        self.csvfile.close()
         # Prevent flush_buffer from being called again at exit
         atexit.unregister(self.flush_buffer)
 
     def __del__(self):
         self.close()
+
 
 
 class SDCard:
