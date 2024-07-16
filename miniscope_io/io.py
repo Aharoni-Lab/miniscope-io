@@ -69,7 +69,7 @@ class BufferedCSVWriter:
         if not self.buffer:
             return
 
-        try:          
+        try:
             with open(self.file_path, "a", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerows(self.buffer)
@@ -88,7 +88,6 @@ class BufferedCSVWriter:
 
     def __del__(self):
         self.close()
-
 
 
 class SDCard:
