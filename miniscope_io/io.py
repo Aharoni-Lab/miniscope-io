@@ -1,10 +1,12 @@
 """
-I/O functions for the SD card
+I/O functions for SD card and external files.
 """
 
+import atexit
 import contextlib
+import csv
 from pathlib import Path
-from typing import BinaryIO, Literal, Optional, Union, overload
+from typing import Any, BinaryIO, List, Literal, Optional, Union, overload
 
 import cv2
 import numpy as np
@@ -15,6 +17,75 @@ from miniscope_io.logging import init_logger
 from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
+
+class BufferedCSVWriter:
+    """
+    Write data to a CSV file in buffered mode.
+
+    Parameters
+    ----------
+    file_path : Union[str, Path]
+        The file path for the CSV file.
+    buffer_size : int, optional
+        The number of rows to buffer before writing to the file (default is 100).
+
+    Attributes
+    ----------
+    file_path : Union[str, Path]
+        The file path for the CSV file.
+    buffer_size : int
+        The number of rows to buffer before writing to the file.
+    buffer : list
+        The buffer for storing rows before writing.
+    csvfile : file object
+        The file object for writing to the CSV file.
+    writer : csv.writer object
+        The CSV writer object for writing rows to the CSV file.
+    """
+    def __init__(self, file_path: Union[str, Path], buffer_size: int = 100):
+        self.file_path = file_path
+        self.buffer_size = buffer_size
+        self.buffer = []
+
+        self.csvfile = open(self.file_path, "a", newline="")
+        self.writer = csv.writer(self.csvfile)
+
+        # Ensure the buffer is flushed when the program exits
+        atexit.register(self.flush_buffer)
+
+    def append(self, data: List[Any]) -> None:
+        """
+        Append data (as a list) to the buffer.
+
+        Parameters
+        ----------
+        data : List[Any]
+            The data to be appended.
+        """
+        data = [int(value) if isinstance(value, np.generic) else value for value in data]
+        self.buffer.append(data)
+        if len(self.buffer) >= self.buffer_size:
+            self.flush_buffer()
+
+    def flush_buffer(self) -> None:
+        """
+        Write all buffered rows to the CSV file.
+        """
+        if self.buffer:
+            self.writer.writerows(self.buffer)
+            self.buffer.clear()
+
+    def close(self) -> None:
+        """
+        Close the CSV file and flush any remaining data.
+        """
+        self.flush_buffer()
+        self.csvfile.close()
+        # Prevent flush_buffer from being called again at exit
+        atexit.unregister(self.flush_buffer)
+
+    def __del__(self):
+        self.close()
 
 class SDCard:
     """

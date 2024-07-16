@@ -20,6 +20,8 @@ from miniscope_io.bit_operation import BufferFormatter
 from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
+from miniscope_io.io import BufferedCSVWriter
+from miniscope_io.models.config import Config
 from miniscope_io.models.stream import (
     StreamBufferHeader,
     StreamDevConfig,
@@ -28,6 +30,7 @@ from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
 )
 
+runtime_config = Config()
 HAVE_OK = False
 ok_error = None
 try:
@@ -159,14 +162,22 @@ class StreamDaq:
 
         return header_data, payload
 
-    def _trim(self, data: np.ndarray, expected_size: int, logger: logging.Logger) -> np.ndarray:
+    def _trim(
+        self,
+        data: np.ndarray,
+        expected_size: int,
+        header: StreamBufferHeader,
+        logger: logging.Logger
+    ) -> np.ndarray:
         """
         Trim or pad an array to match an expected size
         """
         if data.shape[0] != expected_size:
             logger.warning(
+                f"Frame {header.frame_num}; Buffer {header.buffer_count} "
+                f"(#{header.frame_buffer_count} in frame)\n"
                 f"Expected buffer data length: {expected_size}, got data with shape "
-                f"{data.shape}. Padding to expected length",
+                f"{data.shape}.\nPadding to expected length",
             )
 
             # trim if too long
@@ -318,6 +329,8 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
+        metadata: Optional[Path] = None,
+        show_metadata: Optional[bool] = False,
     ) -> None:
         """
         Group buffers together to make frames.
@@ -334,11 +347,22 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
+        metadata : Optional[Path], optional
+            Path to save metadata, by default None.
+        show_metadata : Optional[bool], optional
+            Whether to display metadata, by default False.
         """
         locallogs = init_logger("streamDaq.buffer")
 
         cur_fm_num = -1  # Frame number
 
+        if metadata:
+            buffered_writer = BufferedCSVWriter(
+                metadata, 
+                buffer_size=runtime_config.csvwriter_buffer
+                )
+            buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
+            
         frame_buffer_prealloc = [np.zeros(bufsize, dtype=np.uint8) for bufsize in self.buffer_npix]
         frame_buffer = frame_buffer_prealloc.copy()
         try:
@@ -347,9 +371,27 @@ class StreamDaq:
                     break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
-                serial_buffer = self._trim(
-                    serial_buffer, self.buffer_npix[header_data.frame_buffer_count], locallogs
-                )
+                if metadata:
+                    buffered_writer.append(list(header_data.model_dump().values()))
+
+                try:
+                    serial_buffer = self._trim(
+                        serial_buffer,
+                        self.buffer_npix[header_data.frame_buffer_count],
+                        header_data,
+                        locallogs
+                    )
+                except IndexError as e:
+                    locallogs.warning(
+                        f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
+                        f"(#{header_data.frame_buffer_count} in frame)\n"
+                        f"Frame buffer count {header_data.frame_buffer_count} "
+                        f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
+                        f"Discarding buffer."                       
+                    )
+                    continue
+
+
 
                 # if first buffer of a frame
                 if header_data.frame_num != cur_fm_num:
@@ -382,6 +424,8 @@ class StreamDaq:
                     )
 
         finally:
+            if metadata:
+                buffered_writer.close()
             frame_buffer_queue.put(None)
 
     def _format_frame(
@@ -465,6 +509,8 @@ class StreamDaq:
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
+        metadata: Optional[Path] = None,
+        show_metadata: Optional[bool] = False,
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
     ) -> None:
@@ -482,6 +528,10 @@ class StreamDaq:
             If present, a path to an output video file
         video_kwargs: dict, optional
             kwargs passed to :meth:`.init_video`
+        metadata: Path, optional
+            If present, a path to an output metadata file
+        show_metadata: bool, optional
+            If True, display metadata information during capture
         binary: Path, optional
             Save raw binary directly from ``okDev`` to file, if present.
             Note that binary is captured in *append* mode, rather than rewriting an existing file.
@@ -527,16 +577,22 @@ class StreamDaq:
         if video:
             if video_kwargs is None:
                 video_kwargs = {}
+            if isinstance(video, str):
+                video = Path(video)
+            metadata = video.with_suffix(".csv")
 
             writer = self.init_video(video, **video_kwargs)
         else:
             writer = None
+            metadata = None
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
+                metadata,
+                show_metadata,
             ),
             name="_buffer_to_frame",
         )
