@@ -71,7 +71,7 @@ def capture(
         video_kwargs=okwargs,
         binary=binary,
         show_video=not no_display,
-        save_metadata=not no_metadata
+        save_metadata=not no_metadata,
     )
 
 

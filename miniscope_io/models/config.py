@@ -87,8 +87,9 @@ class Config(BaseSettings):
     log_dir: Path = Field(Path("logs"), description="Location to store logs")
     logs: LogConfig = Field(LogConfig(), description="Additional settings for logs")
     csvwriter_buffer: int = Field(
-        100, description="Buffer length for CSV writer",
-        json_schema_extra={"env": "MINISCOPE_IO_CSVWRITER_BUFFER"}
+        100,
+        description="Buffer length for CSV writer",
+        json_schema_extra={"env": "MINISCOPE_IO_CSVWRITER_BUFFER"},
     )
 
     @field_validator("base_dir", mode="before")

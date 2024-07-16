@@ -42,12 +42,13 @@ class BufferedCSVWriter:
     writer : csv.writer object
         The CSV writer object for writing rows to the CSV file.
     """
+
     def __init__(self, file_path: Union[str, Path], buffer_size: int = 100):
         self.file_path = file_path
         self.buffer_size = buffer_size
         self.buffer = []
 
-        self.csvfile = open(self.file_path, "a", newline="")
+        self.csvfile = open(self.file_path, "a", newline="")  # noqa: SIM115
         self.writer = csv.writer(self.csvfile)
 
         # Ensure the buffer is flushed when the program exits
@@ -86,6 +87,7 @@ class BufferedCSVWriter:
 
     def __del__(self):
         self.close()
+
 
 class SDCard:
     """

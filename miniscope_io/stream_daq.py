@@ -544,7 +544,7 @@ class StreamDaq:
 
         # Queue size is hard coded
         queue_manager = multiprocessing.Manager()
-        metadata_queue = queue_manager.Queue(1000) # For injecting metadata into callbacks, etc.
+        metadata_queue = queue_manager.Queue(1000)  # For injecting metadata into callbacks, etc.
         serial_buffer_queue = queue_manager.Queue(
             10
         )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
