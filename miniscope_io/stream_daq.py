@@ -373,7 +373,7 @@ class StreamDaq:
                     break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
-                
+
                 metadata_circbuffer.append(header_data)
                 if metadata:
                     buffered_writer.append(list(header_data.model_dump().values()))
@@ -511,9 +511,10 @@ class StreamDaq:
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
+        metadata: Optional[Path] = None,
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
-        save_metadata: Optional[bool] = True,
+        show_metadata: Optional[bool] = True,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -529,12 +530,15 @@ class StreamDaq:
             If present, a path to an output video file
         video_kwargs: dict, optional
             kwargs passed to :meth:`.init_video`
+        metadata: Path, optional
+            Save metadata information during capture.
         binary: Path, optional
             Save raw binary directly from ``okDev`` to file, if present.
             Note that binary is captured in *append* mode, rather than rewriting an existing file.
-        save_metadata: bool, optional
-            If True, save metadata information during capture.
-            This flag is only available when the video path is present.
+        show_video: bool, optional
+            If True, display the video in real-time.
+        show_metadata: bool, optional
+            If True, show metadata information during capture (Not implemented yet).
 
         Raises
         ------
@@ -579,11 +583,9 @@ class StreamDaq:
                 video_kwargs = {}
             if isinstance(video, str):
                 video = Path(video)
-            metadata = video.with_suffix(".csv") if save_metadata else None
             writer = self.init_video(video, **video_kwargs)
         else:
             writer = None
-            metadata = None
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
@@ -591,7 +593,7 @@ class StreamDaq:
                 serial_buffer_queue,
                 frame_buffer_queue,
                 metadata,
-                save_metadata,
+                show_metadata,
             ),
             name="_buffer_to_frame",
         )
