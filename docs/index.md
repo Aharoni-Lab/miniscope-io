@@ -11,6 +11,13 @@ cli/main
 ```
 
 ```{toctree}
+:caption: Device:
+:maxdepth: 1
+
+device/test_device
+```
+
+```{toctree}
 :maxdepth: 1
 :caption: API:
 
