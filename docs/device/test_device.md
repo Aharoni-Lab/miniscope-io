@@ -8,6 +8,7 @@
 
 ## Header Values and Expected Transitions
 
+- **`preamble`**: 32-bit preamble for detecting the beginning of each buffer. The [`preamble`](../api/stream_daq.md) in the device config needs to match the preamble defined in firmware.
 - **`linked_list`**: Index of data buffers within the circulating structure. This increments with each buffer until it reaches [`num_buffers`](../api/stream_daq.md), then resets to zero.
 - **`frame_num`**: The index of the image frame, which increments with each image frame (comprising multiple data buffers).
 - **`buffer_count`**: Index of data buffers, which increments with each buffer.
