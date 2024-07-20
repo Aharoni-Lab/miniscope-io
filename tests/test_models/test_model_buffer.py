@@ -10,11 +10,18 @@ def test_buffer_from_format(construct):
     Instantiate a BufferHeader from a sequence and a format
     """
     format = BufferHeaderFormat(
-        linked_list=0, frame_num=1, buffer_count=2, frame_buffer_count=3, timestamp=4
+        linked_list=0,
+        frame_num=1,
+        buffer_count=2,
+        frame_buffer_count=3,
+        write_buffer_count=4,
+        dropped_buffer_count=5,
+        timestamp=6,
+        write_timestamp=7,
     )
 
-    bad_vals = ["a", "b", "c", "d", "e"]
-    vals = [10, 9, 8, 7, 6]
+    bad_vals = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    vals = [10, 9, 8, 7, 6, 5, 4, 3]
 
     # correct vals should work in both cases
     instance = BufferHeader.from_format(vals, format, construct)
