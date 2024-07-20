@@ -34,6 +34,7 @@ class StreamBufferHeader(BufferHeader):
     battery_voltage: int
     ewl_pos: int
 
+
 class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     """
     Format model used to parse DAQ configuration yaml file (examples are in ./config)
