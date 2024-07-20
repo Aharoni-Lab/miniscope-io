@@ -20,6 +20,8 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
 
     pixel_count: int
+    battery_voltage: int
+    ewl_pos: int
 
 
 class StreamBufferHeader(BufferHeader):
@@ -29,7 +31,8 @@ class StreamBufferHeader(BufferHeader):
     """
 
     pixel_count: int
-
+    battery_voltage: int
+    ewl_pos: int
 
 class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     """

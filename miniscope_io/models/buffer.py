@@ -18,7 +18,10 @@ class BufferHeaderFormat(MiniscopeConfig):
     frame_num: int
     buffer_count: int
     frame_buffer_count: int
+    write_buffer_count: int
+    dropped_buffer_count: int
     timestamp: int
+    write_timestamp: int
 
 
 _T = TypeVar("_T", bound="BufferHeader")
@@ -33,7 +36,10 @@ class BufferHeader(Container):
     frame_num: int
     buffer_count: int
     frame_buffer_count: int
+    write_buffer_count: int
+    dropped_buffer_count: int
     timestamp: int
+    write_timestamp: int
 
     @classmethod
     def from_format(
