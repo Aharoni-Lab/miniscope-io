@@ -7,7 +7,6 @@ import multiprocessing
 import os
 import sys
 import time
-from collections import deque
 from pathlib import Path
 from typing import Any, Callable, Generator, List, Literal, Optional, Tuple, Union
 
@@ -330,6 +329,7 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
+        metadata_queue: multiprocessing.Queue,
         metadata: Optional[Path] = None,
         show_metadata: Optional[bool] = False,
     ) -> None:
@@ -348,16 +348,17 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
+        metadata_queue : multiprocessing.Queue[ndarray]
+            Queue for storing received metadata.
         metadata : Optional[Path], optional
             Path to save metadata, by default None.
         show_metadata : Optional[bool], optional
             Whether to display metadata, by default False.
+            Not implemented yet and  itactually might be better to have this in the main process
         """
         locallogs = init_logger("streamDaq.buffer")
 
         cur_fm_num = -1  # Frame number
-
-        metadata_circbuffer = deque(maxlen=1000)
 
         if metadata:
             buffered_writer = BufferedCSVWriter(
@@ -373,8 +374,15 @@ class StreamDaq:
                     break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
+                
+                # If metadata queue is full, pop the oldest one. Probably not the best way.
+                if metadata_queue.full():
+                    metadata_queue.get()
+                
+                # Redundant check for safety. Not a while loop so it keeps moving forward.
+                if not metadata_queue.full():
+                    metadata_queue.put(header_data)
 
-                metadata_circbuffer.append(header_data)
                 if metadata:
                     buffered_writer.append(list(header_data.model_dump().values()))
 
@@ -557,6 +565,8 @@ class StreamDaq:
         imagearray = queue_manager.Queue(5)
         imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
+        metadata_queue = queue_manager.Queue(1000)
+
         if source == "uart":
             self.logger.debug("Starting uart capture process")
             p_recv = multiprocessing.Process(
@@ -592,6 +602,7 @@ class StreamDaq:
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
+                metadata_queue,
                 metadata,
                 show_metadata,
             ),
