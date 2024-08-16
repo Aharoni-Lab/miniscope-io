@@ -494,18 +494,33 @@ class StreamDaq:
         finally:
             imagearray.put(None)
 
-    def init_video(self, path: Path, fourcc: str = "Y800", **kwargs: dict) -> cv2.VideoWriter:
+    def init_video(
+            self,
+            path: Union[Path, str],
+            fourcc: str = "Y800",
+            **kwargs: dict
+            ) -> cv2.VideoWriter:
         """
         Create a parameterized video writer
 
-        Args:
-            path (:class:`pathlib.Path`): Video file to write to
-            fourcc (str): Fourcc code to use
-            kwargs: passed to :class:`cv2.VideoWriter`
+        Parameters
+        ----------
+        frame_buffer_queue : multiprocessing.Queue[list[bytes]]
+            Input buffer queue.
+        path : Union[Path, str]
+            Video file to write to
+        fourcc : str
+            Fourcc code to use
+        kwargs : dict
+            passed to :class:`cv2.VideoWriter`
 
         Returns:
+        ---------
             :class:`cv2.VideoWriter`
         """
+        if isinstance(path, str):
+            path = Path(path)
+               
         fourcc = cv2.VideoWriter_fourcc(*fourcc)
         frame_rate = self.config.fs
         frame_size = (self.config.frame_width, self.config.frame_height)
@@ -590,8 +605,6 @@ class StreamDaq:
         if video:
             if video_kwargs is None:
                 video_kwargs = {}
-            if isinstance(video, str):
-                video = Path(video)
             writer = self.init_video(video, **video_kwargs)
         else:
             writer = None
