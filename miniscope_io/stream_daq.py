@@ -165,27 +165,31 @@ class StreamDaq:
     def _trim(
         self,
         data: np.ndarray,
-        expected_size: int,
+        expected_size_array: List[int],
         header: StreamBufferHeader,
         logger: logging.Logger,
     ) -> np.ndarray:
         """
         Trim or pad an array to match an expected size
         """
-        if data.shape[0] != expected_size:
+        expected_payload_size = expected_size_array[0]
+        expected_data_size = expected_size_array[header.frame_buffer_count]
+
+        if data.shape[0] != expected_payload_size:
             logger.warning(
                 f"Frame {header.frame_num}; Buffer {header.buffer_count} "
                 f"(#{header.frame_buffer_count} in frame)\n"
-                f"Expected buffer data length: {expected_size}, got data with shape "
+                f"Expected buffer data length: {expected_payload_size}, got data with shape "
                 f"{data.shape}.\nPadding to expected length",
             )
 
+        if data.shape[0] != expected_data_size:
             # trim if too long
-            if data.shape[0] > expected_size:
-                data = data[0:expected_size]
+            if data.shape[0] > expected_data_size:
+                data = data[0:expected_data_size]
             # pad if too short
             else:
-                data = np.pad(data, (0, expected_size - data.shape[0]))
+                data = np.pad(data, (0, expected_data_size - data.shape[0]))
 
         return data
 
@@ -389,7 +393,7 @@ class StreamDaq:
                 try:
                     serial_buffer = self._trim(
                         serial_buffer,
-                        self.buffer_npix[header_data.frame_buffer_count],
+                        self.buffer_npix,
                         header_data,
                         locallogs,
                     )
