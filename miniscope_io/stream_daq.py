@@ -333,7 +333,7 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
-        metadata_queue: multiprocessing.Queue,
+        metadata_list: List[StreamBufferHeader],
         metadata: Optional[Path] = None,
         show_metadata: Optional[bool] = False,
     ) -> None:
@@ -380,12 +380,7 @@ class StreamDaq:
                 header_data, serial_buffer = self._parse_header(serial_buffer)
 
                 # If metadata queue is full, pop the oldest one. Probably not the best way.
-                if metadata_queue.full():
-                    metadata_queue.get()
-
-                # Redundant check for safety. Not a while loop so it keeps moving forward.
-                if not metadata_queue.full():
-                    metadata_queue.put(header_data)
+                metadata_list.append(header_data)
 
                 if metadata:
                     buffered_writer.append(list(header_data.model_dump().values()))
@@ -560,16 +555,16 @@ class StreamDaq:
         self.terminate.clear()
 
         # Queue size is hard coded
-        queue_manager = multiprocessing.Manager()
-        serial_buffer_queue = queue_manager.Queue(
+        shared_resource_manager = multiprocessing.Manager()
+        serial_buffer_queue = shared_resource_manager.Queue(
             10
         )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        frame_buffer_queue = queue_manager.Queue(5)  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00']
+        frame_buffer_queue = shared_resource_manager.Queue(5)
         # hand over a frame (five buffers): buffer_to_frame()
-        imagearray = queue_manager.Queue(5)
+        imagearray = shared_resource_manager.Queue(5)
         imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
-        metadata_queue = queue_manager.Queue(1000)
+        metadata_list = shared_resource_manager.list()
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
@@ -606,7 +601,7 @@ class StreamDaq:
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
-                metadata_queue,
+                metadata_list,
                 metadata,
                 show_metadata,
             ),
