@@ -352,7 +352,7 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
-        metadata_queue : multiprocessing.Queue[ndarray]
+        metadata_list : List[:class:`.StreamBufferHeader`]
             Queue for storing received metadata.
         metadata : Optional[Path], optional
             Path to save metadata, by default None.
