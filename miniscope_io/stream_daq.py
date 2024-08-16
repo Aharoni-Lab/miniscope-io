@@ -557,11 +557,11 @@ class StreamDaq:
         # Queue size is hard coded
         shared_resource_manager = multiprocessing.Manager()
         serial_buffer_queue = shared_resource_manager.Queue(
-            10
+            runtime_config.serial_buffer_queue_size
         )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        frame_buffer_queue = shared_resource_manager.Queue(5)
+        frame_buffer_queue = shared_resource_manager.Queue(runtime_config.frame_buffer_queue_size)
         # hand over a frame (five buffers): buffer_to_frame()
-        imagearray = shared_resource_manager.Queue(5)
+        imagearray = shared_resource_manager.Queue(runtime_config.image_buffer_queue_size)
         imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
         metadata_list = shared_resource_manager.list()

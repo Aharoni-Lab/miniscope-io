@@ -91,6 +91,21 @@ class Config(BaseSettings):
         description="Buffer length for CSV writer",
         json_schema_extra={"env": "MINISCOPE_IO_CSVWRITER_BUFFER"},
     )
+    serial_buffer_queue_size: int = Field(
+        100,
+        description="Buffer length for serial data reception in streamDaq",
+        json_schema_extra={"env": "MINISCOPE_IO_SERIAL_BUFFER"},
+    )
+    frame_buffer_queue_size: int = Field(
+        100,
+        description="Buffer length for storing frames in streamDaq",
+        json_schema_extra={"env": "MINISCOPE_IO_FRAME_BUFFER"},
+    )
+    image_buffer_queue_size: int = Field(
+        100,
+        description="Buffer length for storing images in streamDaq",
+        json_schema_extra={"env": "MINISCOPE_IO_IMAGE_BUFFER"},
+    )
 
     @field_validator("base_dir", mode="before")
     @classmethod
