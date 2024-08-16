@@ -12,6 +12,30 @@ from miniscope_io.models import Container, MiniscopeConfig
 class BufferHeaderFormat(MiniscopeConfig):
     """
     Format model used to parse header at the beginning of every buffer.
+    
+    Parameters
+    ----------
+    linked_list: int
+        Index of data buffers within the circulating structure. 
+        This increments with each buffer until it reaches [`num_buffers`](../api/stream_daq.md),
+        then resets to zero.
+    frame_num: int
+        The index of the image frame, which increments with each image frame
+        (comprising multiple data buffers).
+    buffer_count: int
+        Index of data buffers, which increments with each buffer.
+    frame_buffer_count: int
+        Index of the data buffer within the image frame.
+        It is set to `frame_buffer_count = 0` at the first buffer in each frame.
+    write_buffer_count: int
+        Number of data buffers transmitted out of the MCU.
+    dropped_buffer_count: int
+        Number of dropped data buffers.
+    timestamp: int
+        Timestamp in milliseconds.
+        This should increase approximately by `1 / framerate * 1000` every frame.
+    write_timestamp: int
+        Timestamp in milliseconds when the buffer was transmitted out of the MCU.
     """
 
     linked_list: int

@@ -17,6 +17,15 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
     Refinements of :class:`.BufferHeaderFormat` for
     :class:`~miniscope_io.stream_daq.StreamDaq`
+
+    Parameters
+    ----------
+    pixel_count: int
+        Number of pixels in the buffer.
+    battery_voltage: int
+        Battery voltage. Mapping to mV will be documented in device documentation.
+    ewl_pos: int   
+        Electrical wetting lens position.
     """
 
     pixel_count: int
