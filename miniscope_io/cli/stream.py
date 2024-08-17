@@ -49,6 +49,9 @@ def _capture_options(fn: Callable) -> Callable:
     )(fn)
     fn = click.option("--no-display", is_flag=True, help="Don't show video in real time")(fn)
     fn = click.option("-b", "--binary_export", is_flag=True, help="Save binary to a .bin file")(fn)
+    fn = click.option("-m", "--metadata_display",
+                      is_flag=True, 
+                      help="Display metadata in real time")(fn)
     return fn
 
 
@@ -61,6 +64,7 @@ def capture(
     okwarg: Optional[dict],
     no_display: Optional[bool],
     binary_export: Optional[bool],
+    metadata_display: Optional[bool],
     **kwargs: dict,
 ) -> None:
     """
@@ -87,6 +91,7 @@ def capture(
         metadata=metadata_output,
         binary=binary_output,
         show_video=not no_display,
+        show_metadata=metadata_display,
     )
 
 
