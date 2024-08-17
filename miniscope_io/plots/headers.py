@@ -2,9 +2,13 @@
 Plot headers from :class:`.SDCard`
 """
 
-from typing import Optional, Tuple
+from logging import Logger
+from typing import List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
+
+from miniscope_io.models.stream import StreamBufferHeader
 
 try:
     import matplotlib.pyplot as plt
@@ -101,3 +105,26 @@ def plot_headers(
     fig.set_figheight(size[1])
 
     return fig, ax
+
+
+def get_streamheader_values(
+        header: List[StreamBufferHeader],
+        key: str,
+        N: int,
+        ) -> np.ndarray:
+
+    if len(header) < 1:
+        return np.zeros((0, 2))
+
+    sliced_list = header if len(header) < N else header[-N:]
+
+    extracted_values = []
+
+    for index, item in enumerate(sliced_list):
+        if hasattr(item, key):
+            extracted_values.append((index, getattr(item, key)))
+
+    if not extracted_values:
+        return np.zeros((0, 2))
+
+    return np.array(extracted_values)

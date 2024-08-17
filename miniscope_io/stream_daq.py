@@ -3,6 +3,7 @@ DAQ For use with FPGA and Uart streaming video sources.
 """
 
 import logging
+import math
 import multiprocessing
 import os
 import sys
@@ -11,9 +12,11 @@ from pathlib import Path
 from typing import Any, Callable, Generator, List, Literal, Optional, Tuple, Union
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import serial
 from bitstring import BitArray, Bits
+from matplotlib.animation import FuncAnimation
 
 from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
@@ -29,6 +32,7 @@ from miniscope_io.models.stream import (
 from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
 )
+from miniscope_io.plots.headers import get_streamheader_values
 
 runtime_config = Config()
 HAVE_OK = False
@@ -629,10 +633,33 @@ class StreamDaq:
             name="_format_frame",
         )
 
+
         p_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
         # p_terminate.start()
+
+        metadata_key = 'timestamp'
+        metadata_history = 100
+        metadata_trunc = get_streamheader_values(
+            list(metadata_list),
+            metadata_key,
+            metadata_history,
+            )
+
+        # initialize matplotlib
+        plt.ion()
+        plt.figure()
+
+        x_data = metadata_trunc[:, 0]
+        y_data = metadata_trunc[:, 1]
+        li, = plt.plot(x_data, y_data)
+
+        plt.xlabel("index")
+        plt.ylabel(metadata_key)
+        plt.title(metadata_key)
+
+
         try:
             for image in exact_iter(imagearray.get, None):
                 if show_video is True:
@@ -643,6 +670,27 @@ class StreamDaq:
                 if writer:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
+                try:
+                    metadata_trunc = get_streamheader_values(
+                        list(metadata_list),
+                        metadata_key,
+                        metadata_history,
+                        )
+                except Exception as e:
+                    self.logger.exception(f"Error during metadata capture: {e}")
+                    metadata_trunc = np.zeros((0, 2))
+                x_data = metadata_trunc[:, 0]
+                y_data = metadata_trunc[:, 1]
+                if len(x_data) > 0 and len(y_data) > 0:
+                    li.set_xdata(x_data)
+                    li.set_ydata(y_data)
+                    plt.xlim(min(x_data), max(x_data))
+                    plt.ylim(min(y_data), max(y_data))
+                    plt.draw()
+
+                    plt.pause(0.001)
+
+
         except KeyboardInterrupt:
             self.terminate.set()
         except Exception as e:
