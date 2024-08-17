@@ -106,25 +106,82 @@ def plot_headers(
 
     return fig, ax
 
+class StreamPlotter:
+    """
+    Plot headers from StreamDaq
+    """
 
-def get_streamheader_values(
-        header: List[StreamBufferHeader],
-        key: str,
-        N: int,
-        ) -> np.ndarray:
+    def __init__(
+        self,
+        header_keys: str,
+        history_length: int = 100,
+    ) -> None:
+        """
+        Constructor of StreamPlotter.
 
-    if len(header) < 1:
-        return np.zeros((0, 2))
+        Parameters:
+            header_keys: List of header keys to plot
+            history_length: Number of headers to plot
+        """    
+        self.header_keys = header_keys
+        self.history_length = history_length
+        
+        # initialize matplotlib
+        plt.ion()
+        plt.figure()
 
-    sliced_list = header if len(header) < N else header[-N:]
+        metadata_trunc = np.zeros((0, 2))
+        x_data = metadata_trunc[:, 0]
+        y_data = metadata_trunc[:, 1]
+        self.li, = plt.plot(x_data, y_data)
 
-    extracted_values = []
+        plt.xlabel("index")
+        plt.ylabel(header_keys)
+        plt.title(header_keys)
 
-    for index, item in enumerate(sliced_list):
-        if hasattr(item, key):
-            extracted_values.append((index, getattr(item, key)))
+    def _get_streamheader_values(
+            self,
+            header: List[StreamBufferHeader],
+            ) -> np.ndarray:
+        """
+        Extract the values from the StreamBufferHeader objects.
 
-    if not extracted_values:
-        return np.zeros((0, 2))
+        Parameters:
+            header: List of StreamBufferHeader objects
+        """
+        if len(header) < 1:
+            return np.zeros((0, 2))
 
-    return np.array(extracted_values)
+        sliced_list = header if len(header) < self.history_length else header[-self.history_length:]
+
+        extracted_values = []
+
+        for index, item in enumerate(sliced_list):
+            if hasattr(item, self.header_keys):
+                extracted_values.append((index, getattr(item, self.header_keys)))
+
+        if not extracted_values:
+            return np.zeros((0, 2))
+
+        return np.array(extracted_values)
+    
+    def update_plot(
+            self,
+            header: List[StreamBufferHeader],
+            ) -> None:
+        """
+        Update the plot with the latest data.
+
+        Parameters:
+            header: List of StreamBufferHeader objects
+        """
+        metadata_trunc = self._get_streamheader_values(header)
+        x_data = metadata_trunc[:, 0]
+        y_data = metadata_trunc[:, 1]
+        if len(x_data) > 0 and len(y_data) > 0:
+            self.li.set_xdata(x_data)
+            self.li.set_ydata(y_data)
+            plt.xlim(x_data.min(), x_data.max())
+            plt.ylim(y_data.min(), y_data.max())
+            plt.draw()
+            plt.pause(0.01)

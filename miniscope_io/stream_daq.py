@@ -32,7 +32,7 @@ from miniscope_io.models.stream import (
 from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
 )
-from miniscope_io.plots.headers import get_streamheader_values
+from miniscope_io.plots.headers import StreamPlotter
 
 runtime_config = Config()
 HAVE_OK = False
@@ -573,13 +573,11 @@ class StreamDaq:
         """
         self.terminate.clear()
 
-        # Queue size is hard coded
         shared_resource_manager = multiprocessing.Manager()
         serial_buffer_queue = shared_resource_manager.Queue(
             runtime_config.serial_buffer_queue_size
-        )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
+        )
         frame_buffer_queue = shared_resource_manager.Queue(runtime_config.frame_buffer_queue_size)
-        # hand over a frame (five buffers): buffer_to_frame()
         imagearray = shared_resource_manager.Queue(runtime_config.image_buffer_queue_size)
         imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
 
@@ -639,26 +637,10 @@ class StreamDaq:
         p_format_frame.start()
         # p_terminate.start()
 
-        metadata_key = 'timestamp'
-        metadata_history = 100
-        metadata_trunc = get_streamheader_values(
-            list(metadata_list),
-            metadata_key,
-            metadata_history,
-            )
-
-        # initialize matplotlib
-        plt.ion()
-        plt.figure()
-
-        x_data = metadata_trunc[:, 0]
-        y_data = metadata_trunc[:, 1]
-        li, = plt.plot(x_data, y_data)
-
-        plt.xlabel("index")
-        plt.ylabel(metadata_key)
-        plt.title(metadata_key)
-
+        plotter = StreamPlotter(
+            header_keys="timestamp",
+            history_length=100,
+        )
 
         try:
             for image in exact_iter(imagearray.get, None):
@@ -671,25 +653,9 @@ class StreamDaq:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
                 try:
-                    metadata_trunc = get_streamheader_values(
-                        list(metadata_list),
-                        metadata_key,
-                        metadata_history,
-                        )
+                    plotter.update_plot(metadata_list)
                 except Exception as e:
                     self.logger.exception(f"Error during metadata capture: {e}")
-                    metadata_trunc = np.zeros((0, 2))
-                x_data = metadata_trunc[:, 0]
-                y_data = metadata_trunc[:, 1]
-                if len(x_data) > 0 and len(y_data) > 0:
-                    li.set_xdata(x_data)
-                    li.set_ydata(y_data)
-                    plt.xlim(min(x_data), max(x_data))
-                    plt.ylim(min(y_data), max(y_data))
-                    plt.draw()
-
-                    plt.pause(0.001)
-
 
         except KeyboardInterrupt:
             self.terminate.set()
