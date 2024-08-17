@@ -339,7 +339,6 @@ class StreamDaq:
         frame_buffer_queue: multiprocessing.Queue,
         metadata_list: List[StreamBufferHeader],
         metadata: Optional[Path] = None,
-        show_metadata: Optional[bool] = False,
     ) -> None:
         """
         Group buffers together to make frames.
@@ -360,9 +359,6 @@ class StreamDaq:
             Queue for storing received metadata.
         metadata : Optional[Path], optional
             Path to save metadata, by default None.
-        show_metadata : Optional[bool], optional
-            Whether to display metadata, by default False.
-            Not implemented yet and  itactually might be better to have this in the main process
         """
         locallogs = init_logger("streamDaq.buffer")
 
@@ -540,7 +536,7 @@ class StreamDaq:
         metadata: Optional[Path] = None,
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
-        show_metadata: Optional[bool] = True,
+        show_metadata: Optional[bool] = False,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -564,7 +560,7 @@ class StreamDaq:
         show_video: bool, optional
             If True, display the video in real-time.
         show_metadata: bool, optional
-            If True, show metadata information during capture (Not implemented yet).
+            If True, show metadata information during capture.
 
         Raises
         ------
@@ -618,7 +614,6 @@ class StreamDaq:
                 frame_buffer_queue,
                 metadata_list,
                 metadata,
-                show_metadata,
             ),
             name="_buffer_to_frame",
         )
@@ -637,10 +632,15 @@ class StreamDaq:
         p_format_frame.start()
         # p_terminate.start()
 
-        plotter = StreamPlotter(
-            header_keys="timestamp",
-            history_length=100,
-        )
+        if show_metadata:
+            header_plotter = StreamPlotter(
+                header_keys=[
+                    "timestamp",
+                    "buffer_count",
+                    "frame_buffer_count",
+                    ],
+                history_length=100,
+            )
 
         try:
             for image in exact_iter(imagearray.get, None):
@@ -652,10 +652,11 @@ class StreamDaq:
                 if writer:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
-                try:
-                    plotter.update_plot(metadata_list)
-                except Exception as e:
-                    self.logger.exception(f"Error during metadata capture: {e}")
+                if show_metadata:
+                    try:
+                        header_plotter.update_plot(metadata_list)
+                    except Exception as e:
+                        self.logger.exception(f"Error during metadata plotting: {e}")
 
         except KeyboardInterrupt:
             self.terminate.set()
@@ -669,6 +670,8 @@ class StreamDaq:
             if show_video:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
+            if show_metadata:
+                header_plotter.close_plot()
 
             # Join child processes with a timeout
             for p in [p_recv, p_buffer_to_frame, p_format_frame]:
