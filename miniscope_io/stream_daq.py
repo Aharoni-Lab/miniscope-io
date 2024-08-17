@@ -3,7 +3,6 @@ DAQ For use with FPGA and Uart streaming video sources.
 """
 
 import logging
-import math
 import multiprocessing
 import os
 import sys
@@ -16,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import serial
 from bitstring import BitArray, Bits
-from matplotlib.animation import FuncAnimation
 
 from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
@@ -634,13 +632,11 @@ class StreamDaq:
 
         if show_metadata:
             header_plotter = StreamPlotter(
-                header_keys=[
-                    "timestamp",
-                    "buffer_count",
-                    "frame_buffer_count",
-                    ],
-                history_length=100,
+                header_keys=runtime_config.stream_header_plot_key.split(","),
+                history_length=runtime_config.stream_header_plot_history,
             )
+            interval_s = runtime_config.stream_header_plot_update_ms / 1000.0
+            next_time = time.time() + interval_s
 
         try:
             for image in exact_iter(imagearray.get, None):
@@ -653,10 +649,13 @@ class StreamDaq:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
                 if show_metadata:
-                    try:
-                        header_plotter.update_plot(metadata_list)
-                    except Exception as e:
-                        self.logger.exception(f"Error during metadata plotting: {e}")
+                    current_time = time.time()
+                    if current_time > next_time:
+                        try:
+                            header_plotter.update_plot(metadata_list)
+                        except Exception as e:
+                            self.logger.exception(f"Error during metadata plotting: {e}")
+                        next_time = current_time + interval_s
 
         except KeyboardInterrupt:
             self.terminate.set()
@@ -675,7 +674,7 @@ class StreamDaq:
 
             # Join child processes with a timeout
             for p in [p_recv, p_buffer_to_frame, p_format_frame]:
-                p.join(timeout=2)
+                p.join(timeout=5)
                 if p.is_alive():
                     self.logger.warning(f"Termination timeout: force terminating process {p.name}.")
                     p.terminate()
