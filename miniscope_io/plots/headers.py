@@ -105,6 +105,7 @@ def plot_headers(
 
     return fig, ax
 
+
 class StreamPlotter:
     """
     Plot headers from StreamDaq
@@ -121,14 +122,14 @@ class StreamPlotter:
         Parameters:
             header_keys: List of header keys to plot or a single header key as a string
             history_length: Number of headers to plot
-        """    
+        """
         # If a single string is provided, convert it to a list with one element
         if isinstance(header_keys, str):
             header_keys = [header_keys]
-        
+
         self.header_keys = header_keys
         self.history_length = history_length
-        
+
         # initialize matplotlib
         plt.ion()
         self.fig, self.axes = plt.subplots(len(header_keys), 1, figsize=(6, len(header_keys) * 3))
@@ -141,19 +142,17 @@ class StreamPlotter:
             metadata_trunc = np.zeros((0, 2))
             x_data = metadata_trunc[:, 0]
             y_data = metadata_trunc[:, 1]
-            line, = ax.plot(x_data, y_data)
+            (line,) = ax.plot(x_data, y_data)
             self.lines.append(line)
-            
+
             if i == len(header_keys) - 1:
                 ax.set_xlabel("index")
-            
+
             ax.set_ylabel(header_key)
 
     def _get_streamheader_values(
-            self,
-            header: List[StreamBufferHeader],
-            header_key: str
-            ) -> np.ndarray:
+        self, header: List[StreamBufferHeader], header_key: str
+    ) -> np.ndarray:
         """
         Extract the values from the StreamBufferHeader objects for a specific header key.
 
@@ -164,7 +163,9 @@ class StreamPlotter:
         if len(header) < 1:
             return np.zeros((0, 2))
 
-        sliced_list = header if len(header) < self.history_length else header[-self.history_length:]
+        sliced_list = (
+            header if len(header) < self.history_length else header[-self.history_length :]
+        )
 
         extracted_values = []
 
@@ -176,11 +177,11 @@ class StreamPlotter:
             return np.zeros((0, 2))
 
         return np.array(extracted_values)
-    
+
     def update_plot(
-            self,
-            header: List[StreamBufferHeader],
-            ) -> None:
+        self,
+        header: List[StreamBufferHeader],
+    ) -> None:
         """
         Update the plot with the latest data.
 
@@ -197,10 +198,10 @@ class StreamPlotter:
                 ax = self.axes[i]
                 ax.set_xlim(x_data.min(), x_data.max())
                 ax.set_ylim(y_data.min(), y_data.max())
-        
+
         plt.draw()
         plt.pause(0.01)
-    
+
     def close_plot(self) -> None:
         """
         Close the plot and perform any necessary cleanup.

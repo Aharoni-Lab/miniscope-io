@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, Callable, Generator, List, Literal, Optional, Tuple, Union
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import serial
 from bitstring import BitArray, Bits
@@ -493,11 +492,8 @@ class StreamDaq:
             imagearray.put(None)
 
     def init_video(
-            self,
-            path: Union[Path, str],
-            fourcc: str = "Y800",
-            **kwargs: dict
-            ) -> cv2.VideoWriter:
+        self, path: Union[Path, str], fourcc: str = "Y800", **kwargs: dict
+    ) -> cv2.VideoWriter:
         """
         Create a parameterized video writer
 
@@ -518,7 +514,7 @@ class StreamDaq:
         """
         if isinstance(path, str):
             path = Path(path)
-               
+
         fourcc = cv2.VideoWriter_fourcc(*fourcc)
         frame_rate = self.config.fs
         frame_size = (self.config.frame_width, self.config.frame_height)
@@ -568,9 +564,7 @@ class StreamDaq:
         self.terminate.clear()
 
         shared_resource_manager = multiprocessing.Manager()
-        serial_buffer_queue = shared_resource_manager.Queue(
-            runtime_config.serial_buffer_queue_size
-        )
+        serial_buffer_queue = shared_resource_manager.Queue(runtime_config.serial_buffer_queue_size)
         frame_buffer_queue = shared_resource_manager.Queue(runtime_config.frame_buffer_queue_size)
         imagearray = shared_resource_manager.Queue(runtime_config.image_buffer_queue_size)
         imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
@@ -623,7 +617,6 @@ class StreamDaq:
             ),
             name="_format_frame",
         )
-
 
         p_recv.start()
         p_buffer_to_frame.start()

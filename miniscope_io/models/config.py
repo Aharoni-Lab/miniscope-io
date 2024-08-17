@@ -122,7 +122,6 @@ class Config(BaseSettings):
         json_schema_extra={"env": "MINISCOPE_IO_STREAM_HEADER_PLOT_KEY"},
     )
 
-
     @field_validator("base_dir", mode="before")
     @classmethod
     def folder_exists(cls, v: Path) -> Path:

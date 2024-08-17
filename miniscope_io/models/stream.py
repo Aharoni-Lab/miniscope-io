@@ -24,7 +24,7 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
         Number of pixels in the buffer.
     battery_voltage: int
         Battery voltage. Mapping to mV will be documented in device documentation.
-    ewl_pos: int   
+    ewl_pos: int
         Electrical wetting lens position.
     """
 

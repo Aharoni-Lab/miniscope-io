@@ -12,11 +12,11 @@ from miniscope_io.models import Container, MiniscopeConfig
 class BufferHeaderFormat(MiniscopeConfig):
     """
     Format model used to parse header at the beginning of every buffer.
-    
+
     Parameters
     ----------
     linked_list: int
-        Index of data buffers within the circulating structure. 
+        Index of data buffers within the circulating structure.
         This increments with each buffer until it reaches [`num_buffers`](../api/stream_daq.md),
         then resets to zero.
     frame_num: int
