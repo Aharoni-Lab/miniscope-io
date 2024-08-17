@@ -2,9 +2,12 @@
 Plot headers from :class:`.SDCard`
 """
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
+
+from miniscope_io.models.stream import StreamBufferHeader
 
 try:
     import matplotlib.pyplot as plt
@@ -101,3 +104,106 @@ def plot_headers(
     fig.set_figheight(size[1])
 
     return fig, ax
+
+class StreamPlotter:
+    """
+    Plot headers from StreamDaq
+    """
+
+    def __init__(
+        self,
+        header_keys: Union[List[str], str],
+        history_length: int = 100,
+    ) -> None:
+        """
+        Constructor of StreamPlotter.
+
+        Parameters:
+            header_keys: List of header keys to plot or a single header key as a string
+            history_length: Number of headers to plot
+        """    
+        # If a single string is provided, convert it to a list with one element
+        if isinstance(header_keys, str):
+            header_keys = [header_keys]
+        
+        self.header_keys = header_keys
+        self.history_length = history_length
+        
+        # initialize matplotlib
+        plt.ion()
+        self.fig, self.axes = plt.subplots(len(header_keys), 1, figsize=(6, len(header_keys) * 3))
+        self.axes = np.array(self.axes).reshape(-1)  # Ensure axes is an array
+
+        # Initialize line objects
+        self.lines = []
+        for i, header_key in enumerate(header_keys):
+            ax = self.axes[i]
+            metadata_trunc = np.zeros((0, 2))
+            x_data = metadata_trunc[:, 0]
+            y_data = metadata_trunc[:, 1]
+            line, = ax.plot(x_data, y_data)
+            self.lines.append(line)
+            
+            if i == len(header_keys) - 1:
+                ax.set_xlabel("index")
+            
+            ax.set_ylabel(header_key)
+
+    def _get_streamheader_values(
+            self,
+            header: List[StreamBufferHeader],
+            header_key: str
+            ) -> np.ndarray:
+        """
+        Extract the values from the StreamBufferHeader objects for a specific header key.
+
+        Parameters:
+            header: List of StreamBufferHeader objects
+            header_key: The specific header key to extract values for
+        """
+        if len(header) < 1:
+            return np.zeros((0, 2))
+
+        sliced_list = header if len(header) < self.history_length else header[-self.history_length:]
+
+        extracted_values = []
+
+        for index, item in enumerate(sliced_list):
+            if hasattr(item, header_key):
+                extracted_values.append((index, getattr(item, header_key)))
+
+        if not extracted_values:
+            return np.zeros((0, 2))
+
+        return np.array(extracted_values)
+    
+    def update_plot(
+            self,
+            header: List[StreamBufferHeader],
+            ) -> None:
+        """
+        Update the plot with the latest data.
+
+        Parameters:
+            header: List of StreamBufferHeader objects
+        """
+        for i, header_key in enumerate(self.header_keys):
+            metadata_trunc = self._get_streamheader_values(header, header_key)
+            x_data = metadata_trunc[:, 0]
+            y_data = metadata_trunc[:, 1]
+            if len(x_data) > 0 and len(y_data) > 0:
+                self.lines[i].set_xdata(x_data)
+                self.lines[i].set_ydata(y_data)
+                ax = self.axes[i]
+                ax.set_xlim(x_data.min(), x_data.max())
+                ax.set_ylim(y_data.min(), y_data.max())
+        
+        plt.draw()
+        plt.pause(0.01)
+    
+    def close_plot(self) -> None:
+        """
+        Close the plot and perform any necessary cleanup.
+        """
+        plt.ioff()  # Turn off interactive mode
+        plt.close(self.fig)
