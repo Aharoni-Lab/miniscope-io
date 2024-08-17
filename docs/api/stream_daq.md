@@ -2,18 +2,13 @@
 This module is a data acquisition module that captures video streams from Miniscopes based on the `Miniscope-SAMD-Framework` firmware. The firmware repository will be published in future updates but is currently under development and private.
 
 ## Command
-After [installation](../guide/installation.md) and customizing [device configurations](stream-dev-config) if necessary, run the following command in this Git repository to start the data acquisition process:
+After [installation](../guide/installation.md) and customizing [device configurations](stream-dev-config) and [runtime configuration](models/config.md) if necessary, run the command described in [CLI Usage](../cli/main.rst).
+
+One example of this command is the following:
 ```bash
-$ mio stream capture -c path/to/device/config.yml -o output_filename.avi
-[24-06-25T04:19:46] INFO     [miniscope_io.okDev] Connected to           opalkelly.py:34
-                             XEM7310-A75
-Connected to XEM7310-A75
-Successfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
-FrontPanel is supported
-[24-06-11T01:40:45] INFO     [miniscope_io.streamDaq.frame] frame: 1570, bits lost: 0                                    stream_daq.py:524
-[24-06-11T01:40:46] INFO     [miniscope_io.streamDaq.frame] frame: 1571, bits lost: 0                                    stream_daq.py:524
+$ mio stream capture -c .path/to/device/config.yml -o output_filename.avi -m
 ```
-A window displaying the image transferred from the Miniscope should pop up. Additionally, the indexes of captured frames and their statuses will be logged in the terminal.
+A window displaying the image transferred from the Miniscope and a graph plotting metadata (`-m` option) should pop up. Additionally, the indexes of captured frames and their statuses will be logged in the terminal. The `MINISCOPE_IO_STREAM_HEADER_PLOT_KEY` defines plotted header fields (see `.env.sample`).
 
 ## Prerequisites
 - **Data capture hardware:** Opal Kelly XEM7310-A75 FPGA board (connected via USB)
