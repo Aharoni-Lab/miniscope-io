@@ -375,8 +375,6 @@ class StreamDaq:
                     break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
-
-                # If metadata queue is full, pop the oldest one. Probably not the best way.
                 metadata_list.append(header_data)
 
                 if metadata:

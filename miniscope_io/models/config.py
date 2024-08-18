@@ -107,7 +107,7 @@ class Config(BaseSettings):
         json_schema_extra={"env": "MINISCOPE_IO_IMAGE_BUFFER"},
     )
     stream_header_plot_update_ms: int = Field(
-        100,
+        1000,
         description="Update rate for stream header plots in milliseconds",
         json_schema_extra={"env": "MINISCOPE_IO_STREAM_HEADER_PLOT_UPDATE_MS"},
     )
