@@ -107,7 +107,6 @@ def test_metadata_plotting(tmp_path, default_streamdaq):
     during capture.
     """
     default_streamdaq.capture(source="fpga", show_metadata=True)
-    pdb.set_trace()
 
     # unit tests for the stream plotter should go elsewhere, here we just
     # test that the object was instantiated and that it got the data it should have
