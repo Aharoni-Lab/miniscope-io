@@ -86,41 +86,6 @@ class Config(BaseSettings):
     )
     log_dir: Path = Field(Path("logs"), description="Location to store logs")
     logs: LogConfig = Field(LogConfig(), description="Additional settings for logs")
-    csvwriter_buffer: int = Field(
-        100,
-        description="Buffer length for CSV writer",
-        json_schema_extra={"env": "MINISCOPE_IO_CSVWRITER_BUFFER"},
-    )
-    serial_buffer_queue_size: int = Field(
-        10,
-        description="Buffer length for serial data reception in streamDaq",
-        json_schema_extra={"env": "MINISCOPE_IO_SERIAL_BUFFER"},
-    )
-    frame_buffer_queue_size: int = Field(
-        5,
-        description="Buffer length for storing frames in streamDaq",
-        json_schema_extra={"env": "MINISCOPE_IO_FRAME_BUFFER"},
-    )
-    image_buffer_queue_size: int = Field(
-        5,
-        description="Buffer length for storing images in streamDaq",
-        json_schema_extra={"env": "MINISCOPE_IO_IMAGE_BUFFER"},
-    )
-    stream_header_plot_update_ms: int = Field(
-        1000,
-        description="Update rate for stream header plots in milliseconds",
-        json_schema_extra={"env": "MINISCOPE_IO_STREAM_HEADER_PLOT_UPDATE_MS"},
-    )
-    stream_header_plot_history: int = Field(
-        500,
-        description="Number of stream headers to plot",
-        json_schema_extra={"env": "MINISCOPE_IO_STREAM_HEADER_PLOT_HISTORY"},
-    )
-    stream_header_plot_key: str = Field(
-        "timestamp,buffer_count,frame_buffer_count",
-        description="Keys for plotting stream headers",
-        json_schema_extra={"env": "MINISCOPE_IO_STREAM_HEADER_PLOT_KEY"},
-    )
 
     @field_validator("base_dir", mode="before")
     @classmethod

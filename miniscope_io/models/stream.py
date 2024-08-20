@@ -5,12 +5,13 @@ Models for :mod:`miniscope_io.stream_daq`
 from pathlib import Path
 from typing import Literal, Optional, Union
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 from miniscope_io.models.mixins import YAMLMixin
+from miniscope_io.models.sinks import CSVWriterConfig, StreamPlotterConfig
 
 
 class StreamBufferHeaderFormat(BufferHeaderFormat):
@@ -42,6 +43,44 @@ class StreamBufferHeader(BufferHeader):
     pixel_count: int
     battery_voltage: int
     ewl_pos: int
+
+
+class StreamDevRuntime(MiniscopeConfig):
+    """
+    Runtime configuration for :class:`.StreamDaq`
+
+    Included within :class:`.StreamDevConfig` to separate config that is not
+    unique to the device, but how that device is controlled at runtime.
+    """
+
+    serial_buffer_queue_size: int = Field(
+        10,
+        description="Buffer length for serial data reception in streamDaq",
+    )
+    frame_buffer_queue_size: int = Field(
+        5,
+        description="Buffer length for storing frames in streamDaq",
+    )
+    image_buffer_queue_size: int = Field(
+        5,
+        description="Buffer length for storing images in streamDaq",
+    )
+    plot: Optional[StreamPlotterConfig] = Field(
+        StreamPlotterConfig(
+            keys=["timestamp", "buffer_count", "frame_buffer_count"], update_ms=1000, history=500
+        ),
+        description="Configuration for plotting header data as it is collected. "
+        "If ``None``, use the default params in StreamPlotter. "
+        "Note that this does *not* control whether header metadata is plotted during capture, "
+        "for enabling/disabling, use the ``show_metadata`` kwarg in the capture method",
+    )
+    csvwriter: Optional[CSVWriterConfig] = Field(
+        CSVWriterConfig(buffer=100),
+        description="Default configuration for writing header data to a CSV file. "
+        "If ``None``, use the default params in BufferedCSVWriter. "
+        "Note that this does *not* control whether header metadata is written during capture, "
+        "for enabling/disabling, use the ``metadata`` kwarg in the capture method.",
+    )
 
 
 class StreamDevConfig(MiniscopeConfig, YAMLMixin):
@@ -135,6 +174,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_header_bytes: bool = False
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
+    runtime: StreamDevRuntime = StreamDevRuntime()
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
