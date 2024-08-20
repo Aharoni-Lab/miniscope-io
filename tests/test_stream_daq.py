@@ -85,7 +85,7 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
     output_csv = tmp_path / "output.csv"
 
     if write_metadata:
-        default_streamdaq.capture(source="fpga", metadata=output_csv)
+        default_streamdaq.capture(source="fpga", metadata=output_csv, show_video=False)
 
         df = pd.read_csv(output_csv)
         # actually not sure what we should be looking for here, for now we just check for shape
