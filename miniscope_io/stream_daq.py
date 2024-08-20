@@ -713,6 +713,8 @@ class StreamDaq:
                         self.logger.exception(f"Exception saving headers: \n{e}")
 
 
+#
+
 # DEPRECATION: v0.3.0
 if __name__ == "__main__":
     import warnings
