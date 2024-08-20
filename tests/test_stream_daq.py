@@ -106,7 +106,7 @@ def test_metadata_plotting(tmp_path, default_streamdaq):
     Setting the capture kwarg ``show_metadata == True`` should plot the frame metadata
     during capture.
     """
-    default_streamdaq.capture(source="fpga", show_metadata=True)
+    default_streamdaq.capture(source="fpga", show_metadata=True, show_video=False)
 
     # unit tests for the stream plotter should go elsewhere, here we just
     # test that the object was instantiated and that it got the data it should have
