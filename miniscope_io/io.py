@@ -31,7 +31,7 @@ class BufferedCSVWriter:
 
     Attributes
     ----------
-    file_path : Union[str, Path]
+    file_path : Path
         The file path for the CSV file.
     buffer_size : int
         The number of rows to buffer before writing to the file.
@@ -40,7 +40,7 @@ class BufferedCSVWriter:
     """
 
     def __init__(self, file_path: Union[str, Path], buffer_size: int = 100):
-        self.file_path = file_path
+        self.file_path: Path = Path(file_path)
         self.buffer_size = buffer_size
         self.buffer = []
         self.logger = init_logger("BufferedCSVWriter")

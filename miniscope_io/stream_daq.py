@@ -21,7 +21,6 @@ from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
 from miniscope_io.io import BufferedCSVWriter
-from miniscope_io.models.config import Config
 from miniscope_io.models.stream import (
     StreamBufferHeader,
     StreamDevConfig,
@@ -31,7 +30,6 @@ from miniscope_io.models.stream import (
 )
 from miniscope_io.plots.headers import StreamPlotter
 
-runtime_config = Config()
 HAVE_OK = False
 ok_error = None
 try:
@@ -108,9 +106,12 @@ class StreamDaq:
         self.config = device_config
         self.header_fmt = header_fmt
         self.preamble = self.config.preamble
+        self.terminate: multiprocessing.Event = multiprocessing.Event()
+
         self._buffer_npix: Optional[List[int]] = None
         self._nbuffer_per_fm: Optional[int] = None
-        self.terminate: multiprocessing.Event = multiprocessing.Event()
+        self._buffered_writer: Optional[BufferedCSVWriter] = None
+        self._header_plotter: Optional[StreamPlotter] = None
 
     @property
     def buffer_npix(self) -> List[int]:
@@ -334,7 +335,6 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
-        metadata_list: List[StreamBufferHeader],
         metadata: Optional[Path] = None,
     ) -> None:
         """
@@ -352,8 +352,6 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
-        metadata_list : List[:class:`.StreamBufferHeader`]
-            Queue for storing received metadata.
         metadata : Optional[Path], optional
             Path to save metadata, by default None.
         """
@@ -361,24 +359,17 @@ class StreamDaq:
 
         cur_fm_num = -1  # Frame number
 
-        if metadata:
-            buffered_writer = BufferedCSVWriter(
-                metadata, buffer_size=runtime_config.csvwriter_buffer
-            )
-            buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
-
         frame_buffer_prealloc = [np.zeros(bufsize, dtype=np.uint8) for bufsize in self.buffer_npix]
         frame_buffer = frame_buffer_prealloc.copy()
+        header_list = []
+
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
                 if self.terminate.is_set():
                     break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
-                metadata_list.append(header_data)
-
-                if metadata:
-                    buffered_writer.append(list(header_data.model_dump().values()))
+                header_list.append(header_data)
 
                 try:
                     serial_buffer = self._trim(
@@ -404,10 +395,11 @@ class StreamDaq:
                         continue
 
                     # push previous frame_buffer into frame_buffer queue
-                    frame_buffer_queue.put(frame_buffer)
+                    frame_buffer_queue.put((frame_buffer, header_list))
 
                     # init new frame_buffer
                     frame_buffer = frame_buffer_prealloc.copy()
+                    header_list = []
 
                     # update frame_num and index
                     cur_fm_num = header_data.frame_num
@@ -428,8 +420,6 @@ class StreamDaq:
                     )
 
         finally:
-            if metadata:
-                buffered_writer.close()
             frame_buffer_queue.put(None)
 
     def _format_frame(
@@ -458,7 +448,7 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.frame")
         try:
-            for frame_data in exact_iter(frame_buffer_queue.get, None):
+            for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
                 if self.terminate.is_set():
                     break
 
@@ -485,7 +475,7 @@ class StreamDaq:
                         (self.config.frame_width, self.config.frame_height), dtype=np.uint8
                     )
 
-                imagearray.put(frame)
+                imagearray.put((frame, header_list))
         finally:
             imagearray.put(None)
 
@@ -562,12 +552,13 @@ class StreamDaq:
         self.terminate.clear()
 
         shared_resource_manager = multiprocessing.Manager()
-        serial_buffer_queue = shared_resource_manager.Queue(runtime_config.serial_buffer_queue_size)
-        frame_buffer_queue = shared_resource_manager.Queue(runtime_config.frame_buffer_queue_size)
-        imagearray = shared_resource_manager.Queue(runtime_config.image_buffer_queue_size)
-        imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
-
-        metadata_list = shared_resource_manager.list()
+        serial_buffer_queue = shared_resource_manager.Queue(
+            self.config.runtime.serial_buffer_queue_size
+        )
+        frame_buffer_queue = shared_resource_manager.Queue(
+            self.config.runtime.frame_buffer_queue_size
+        )
+        imagearray = shared_resource_manager.Queue(self.config.runtime.image_buffer_queue_size)
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
@@ -590,19 +581,17 @@ class StreamDaq:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
 
         # Video output
+        writer = None
         if video:
             if video_kwargs is None:
                 video_kwargs = {}
             writer = self.init_video(video, **video_kwargs)
-        else:
-            writer = None
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
-                metadata_list,
                 metadata,
             ),
             name="_buffer_to_frame",
@@ -619,18 +608,22 @@ class StreamDaq:
         p_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
-        # p_terminate.start()
 
         if show_metadata:
-            header_plotter = StreamPlotter(
-                header_keys=runtime_config.stream_header_plot_key.split(","),
-                history_length=runtime_config.stream_header_plot_history,
+            self._header_plotter = StreamPlotter(
+                header_keys=self.config.runtime.plot.keys,
+                history_length=self.config.runtime.plot.history,
+                update_ms=self.config.runtime.plot.update_ms,
             )
-            interval_s = runtime_config.stream_header_plot_update_ms / 1000.0
-            next_time = time.time() + interval_s
+
+        if metadata:
+            self._buffered_writer = BufferedCSVWriter(
+                metadata, buffer_size=self.config.runtime.csvwriter.buffer
+            )
+            self._buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
 
         try:
-            for image in exact_iter(imagearray.get, None):
+            for image, header_list in exact_iter(imagearray.get, None):
                 if show_video is True:
                     cv2.imshow("image", image)
                     if cv2.waitKey(1) == 27:  # get out with ESC key
@@ -639,14 +632,20 @@ class StreamDaq:
                 if writer:
                     picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
                     writer.write(picture)
-                if show_metadata:
-                    current_time = time.time()
-                    if current_time > next_time:
-                        try:
-                            header_plotter.update_plot(metadata_list)
-                        except Exception as e:
-                            self.logger.exception(f"Error during metadata plotting: {e}")
-                        next_time = current_time + interval_s
+                if show_metadata or metadata:
+                    for header in header_list:
+                        if show_metadata:
+                            self.logger.debug("Plotting header metadata")
+                            try:
+                                self._header_plotter.update(header)
+                            except Exception as e:
+                                self.logger.exception(f"Exception plotting headers: \n{e}")
+                        if metadata:
+                            self.logger.debug("Saving header metadata")
+                            try:
+                                self._buffered_writer.append(list(header.model_dump().values()))
+                            except Exception as e:
+                                self.logger.exception(f"Exception saving headers: \n{e}")
 
         except KeyboardInterrupt:
             self.terminate.set()
@@ -661,7 +660,9 @@ class StreamDaq:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
             if show_metadata:
-                header_plotter.close_plot()
+                self._header_plotter.close_plot()
+            if metadata:
+                self._buffered_writer.close()
 
             # Join child processes with a timeout
             for p in [p_recv, p_buffer_to_frame, p_format_frame]:
