@@ -97,7 +97,7 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         for record in caplog.records:
             assert "Exception saving headers" not in record.msg
     else:
-        default_streamdaq.capture(source="fpga", metadata=None)
+        default_streamdaq.capture(source="fpga", metadata=None, show_video=False)
         assert not output_csv.exists()
 
 
