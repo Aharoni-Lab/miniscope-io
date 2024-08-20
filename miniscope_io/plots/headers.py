@@ -198,7 +198,7 @@ class StreamPlotter:
                 self.lines[key].set_xdata(self.index)
                 if len(self.index) > 1:
                     self.axes[key].set_xlim(self.index[0], self.index[-1])
-                self.axes[key].set_ylim(np.min(self.data[key]), np.max(self.data[key]))
+                    self.axes[key].set_ylim(np.min(self.data[key]), np.max(self.data[key]))
             plt.draw()
             plt.pause(0.001)
 
