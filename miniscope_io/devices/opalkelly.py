@@ -2,9 +2,19 @@
 Interfaces for OpalKelly (model number?) FPGAs
 """
 
+import multiprocessing as mp
+import os
+from pathlib import Path
+from time import sleep
+from typing import Callable
+
+from bitstring import Bits
+
+from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import (
     DeviceConfigurationError,
     DeviceOpenError,
+    EndOfRecordingException,
     StreamReadError,
 )
 from miniscope_io.logging import init_logger
@@ -87,3 +97,92 @@ class okDev(ok.okCFrontPanel):
         ret = self.UpdateWireIns()
         if ret != self.NoError:
             raise DeviceConfigurationError(f"Wire update failed: {ret}")
+
+
+class okCapture:
+    """
+    Capture class for :class:`.okDev` that pipes minimally formatted buffers
+    to a multiprocessing queue or dequeue
+    """
+
+    def __init__(self, bit_file: Path, read_length: int, preamble: bytes):
+
+        self.bit_file = Path(bit_file)
+        self.read_length = read_length
+        self.preamble = Bits(preamble)
+        self.dev: okDev | okDevMock | None = None
+
+        self.terminate = mp.Event()
+
+    def capture(
+        self, callback: Callable[[bytearray | None], None], process: bool = True
+    ) -> mp.Process | None:
+        """
+        Begin capturing frames
+        Args:
+            callback (Callable): call this function with each buffer received by the device
+            process (bool): If ``True`` (default), run in a separate process
+
+        """
+        if process:
+            proc = mp.Process(target=self._capture_loop, args=(callback,))
+            proc.start()
+            return proc
+        else:
+            self._capture_loop(callback=callback)
+
+    def _capture(self) -> bytearray | None:
+        """Inner capture method, get and return a bytestring from the device"""
+        locallogs = init_logger("okCapture.capture")
+        try:
+            buf = self.dev.readData(self.read_length)
+        except (EndOfRecordingException, StreamReadError, KeyboardInterrupt):
+            locallogs.debug("Got end of recording exception, breaking")
+            return None
+
+        return buf
+
+    def _capture_loop(self, callback: Callable[[bytearray | None], None]) -> None:
+        """
+        Capture a byte string and call the callback function until we are told to end
+        """
+        locallogs = init_logger("okCapture.capture_loop")
+        locallogs.debug("Initializing okDev")
+        self.dev = self.init_device()
+        locallogs.debug("Starting capture")
+        try:
+            while not self.terminate.is_set():
+                buffer = self._capture()
+                if buffer is None:
+                    break
+                callback(buffer)
+        finally:
+            locallogs.debug("Quitting, putting sentinel in queue")
+            callback(None)
+
+    def stop(self) -> None:
+        """
+        Stop capture
+        """
+        self.terminate.set()
+
+    def init_device(self) -> okDev | okDevMock:
+        """Write initialization wires to prepare okDev for streaming data"""
+        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_MOCKRUN"):
+            dev = okDevMock()
+        else:
+            dev = okDev()
+
+        if not self.bit_file.exists():
+            raise RuntimeError(
+                f"Configured to use bitfile at {self.bit_file} but no such file exists"
+            )
+
+        dev.uploadBit(str(self.bit_file))
+        dev.setWire(0x00, 0b0010)
+        sleep(0.01)
+        dev.setWire(0x00, 0b0)
+        dev.setWire(0x00, 0b1000)
+        sleep(0.01)
+        dev.setWire(0x00, 0b0)
+        return dev

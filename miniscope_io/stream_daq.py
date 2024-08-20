@@ -2,13 +2,13 @@
 DAQ For use with FPGA and Uart streaming video sources.
 """
 
+import cProfile
 import logging
 import multiprocessing
-import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Generator, List, Literal, Optional, Tuple, Union
+from typing import Any, Callable, Generator, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -17,7 +17,6 @@ from bitstring import BitArray, Bits
 
 from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
-from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
 from miniscope_io.io import BufferedCSVWriter
@@ -33,7 +32,7 @@ from miniscope_io.plots.headers import StreamPlotter
 HAVE_OK = False
 ok_error = None
 try:
-    from miniscope_io.devices.opalkelly import okDev
+    from miniscope_io.devices.opalkelly import okCapture
 
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError):
@@ -135,35 +134,6 @@ class StreamDaq:
             self._nbuffer_per_fm = len(self.buffer_npix)
         return self._nbuffer_per_fm
 
-    def _parse_header(self, buffer: bytes) -> Tuple[StreamBufferHeader, np.ndarray]:
-        """
-        Function to parse header from each buffer.
-
-        Parameters
-        ----------
-        buffer : bytes
-            Input buffer.
-
-        Returns
-        -------
-        Tuple[BufferHeader, ndarray]
-            The returned header data and payload (uint8).
-        """
-
-        header, payload = BufferFormatter.bytebuffer_to_ndarrays(
-            buffer=buffer,
-            header_length_words=int(self.config.header_len / 32),
-            preamble_length_words=int(len(Bits(self.config.preamble)) / 32),
-            reverse_header_bits=self.config.reverse_header_bits,
-            reverse_header_bytes=self.config.reverse_header_bytes,
-            reverse_payload_bits=self.config.reverse_payload_bits,
-            reverse_payload_bytes=self.config.reverse_payload_bytes,
-        )
-
-        header_data = StreamBufferHeader.from_format(header, self.header_fmt, construct=True)
-
-        return header_data, payload
-
     def _trim(
         self,
         data: np.ndarray,
@@ -235,22 +205,6 @@ class StreamDaq:
             self.logger.info("Close serial port")
             sys.exit(1)
 
-    def _init_okdev(self, BIT_FILE: Path) -> Union[okDev, okDevMock]:
-        # FIXME: when multiprocessing bug resolved, remove this and just mock in tests
-        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("STREAMDAQ_MOCKRUN"):
-            dev = okDevMock()
-        else:
-            dev = okDev()
-
-        dev.uploadBit(str(BIT_FILE))
-        dev.setWire(0x00, 0b0010)
-        time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
-        dev.setWire(0x00, 0b1000)
-        time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
-        return dev
-
     def _fpga_recv(
         self,
         serial_buffer_queue: multiprocessing.Queue,
@@ -284,6 +238,9 @@ class StreamDaq:
         RuntimeError
             If the OpalKelly device library cannot be found
         """
+        pr = cProfile.Profile()
+        pr.enable()
+
         locallogs = init_logger("streamDaq.fpga_recv")
         if not HAVE_OK:
             raise RuntimeError(
@@ -320,22 +277,11 @@ class StreamDaq:
                     with open(capture_binary, "ab") as file:
                         file.write(buf)
 
-                dat = BitArray(buf)
-                cur_buffer = cur_buffer + dat
-                pre_pos = list(cur_buffer.findall(pre))
-                for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
-                    if not pre_first:
-                        buf_start, buf_stop = (
-                            buf_start + len(self.preamble),
-                            buf_stop + len(self.preamble),
-                        )
-                    serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
-                if pre_pos:
-                    cur_buffer = cur_buffer[pre_pos[-1] :]
-
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             serial_buffer_queue.put(None)
+            pr.disable()
+            pr.dump_stats("fpga_recv.stats")
 
     def _buffer_to_frame(
         self,
@@ -358,6 +304,8 @@ class StreamDaq:
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
         """
+        pr = cProfile.Profile()
+        pr.enable()
         locallogs = init_logger("streamDaq.buffer")
 
         cur_fm_num = -1  # Frame number
@@ -423,6 +371,8 @@ class StreamDaq:
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             frame_buffer_queue.put(None)
+            pr.disable()
+            pr.dump_stats("buffer.stats")
 
     def _format_frame(
         self,
@@ -448,6 +398,8 @@ class StreamDaq:
         imagearray : multiprocessing.Queue[np.ndarray]
             Output image array queue.
         """
+        pr = cProfile.Profile()
+        pr.enable()
         locallogs = init_logger("streamDaq.frame")
         try:
             for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
@@ -478,6 +430,8 @@ class StreamDaq:
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             imagearray.put(None)
+            pr.disable()
+            pr.dump_stats("frame.stats")
 
     def init_video(
         self, path: Union[Path, str], fourcc: str = "Y800", **kwargs: dict
@@ -511,8 +465,6 @@ class StreamDaq:
 
     def capture(
         self,
-        source: Literal["uart", "fpga"],
-        read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
         metadata: Optional[Path] = None,
@@ -549,36 +501,9 @@ class StreamDaq:
         ValueError
             If `source` is not in `("uart", "fpga")`.
         """
-        self.terminate.clear()
 
-        shared_resource_manager = multiprocessing.Manager()
-        serial_buffer_queue = shared_resource_manager.Queue(
-            self.config.runtime.serial_buffer_queue_size
-        )
-        frame_buffer_queue = shared_resource_manager.Queue(
-            self.config.runtime.frame_buffer_queue_size
-        )
-        imagearray = shared_resource_manager.Queue(self.config.runtime.image_buffer_queue_size)
-
-        if source == "uart":
-            self.logger.debug("Starting uart capture process")
-            p_recv = multiprocessing.Process(
-                target=self._uart_recv,
-                args=(
-                    serial_buffer_queue,
-                    self.config["port"],
-                    self.config["baudrate"],
-                ),
-            )
-        elif source == "fpga":
-            self.logger.debug("Starting fpga capture process")
-            p_recv = multiprocessing.Process(
-                target=self._fpga_recv,
-                args=(serial_buffer_queue, read_length, True, binary),
-                name="_fpga_recv",
-            )
-        else:
-            raise ValueError(f"source can be one of uart or fpga. Got {source}")
+        read_length = int(max(self.buffer_npix) * self.config.pix_depth / 8 / 16) * 16
+        fpga = okCapture(self.config.bitstream, read_length=read_length, preamble=self.preamble)
 
         # Video output
         writer = None
@@ -586,27 +511,6 @@ class StreamDaq:
             if video_kwargs is None:
                 video_kwargs = {}
             writer = self.init_video(video, **video_kwargs)
-
-        p_buffer_to_frame = multiprocessing.Process(
-            target=self._buffer_to_frame,
-            args=(
-                serial_buffer_queue,
-                frame_buffer_queue,
-            ),
-            name="_buffer_to_frame",
-        )
-        p_format_frame = multiprocessing.Process(
-            target=self._format_frame,
-            args=(
-                frame_buffer_queue,
-                imagearray,
-            ),
-            name="_format_frame",
-        )
-
-        p_recv.start()
-        p_buffer_to_frame.start()
-        p_format_frame.start()
 
         if show_metadata:
             self._header_plotter = StreamPlotter(
@@ -622,6 +526,7 @@ class StreamDaq:
             self._buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
 
         try:
+            proc = fpga.capture()
             for image, header_list in exact_iter(imagearray.get, None):
                 self._handle_frame(
                     image,
@@ -673,6 +578,8 @@ class StreamDaq:
                     self.logger.warning(f"Termination timeout: force terminating process {p.name}.")
                     p.terminate()
                     p.join()
+            pr.disable()
+            pr.dump_stats("capture.stats")
             self.logger.info("Child processes joined. End capture.")
 
     def _handle_frame(
@@ -711,6 +618,68 @@ class StreamDaq:
                         self._buffered_writer.append(list(header.model_dump().values()))
                     except Exception as e:
                         self.logger.exception(f"Exception saving headers: \n{e}")
+
+
+class FPGAProcessor:
+    """
+    Process streaming data from an FPGA
+    """
+
+    def __init__(self, config: StreamDevConfig, callback: Callable[[str], None]):
+        self.config = config
+        self.cur_buffer = BitArray()
+
+    def update(self, buffer: bytearray):
+        """
+        Update the processor with a new buffer
+        """
+
+    def find_header(self, buf):
+        dat = BitArray(buf)
+        cur_buffer = cur_buffer + dat
+        pre_pos = list(cur_buffer.findall(pre))
+        for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
+            if not pre_first:
+                buf_start, buf_stop = (
+                    buf_start + len(self.preamble),
+                    buf_stop + len(self.preamble),
+                )
+            serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
+        if pre_pos:
+            cur_buffer = cur_buffer[pre_pos[-1] :]
+
+    @classmethod
+    def parse_header(self, buffer: bytes) -> Tuple[StreamBufferHeader, np.ndarray]:
+        """
+        Function to parse header from each buffer.
+
+        Parameters
+        ----------
+        buffer : bytes
+            Input buffer.
+
+        Returns
+        -------
+        Tuple[BufferHeader, ndarray]
+            The returned header data and payload (uint8).
+        """
+
+        header, payload = BufferFormatter.bytebuffer_to_ndarrays(
+            buffer=buffer,
+            header_length_words=int(self.config.header_len / 32),
+            preamble_length_words=int(len(Bits(self.config.preamble)) / 32),
+            reverse_header_bits=self.config.reverse_header_bits,
+            reverse_header_bytes=self.config.reverse_header_bytes,
+            reverse_payload_bits=self.config.reverse_payload_bits,
+            reverse_payload_bytes=self.config.reverse_payload_bytes,
+        )
+
+        header_data = StreamBufferHeader.from_format(header, self.header_fmt, construct=True)
+
+        return header_data, payload
+
+    def process(self) -> tuple[np.ndarray, list[StreamBufferHeader]]:
+        pass
 
 
 # DEPRECATION: v0.3.0
