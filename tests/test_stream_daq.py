@@ -8,11 +8,14 @@ from miniscope_io.utils import hash_video, hash_file
 from .conftest import DATA_DIR, CONFIG_DIR
 
 
-@pytest.fixture()
-def default_streamdaq(set_okdev_input) -> StreamDaq:
+@pytest.fixture(params=[pytest.param(5, id="buffer-size-5"), pytest.param(10, id="buffer-size-10")])
+def default_streamdaq(set_okdev_input, request) -> StreamDaq:
 
     test_config_path = CONFIG_DIR / "stream_daq_test_200px.yml"
     daqConfig = StreamDevConfig.from_yaml(test_config_path)
+    daqConfig.runtime.frame_buffer_queue_size = request.param
+    daqConfig.runtime.image_buffer_queue_size = request.param
+    daqConfig.runtime.serial_buffer_queue_size = request.param
 
     data_file = DATA_DIR / "stream_daq_test_fpga_raw_input_200px.bin"
     set_okdev_input(data_file)
@@ -21,22 +24,32 @@ def default_streamdaq(set_okdev_input) -> StreamDaq:
     return daq_inst
 
 
+@pytest.mark.parametrize("buffer_size", [5, 50])
 @pytest.mark.parametrize(
     "config,data,video_hash_list,show_video",
     [
         (
             "stream_daq_test_200px.yml",
             "stream_daq_test_fpga_raw_input_200px.bin",
-            '["f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c","8a6f6dc69275ec3fbcd69d1e1f467df8503306fa0778e4b9c1d41668a7af4856","3676bc4c6900bc9ec18b8387abdbed35978ebc48408de7b1692959037bc6274d"] ',
+            [
+                "f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c",
+                "8a6f6dc69275ec3fbcd69d1e1f467df8503306fa0778e4b9c1d41668a7af4856",
+                "3676bc4c6900bc9ec18b8387abdbed35978ebc48408de7b1692959037bc6274d",
+            ],
             False,
         )
     ],
 )
-def test_video_output(config, data, video_hash_list, tmp_path, show_video, set_okdev_input):
+def test_video_output(
+    config, data, video_hash_list, tmp_path, show_video, set_okdev_input, buffer_size
+):
     output_video = tmp_path / "output.avi"
 
     test_config_path = CONFIG_DIR / config
     daqConfig = StreamDevConfig.from_yaml(test_config_path)
+    daqConfig.runtime.frame_buffer_queue_size = buffer_size
+    daqConfig.runtime.image_buffer_queue_size = buffer_size
+    daqConfig.runtime.serial_buffer_queue_size = buffer_size
 
     data_file = DATA_DIR / data
     set_okdev_input(data_file)
