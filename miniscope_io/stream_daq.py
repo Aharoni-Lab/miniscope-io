@@ -423,7 +423,7 @@ class StreamDaq:
                     )
 
         finally:
-            frame_buffer_queue.put((None, header_list)) #for getting remaining buffers.
+            frame_buffer_queue.put((None, header_list))  # for getting remaining buffers.
             locallogs.debug("Quitting, putting sentinel in queue")
             frame_buffer_queue.put(None)
 
