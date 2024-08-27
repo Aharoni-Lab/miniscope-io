@@ -200,7 +200,7 @@ class StreamPlotter:
                     self.axes[key].set_xlim(self.index[0], self.index[-1])
                     self.axes[key].set_ylim(np.min(self.data[key]), np.max(self.data[key]))
             plt.draw()
-            plt.pause(0.001)
+            plt.pause(0.01)
 
     def close_plot(self) -> None:
         """
