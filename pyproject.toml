@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "miniscope_io"
-version = "0.3.0"
+version = "0.4.0"
 description = "Generic I/O for miniscopes"
 authors = [
     "sneakers-the-rat <JLSaunders987@gmail.com>",
