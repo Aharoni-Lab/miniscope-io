@@ -697,6 +697,7 @@ class StreamDaq:
         """
         if show_video is True:
             cv2.imshow("image", image)
+            cv2.waitKey(1)
         if writer:
             picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
             writer.write(picture)
