@@ -50,7 +50,11 @@ def _capture_options(fn: Callable) -> Callable:
     fn = click.option("--no-display", is_flag=True, help="Don't show video in real time")(fn)
     fn = click.option("-b", "--binary_export", is_flag=True, help="Save binary to a .bin file")(fn)
     fn = click.option(
-        "-m", "--metadata_display", is_flag=True, help="Display metadata in real time"
+        "-m",
+        "--metadata_display",
+        is_flag=True,
+        help="Display metadata in real time. \n"
+        "**WARNING:** This is still an **EXPERIMENTAL** feature and is **UNSTABLE**.",
     )(fn)
     return fn
 
