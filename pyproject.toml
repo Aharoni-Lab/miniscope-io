@@ -120,6 +120,8 @@ select = [
     "I",
     # annotations
     "ANN",
+    # no debugger
+    "T10",
     ## ----------
     # pydocstyle
     # undocumented public objects

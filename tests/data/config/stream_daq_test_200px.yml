@@ -23,3 +23,17 @@ reverse_header_bits: True
 reverse_header_bytes: True
 reverse_payload_bits: True
 reverse_payload_bytes: True
+
+runtime:
+  serial_buffer_queue_size: 10
+  frame_buffer_queue_size: 5
+  image_buffer_queue_size: 5
+  csv:
+    buffer: 100
+  plot:
+    keys:
+      - timestamp
+      - buffer_count
+      - frame_buffer_count
+    update_ms: 1000
+    history: 500

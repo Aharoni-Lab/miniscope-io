@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4
+
+### 0.4.0 - 24-08-27
+
+Enhancements and bugfixes to `StreamDaq`. Mostly around handling metadata.
+
+Contributors: [@t-sasatani](https://github.com/t-sasatani), [@sneakers-the-rat](https://github.com/sneakers-the-rat), [@MarcelMB](https://github.com/MarcelMB).
+Related PRs: [#35](https://github.com/Aharoni-Lab/miniscope-io/pull/35), [#38](https://github.com/Aharoni-Lab/miniscope-io/pull/38), [#33](https://github.com/Aharoni-Lab/miniscope-io/pull/33)
+Related Issues: [#34](https://github.com/Aharoni-Lab/miniscope-io/issues/34), [#36](https://github.com/Aharoni-Lab/miniscope-io/issues/36), [#38](https://github.com/Aharoni-Lab/miniscope-io/issues/38), [#40](https://github.com/Aharoni-Lab/miniscope-io/issues/40)
+
+**Features:**
+- **Metadata handling**: CSV export and real-time plotting of metadata. The plotting feature is experimental and is still very unstable. Also improved metadata error handling.
+- **CLI enhancement**: Generate video and metadata csv files with same stem names.
+
+**Models/Formats:**
+- **Runtime config**: `StreamDevRuntime` now configures queue and buffer sizes used in `StreamDaq`.
+
+**CI / Bugfix:**
+- **Fix termination**: Now buffer size doesn't affect output video. Very good for tests.
+- **Device docs section**: For adding documentation about specific devices.
+- **CLI docs on RTD**: Mock binaries so CLI docs show up on RTD.
+- **Dependency**: Update some packages for Windows compatibility.
+
 ## 0.3
 
 ### 0.3.0 - 24-07-04

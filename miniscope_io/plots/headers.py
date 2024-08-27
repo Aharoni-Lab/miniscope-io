@@ -2,9 +2,15 @@
 Plot headers from :class:`.SDCard`
 """
 
-from typing import Optional, Tuple
+from collections import deque
+from itertools import count
+from time import time
+from typing import Any, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
+
+from miniscope_io.models.stream import StreamBufferHeader
 
 try:
     import matplotlib.pyplot as plt
@@ -101,3 +107,104 @@ def plot_headers(
     fig.set_figheight(size[1])
 
     return fig, ax
+
+
+class StreamPlotter:
+    """
+    Plot headers from StreamDaq.
+
+    .. note::
+
+        Eventually this should get generalized into a plotter object that
+        can take an arbitrary set of keys and values, but for now is
+        somewhat specific to :class:`.StreamDaq` , at least in the type hints.
+
+    """
+
+    def __init__(
+        self, header_keys: List[str], history_length: int = 100, update_ms: int = 1000
+    ) -> None:
+        """
+        Constructor of StreamPlotter.
+
+        Parameters:
+            header_keys (list[str]): List of header keys to plot or a single header key as a string
+            history_length (int): Number of headers to plot
+            update_ms (int): milliseconds between each plot update
+        """
+        # If a single string is provided, convert it to a list with one element
+        if isinstance(header_keys, str):
+            header_keys = [header_keys]
+
+        self.header_keys = header_keys
+        self.history_length = history_length
+        self.update_ms = update_ms
+        self.fig, self.axes, self.lines = self._init_plot()
+        self.data = {key: deque(maxlen=self.history_length) for key in self.header_keys}
+        self.index = deque(maxlen=self.history_length)
+        self._last_update = time()
+        self._index_counter = count()
+
+    def _init_plot(
+        self,
+    ) -> tuple[plt.Figure, dict[str, plt.Axes], dict[str, plt.Line2D]]:
+
+        # initialize matplotlib
+        plt.ion()
+        fig: plt.Figure
+        axes: np.ndarray[Any, np.dtype[plt.Axes]]
+        fig, axes = plt.subplots(len(self.header_keys), 1, figsize=(6, len(self.header_keys) * 3))
+        axes = np.array(axes).reshape(-1)  # Ensure axes is an array
+
+        # Initialize line objects
+        axes_dict = {}
+        lines = {}
+        for i, header_key in enumerate(self.header_keys):
+            ax: plt.Axes = axes[i]
+            metadata_trunc = np.zeros((0, 2))
+            x_data = metadata_trunc[:, 0]
+            y_data = metadata_trunc[:, 1]
+            (line,) = ax.plot(x_data, y_data)
+            lines[header_key] = line
+            axes_dict[header_key] = ax
+
+            if i == len(self.header_keys) - 1:
+                ax.set_xlabel("index")
+
+            ax.set_ylabel(header_key)
+        return fig, axes_dict, lines
+
+    def update(
+        self,
+        header: StreamBufferHeader,
+    ) -> None:
+        """
+        Update the plot with the latest data.
+
+        Parameters:
+            header: StreamBufferHeader to update with
+        """
+        this_update = time()
+
+        # update the index
+        self.index.append(next(self._index_counter))
+        for key in self.header_keys:
+            self.data[key].append(getattr(header, key))
+
+        if this_update - self._last_update > (self.update_ms / 1000):
+            self._last_update = this_update
+            for key in self.header_keys:
+                self.lines[key].set_ydata(self.data[key])
+                self.lines[key].set_xdata(self.index)
+                if len(self.index) > 1:
+                    self.axes[key].set_xlim(self.index[0], self.index[-1])
+                    self.axes[key].set_ylim(np.min(self.data[key]), np.max(self.data[key]))
+            plt.draw()
+            plt.pause(0.01)
+
+    def close_plot(self) -> None:
+        """
+        Close the plot and perform any necessary cleanup.
+        """
+        plt.ioff()  # Turn off interactive mode
+        plt.close(self.fig)

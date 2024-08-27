@@ -20,6 +20,7 @@ from miniscope_io.bit_operation import BufferFormatter
 from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
+from miniscope_io.io import BufferedCSVWriter
 from miniscope_io.models.stream import (
     StreamBufferHeader,
     StreamDevConfig,
@@ -27,6 +28,7 @@ from miniscope_io.models.stream import (
 from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
 )
+from miniscope_io.plots.headers import StreamPlotter
 
 HAVE_OK = False
 ok_error = None
@@ -104,9 +106,12 @@ class StreamDaq:
         self.config = device_config
         self.header_fmt = header_fmt
         self.preamble = self.config.preamble
+        self.terminate: multiprocessing.Event = multiprocessing.Event()
+
         self._buffer_npix: Optional[List[int]] = None
         self._nbuffer_per_fm: Optional[int] = None
-        self.terminate: multiprocessing.Event = multiprocessing.Event()
+        self._buffered_writer: Optional[BufferedCSVWriter] = None
+        self._header_plotter: Optional[StreamPlotter] = None
 
     @property
     def buffer_npix(self) -> List[int]:
@@ -159,22 +164,34 @@ class StreamDaq:
 
         return header_data, payload
 
-    def _trim(self, data: np.ndarray, expected_size: int, logger: logging.Logger) -> np.ndarray:
+    def _trim(
+        self,
+        data: np.ndarray,
+        expected_size_array: List[int],
+        header: StreamBufferHeader,
+        logger: logging.Logger,
+    ) -> np.ndarray:
         """
         Trim or pad an array to match an expected size
         """
-        if data.shape[0] != expected_size:
+        expected_payload_size = expected_size_array[0]
+        expected_data_size = expected_size_array[header.frame_buffer_count]
+
+        if data.shape[0] != expected_payload_size:
             logger.warning(
-                f"Expected buffer data length: {expected_size}, got data with shape "
-                f"{data.shape}. Padding to expected length",
+                f"Frame {header.frame_num}; Buffer {header.buffer_count} "
+                f"(#{header.frame_buffer_count} in frame)\n"
+                f"Expected buffer data length: {expected_payload_size}, got data with shape "
+                f"{data.shape}.\nPadding to expected length",
             )
 
+        if data.shape[0] != expected_data_size:
             # trim if too long
-            if data.shape[0] > expected_size:
-                data = data[0:expected_size]
+            if data.shape[0] > expected_data_size:
+                data = data[0:expected_data_size]
             # pad if too short
             else:
-                data = np.pad(data, (0, expected_size - data.shape[0]))
+                data = np.pad(data, (0, expected_data_size - data.shape[0]))
 
         return data
 
@@ -267,6 +284,7 @@ class StreamDaq:
         RuntimeError
             If the OpalKelly device library cannot be found
         """
+        locallogs = init_logger("streamDaq.fpga_recv")
         if not HAVE_OK:
             raise RuntimeError(
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
@@ -289,30 +307,35 @@ class StreamDaq:
         if self.config.reverse_header_bits:
             pre = pre[::-1]
 
-        while not self.terminate.is_set():
-            try:
-                buf = dev.readData(read_length)
-            except (EndOfRecordingException, StreamReadError, KeyboardInterrupt):
-                self.terminate.set()
-                serial_buffer_queue.put(None)
-                break
+        locallogs.debug("Starting capture")
+        try:
+            while not self.terminate.is_set():
+                try:
+                    buf = dev.readData(read_length)
+                except (EndOfRecordingException, StreamReadError, KeyboardInterrupt):
+                    locallogs.debug("Got end of recording exception, breaking")
+                    break
 
-            if capture_binary:
-                with open(capture_binary, "ab") as file:
-                    file.write(buf)
+                if capture_binary:
+                    with open(capture_binary, "ab") as file:
+                        file.write(buf)
 
-            dat = BitArray(buf)
-            cur_buffer = cur_buffer + dat
-            pre_pos = list(cur_buffer.findall(pre))
-            for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
-                if not pre_first:
-                    buf_start, buf_stop = (
-                        buf_start + len(self.preamble),
-                        buf_stop + len(self.preamble),
-                    )
-                serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
-            if pre_pos:
-                cur_buffer = cur_buffer[pre_pos[-1] :]
+                dat = BitArray(buf)
+                cur_buffer = cur_buffer + dat
+                pre_pos = list(cur_buffer.findall(pre))
+                for buf_start, buf_stop in zip(pre_pos[:-1], pre_pos[1:]):
+                    if not pre_first:
+                        buf_start, buf_stop = (
+                            buf_start + len(self.preamble),
+                            buf_stop + len(self.preamble),
+                        )
+                    serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
+                if pre_pos:
+                    cur_buffer = cur_buffer[pre_pos[-1] :]
+
+        finally:
+            locallogs.debug("Quitting, putting sentinel in queue")
+            serial_buffer_queue.put(None)
 
     def _buffer_to_frame(
         self,
@@ -341,15 +364,32 @@ class StreamDaq:
 
         frame_buffer_prealloc = [np.zeros(bufsize, dtype=np.uint8) for bufsize in self.buffer_npix]
         frame_buffer = frame_buffer_prealloc.copy()
+        header_list = []
+
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
-                if self.terminate.is_set():
-                    break
 
                 header_data, serial_buffer = self._parse_header(serial_buffer)
-                serial_buffer = self._trim(
-                    serial_buffer, self.buffer_npix[header_data.frame_buffer_count], locallogs
-                )
+                header_list.append(header_data)
+
+                try:
+                    serial_buffer = self._trim(
+                        serial_buffer,
+                        self.buffer_npix,
+                        header_data,
+                        locallogs,
+                    )
+                except IndexError:
+                    locallogs.warning(
+                        f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
+                        f"(#{header_data.frame_buffer_count} in frame)\n"
+                        f"Frame buffer count {header_data.frame_buffer_count} "
+                        f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
+                        f"Discarding buffer."
+                    )
+                    if header_list:
+                        frame_buffer_queue.put((None, header_list))
+                    continue
 
                 # if first buffer of a frame
                 if header_data.frame_num != cur_fm_num:
@@ -358,10 +398,11 @@ class StreamDaq:
                         continue
 
                     # push previous frame_buffer into frame_buffer queue
-                    frame_buffer_queue.put(frame_buffer)
+                    frame_buffer_queue.put((frame_buffer, header_list))
 
                     # init new frame_buffer
                     frame_buffer = frame_buffer_prealloc.copy()
+                    header_list = []
 
                     # update frame_num and index
                     cur_fm_num = header_data.frame_num
@@ -382,6 +423,8 @@ class StreamDaq:
                     )
 
         finally:
+            frame_buffer_queue.put((None, header_list))  # for getting remaining buffers.
+            locallogs.debug("Quitting, putting sentinel in queue")
             frame_buffer_queue.put(None)
 
     def _format_frame(
@@ -410,9 +453,7 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.frame")
         try:
-            for frame_data in exact_iter(frame_buffer_queue.get, None):
-                if self.terminate.is_set():
-                    break
+            for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
 
                 locallogs.debug("Found frame in queue")
                 if len(frame_data) == 0:
@@ -436,23 +477,35 @@ class StreamDaq:
                     frame = np.zeros(
                         (self.config.frame_width, self.config.frame_height), dtype=np.uint8
                     )
-
-                imagearray.put(frame)
+                imagearray.put((frame, header_list))
         finally:
+            locallogs.debug("Quitting, putting sentinel in queue")
             imagearray.put(None)
 
-    def init_video(self, path: Path, fourcc: str = "Y800", **kwargs: dict) -> cv2.VideoWriter:
+    def init_video(
+        self, path: Union[Path, str], fourcc: str = "Y800", **kwargs: dict
+    ) -> cv2.VideoWriter:
         """
         Create a parameterized video writer
 
-        Args:
-            path (:class:`pathlib.Path`): Video file to write to
-            fourcc (str): Fourcc code to use
-            kwargs: passed to :class:`cv2.VideoWriter`
+        Parameters
+        ----------
+        frame_buffer_queue : multiprocessing.Queue[list[bytes]]
+            Input buffer queue.
+        path : Union[Path, str]
+            Video file to write to
+        fourcc : str
+            Fourcc code to use
+        kwargs : dict
+            passed to :class:`cv2.VideoWriter`
 
         Returns:
+        ---------
             :class:`cv2.VideoWriter`
         """
+        if isinstance(path, str):
+            path = Path(path)
+
         fourcc = cv2.VideoWriter_fourcc(*fourcc)
         frame_rate = self.config.fs
         frame_size = (self.config.frame_width, self.config.frame_height)
@@ -465,8 +518,10 @@ class StreamDaq:
         read_length: Optional[int] = None,
         video: Optional[Path] = None,
         video_kwargs: Optional[dict] = None,
+        metadata: Optional[Path] = None,
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
+        show_metadata: Optional[bool] = False,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -482,9 +537,15 @@ class StreamDaq:
             If present, a path to an output video file
         video_kwargs: dict, optional
             kwargs passed to :meth:`.init_video`
+        metadata: Path, optional
+            Save metadata information during capture.
         binary: Path, optional
             Save raw binary directly from ``okDev`` to file, if present.
             Note that binary is captured in *append* mode, rather than rewriting an existing file.
+        show_video: bool, optional
+            If True, display the video in real-time.
+        show_metadata: bool, optional
+            If True, show metadata information during capture.
 
         Raises
         ------
@@ -493,15 +554,14 @@ class StreamDaq:
         """
         self.terminate.clear()
 
-        # Queue size is hard coded
-        queue_manager = multiprocessing.Manager()
-        serial_buffer_queue = queue_manager.Queue(
-            10
-        )  # b'\x00' # hand over single buffer: uart_recv() -> buffer_to_frame()
-        frame_buffer_queue = queue_manager.Queue(5)  # [b'\x00', b'\x00', b'\x00', b'\x00', b'\x00']
-        # hand over a frame (five buffers): buffer_to_frame()
-        imagearray = queue_manager.Queue(5)
-        imagearray.put(np.zeros(int(self.config.frame_width * self.config.frame_height), np.uint8))
+        shared_resource_manager = multiprocessing.Manager()
+        serial_buffer_queue = shared_resource_manager.Queue(
+            self.config.runtime.serial_buffer_queue_size
+        )
+        frame_buffer_queue = shared_resource_manager.Queue(
+            self.config.runtime.frame_buffer_queue_size
+        )
+        imagearray = shared_resource_manager.Queue(self.config.runtime.image_buffer_queue_size)
 
         if source == "uart":
             self.logger.debug("Starting uart capture process")
@@ -524,13 +584,11 @@ class StreamDaq:
             raise ValueError(f"source can be one of uart or fpga. Got {source}")
 
         # Video output
+        writer = None
         if video:
             if video_kwargs is None:
                 video_kwargs = {}
-
             writer = self.init_video(video, **video_kwargs)
-        else:
-            writer = None
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
@@ -552,19 +610,48 @@ class StreamDaq:
         p_recv.start()
         p_buffer_to_frame.start()
         p_format_frame.start()
-        # p_terminate.start()
+
+        if show_metadata:
+            self._header_plotter = StreamPlotter(
+                header_keys=self.config.runtime.plot.keys,
+                history_length=self.config.runtime.plot.history,
+                update_ms=self.config.runtime.plot.update_ms,
+            )
+
+        if metadata:
+            self._buffered_writer = BufferedCSVWriter(
+                metadata, buffer_size=self.config.runtime.csvwriter.buffer
+            )
+            self._buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
+
         try:
-            for image in exact_iter(imagearray.get, None):
-                if show_video is True:
-                    cv2.imshow("image", image)
-                    if cv2.waitKey(1) == 27:  # get out with ESC key
-                        self.terminate.set()
-                        break
-                if writer:
-                    picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
-                    writer.write(picture)
+            for image, header_list in exact_iter(imagearray.get, None):
+                self._handle_frame(
+                    image,
+                    header_list,
+                    show_video=show_video,
+                    writer=writer,
+                    show_metadata=show_metadata,
+                    metadata=metadata,
+                )
+
         except KeyboardInterrupt:
+            self.logger.exception(
+                "Quitting capture, processing remaining frames. Ctrl+C again to force quit"
+            )
             self.terminate.set()
+            try:
+                for image, header_list in exact_iter(lambda: imagearray.get(1), None):
+                    self._handle_frame(
+                        image,
+                        header_list,
+                        show_video=show_video,
+                        writer=writer,
+                        show_metadata=show_metadata,
+                        metadata=metadata,
+                    )
+            except KeyboardInterrupt:
+                self.logger.exception("Force quitting")
         except Exception as e:
             self.logger.exception(f"Error during capture: {e}")
             self.terminate.set()
@@ -575,15 +662,59 @@ class StreamDaq:
             if show_video:
                 cv2.destroyAllWindows()
                 cv2.waitKey(100)
+            if show_metadata:
+                self._header_plotter.close_plot()
+            if metadata:
+                self._buffered_writer.close()
 
             # Join child processes with a timeout
+            # Should never happen except during a force quit, as we wait for all
+            # queues to drain, and if they don't do so on their own, it's a bug.
             for p in [p_recv, p_buffer_to_frame, p_format_frame]:
-                p.join(timeout=2)
+                p.join(timeout=5)
                 if p.is_alive():
                     self.logger.warning(f"Termination timeout: force terminating process {p.name}.")
                     p.terminate()
                     p.join()
             self.logger.info("Child processes joined. End capture.")
+
+    def _handle_frame(
+        self,
+        image: np.ndarray,
+        header_list: list[StreamBufferHeader],
+        show_video: bool,
+        writer: Optional[cv2.VideoWriter],
+        show_metadata: bool,
+        metadata: Optional[Path] = None,
+    ) -> None:
+        """
+        Inner handler for :meth:`.capture` to process the frames from the frame queue.
+
+        .. todo::
+
+            Further refactor to break into smaller pieces, not have to pass 100 args every time.
+
+        """
+        if show_video is True:
+            cv2.imshow("image", image)
+            cv2.waitKey(1)
+        if writer:
+            picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
+            writer.write(picture)
+        if show_metadata or metadata:
+            for header in header_list:
+                if show_metadata:
+                    self.logger.debug("Plotting header metadata")
+                    try:
+                        self._header_plotter.update(header)
+                    except Exception as e:
+                        self.logger.exception(f"Exception plotting headers: \n{e}")
+                if metadata:
+                    self.logger.debug("Saving header metadata")
+                    try:
+                        self._buffered_writer.append(list(header.model_dump().values()))
+                    except Exception as e:
+                        self.logger.exception(f"Exception saving headers: \n{e}")
 
 
 # DEPRECATION: v0.3.0
