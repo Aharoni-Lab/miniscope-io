@@ -387,6 +387,8 @@ class StreamDaq:
                         f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
                         f"Discarding buffer."
                     )
+                    if header_list:
+                        frame_buffer_queue.put((None, header_list))
                     continue
 
                 # if first buffer of a frame
@@ -421,6 +423,7 @@ class StreamDaq:
                     )
 
         finally:
+            frame_buffer_queue.put((None, header_list)) #for getting remaining buffers.
             locallogs.debug("Quitting, putting sentinel in queue")
             frame_buffer_queue.put(None)
 
