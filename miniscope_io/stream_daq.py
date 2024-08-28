@@ -177,7 +177,8 @@ class StreamDaq:
         expected_payload_size = expected_size_array[0]
         expected_data_size = expected_size_array[header.frame_buffer_count]
 
-        if data.shape[0] != expected_payload_size:
+        # This is temporary. It's better to detect all dummy words and remove them.
+        if data.shape[0] != expected_payload_size + self.config.dummy_words * 4:
             logger.warning(
                 f"Frame {header.frame_num}; Buffer {header.buffer_count} "
                 f"(#{header.frame_buffer_count} in frame)\n"
