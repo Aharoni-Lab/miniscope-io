@@ -456,8 +456,11 @@ class StreamDaq:
         try:
             for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
 
-                locallogs.debug("Found frame in queue")
+                if not frame_data:
+                    imagearray.put((None, header_list))
+                    continue
                 if len(frame_data) == 0:
+                    imagearray.put((None, header_list))
                     continue
                 frame_data = np.concatenate(frame_data, axis=0)
 
