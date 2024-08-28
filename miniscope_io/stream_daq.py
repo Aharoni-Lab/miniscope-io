@@ -120,7 +120,8 @@ class StreamDaq:
             px_per_frame = self.config.frame_width * self.config.frame_height
             px_per_buffer = (
                 self.config.buffer_block_length * self.config.block_size
-                - self.config.header_len / 8 - self.config.dummy_words * 4
+                - self.config.header_len / 8
+                - self.config.dummy_words * 4
             )
             quotient, remainder = divmod(px_per_frame, px_per_buffer)
             self._buffer_npix = [int(px_per_buffer)] * int(quotient) + [int(remainder)]

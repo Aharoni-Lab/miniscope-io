@@ -152,6 +152,10 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
         If True, reverse the byte order within each 32-bit word of the payload.
         This is used for handling endianness in systems where the byte order needs to be swapped.
         Default is False.
+    dummy_words : int, optional
+        Number of 32-bit dummy words in the header.
+        This is used to stabilize clock recovery in FPGA Manchester decoder.
+        This value does not have a meaning for image recovery.
 
     ..todo::
         Move port (for USART) to a user config area. This should make this pure device config.
@@ -174,8 +178,8 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_header_bytes: bool = False
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
-    runtime: StreamDevRuntime = StreamDevRuntime()
     dummy_words: int = 0
+    runtime: StreamDevRuntime = StreamDevRuntime()
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
