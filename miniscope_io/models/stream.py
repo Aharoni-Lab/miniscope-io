@@ -175,6 +175,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
     runtime: StreamDevRuntime = StreamDevRuntime()
+    dummy_words: int = 0
 
     @field_validator("preamble", mode="before")
     def preamble_to_bytes(cls, value: Union[str, bytes, int]) -> bytes:
