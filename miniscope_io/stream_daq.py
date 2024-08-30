@@ -24,6 +24,7 @@ from miniscope_io.io import BufferedCSVWriter
 from miniscope_io.models.stream import (
     StreamBufferHeader,
     StreamDevConfig,
+    adcScaling,
 )
 from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
@@ -646,6 +647,7 @@ class StreamDaq:
                     writer=writer,
                     show_metadata=show_metadata,
                     metadata=metadata,
+                    adc_scaling=self.config.adc_scale,
                 )
 
         except KeyboardInterrupt:
@@ -699,6 +701,7 @@ class StreamDaq:
         writer: Optional[cv2.VideoWriter],
         show_metadata: bool,
         metadata: Optional[Path] = None,
+        adc_scaling: Optional[adcScaling] = None,
     ) -> None:
         """
         Inner handler for :meth:`.capture` to process the frames from the frame queue.
@@ -717,6 +720,7 @@ class StreamDaq:
         if show_metadata or metadata:
             for header in header_list:
                 if show_metadata:
+                    header.set_adc_scaling(adc_scaling)
                     self.logger.debug("Plotting header metadata")
                     try:
                         self._header_plotter.update(header)

@@ -15,6 +15,6 @@ StreamBufferHeader = StreamBufferHeaderFormat(
     timestamp=6,
     pixel_count=7,
     write_timestamp=8,
-    battery_voltage=9,
-    ewl_pos=10,
+    battery_voltage_adc=9,
+    input_voltage_adc=10,
 )

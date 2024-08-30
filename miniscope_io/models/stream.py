@@ -14,6 +14,27 @@ from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.sinks import CSVWriterConfig, StreamPlotterConfig
 
 
+class adcScaling(MiniscopeConfig):
+    """
+    Configuration for the ADC scaling factors
+    """
+    ref_voltage: float = Field(
+        1.1,
+        description="Reference voltage of the ADC",
+    )
+    bitdepth: int = Field(
+        8,
+        description="Bit depth of the ADC",
+    )
+    battery_div_factor: float = Field(
+        5.0,
+        description="Voltage divider factor for the battery voltage",
+    )
+    vin_div_factor: float = Field(
+        11.3,
+        description="Voltage divider factor for the Vin voltage",
+    )
+    
 class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
     Refinements of :class:`.BufferHeaderFormat` for
@@ -24,15 +45,19 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     pixel_count: int
         Number of pixels in the buffer.
     battery_voltage: int
-        Battery voltage. Mapping to mV will be documented in device documentation.
-    ewl_pos: int
-        Electrical wetting lens position.
+        Battery voltage. This is currently raw ADC value.
+        Mapping to mV will be documented in device documentation.
+    vin_voltage: int
+        Input voltage. This is currently raw ADC value.
+        Mapping to mV will be documented in device documentation.
+    _adc_scaling: adcScaling
+        Scaling factors for the ADC. This is used to convert raw ADC values to voltages.
     """
 
     pixel_count: int
-    battery_voltage: int
-    ewl_pos: int
-
+    battery_voltage_adc: int
+    input_voltage_adc: int
+    _adc_scaling: adcScaling = None
 
 class StreamBufferHeader(BufferHeader):
     """
@@ -41,9 +66,41 @@ class StreamBufferHeader(BufferHeader):
     """
 
     pixel_count: int
-    battery_voltage: int
-    ewl_pos: int
+    battery_voltage_adc: int
+    input_voltage_adc: int
+    _adc_scaling: adcScaling = None
 
+    def set_adc_scaling(self, scaling: adcScaling)-> None:
+        """
+        set adc scaling in the header format
+        """
+        self._adc_scaling = scaling
+
+    @property
+    def battery_voltage(self) -> float:
+        """
+        Scaled battery voltage in Volts.
+        """
+        if self._adc_scaling is None:
+            raise ValueError("ADC scaling factors not set")
+        return (
+            self.battery_voltage_adc / 2**self._adc_scaling.bitdepth *
+            self._adc_scaling.ref_voltage *
+            self._adc_scaling.battery_div_factor
+        )
+
+    @property
+    def input_voltage(self) -> float:
+        """
+        Scaled input voltage in Volts.
+        """
+        if self._adc_scaling is None:
+            raise ValueError("ADC scaling factors not set")
+        return (
+            self.input_voltage_adc / 2**self._adc_scaling.bitdepth *
+            self._adc_scaling.ref_voltage *
+            self._adc_scaling.battery_div_factor
+        )
 
 class StreamDevRuntime(MiniscopeConfig):
     """
@@ -81,7 +138,6 @@ class StreamDevRuntime(MiniscopeConfig):
         "Note that this does *not* control whether header metadata is written during capture, "
         "for enabling/disabling, use the ``metadata`` kwarg in the capture method.",
     )
-
 
 class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     """
@@ -179,6 +235,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
     dummy_words: int = 0
+    adc_scale: adcScaling = adcScaling()
     runtime: StreamDevRuntime = StreamDevRuntime()
 
     @field_validator("preamble", mode="before")
