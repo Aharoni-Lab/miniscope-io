@@ -104,7 +104,7 @@ class StreamBufferHeader(BufferHeader):
             self.input_voltage_adc
             / 2**self._adc_scaling.bitdepth
             * self._adc_scaling.ref_voltage
-            * self._adc_scaling.battery_div_factor
+            * self._adc_scaling.vin_div_factor
         )
 
 
