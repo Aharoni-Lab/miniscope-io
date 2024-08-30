@@ -118,11 +118,11 @@ class StreamDaq:
         """List of pixels per buffer for a frame"""
         if self._buffer_npix is None:
             px_per_frame = self.config.frame_width * self.config.frame_height
-            byte_per_word = np.iinfo(np.int32).bits / np.iinfo(np.int8).bits 
+            byte_per_word = np.iinfo(np.int32).bits / np.iinfo(np.int8).bits
 
             px_per_buffer = (
                 self.config.buffer_block_length * self.config.block_size
-                - self.config.header_len / np.iinfo(np.int8).bits 
+                - self.config.header_len / np.iinfo(np.int8).bits
                 - self.config.dummy_words * byte_per_word
             )
             quotient, remainder = divmod(px_per_frame, px_per_buffer)
@@ -176,11 +176,17 @@ class StreamDaq:
     ) -> np.ndarray:
         """
         Trim or pad an array to match an expected size
+
+        .. todo::
+            Re-think about the timing to deal with dummy words.
+            It feels cleaner to remove these dummy words right after the preamble detections.
+            That way, all data we inject into later stages will be pure metadata and pixel data.
+            This isn't critical and I don't want to slow down detection so skipping for now.
         """
         expected_payload_size = expected_size_array[0]
         expected_data_size = expected_size_array[header.frame_buffer_count]
 
-        # This is temporary. It's better to detect all dummy words and remove them.
+        # This validation is temporary. More info in todo above.
         if data.shape[0] != expected_payload_size + self.config.dummy_words * 4:
             logger.warning(
                 f"Frame {header.frame_num}; Buffer {header.buffer_count} "
