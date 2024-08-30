@@ -18,6 +18,7 @@ class adcScaling(MiniscopeConfig):
     """
     Configuration for the ADC scaling factors
     """
+
     ref_voltage: float = Field(
         1.1,
         description="Reference voltage of the ADC",
@@ -34,7 +35,8 @@ class adcScaling(MiniscopeConfig):
         11.3,
         description="Voltage divider factor for the Vin voltage",
     )
-    
+
+
 class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
     Refinements of :class:`.BufferHeaderFormat` for
@@ -59,6 +61,7 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     input_voltage_adc: int
     _adc_scaling: adcScaling = None
 
+
 class StreamBufferHeader(BufferHeader):
     """
     Refinements of :class:`.BufferHeader` for
@@ -70,7 +73,7 @@ class StreamBufferHeader(BufferHeader):
     input_voltage_adc: int
     _adc_scaling: adcScaling = None
 
-    def set_adc_scaling(self, scaling: adcScaling)-> None:
+    def set_adc_scaling(self, scaling: adcScaling) -> None:
         """
         set adc scaling in the header format
         """
@@ -84,9 +87,10 @@ class StreamBufferHeader(BufferHeader):
         if self._adc_scaling is None:
             raise ValueError("ADC scaling factors not set")
         return (
-            self.battery_voltage_adc / 2**self._adc_scaling.bitdepth *
-            self._adc_scaling.ref_voltage *
-            self._adc_scaling.battery_div_factor
+            self.battery_voltage_adc
+            / 2**self._adc_scaling.bitdepth
+            * self._adc_scaling.ref_voltage
+            * self._adc_scaling.battery_div_factor
         )
 
     @property
@@ -97,10 +101,12 @@ class StreamBufferHeader(BufferHeader):
         if self._adc_scaling is None:
             raise ValueError("ADC scaling factors not set")
         return (
-            self.input_voltage_adc / 2**self._adc_scaling.bitdepth *
-            self._adc_scaling.ref_voltage *
-            self._adc_scaling.battery_div_factor
+            self.input_voltage_adc
+            / 2**self._adc_scaling.bitdepth
+            * self._adc_scaling.ref_voltage
+            * self._adc_scaling.battery_div_factor
         )
+
 
 class StreamDevRuntime(MiniscopeConfig):
     """
@@ -138,6 +144,7 @@ class StreamDevRuntime(MiniscopeConfig):
         "Note that this does *not* control whether header metadata is written during capture, "
         "for enabling/disabling, use the ``metadata`` kwarg in the capture method.",
     )
+
 
 class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     """
