@@ -22,9 +22,9 @@ from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
 from miniscope_io.io import BufferedCSVWriter
 from miniscope_io.models.stream import (
+    ADCScaling,
     StreamBufferHeader,
     StreamDevConfig,
-    adcScaling,
 )
 from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
@@ -701,7 +701,7 @@ class StreamDaq:
         writer: Optional[cv2.VideoWriter],
         show_metadata: bool,
         metadata: Optional[Path] = None,
-        adc_scaling: Optional[adcScaling] = None,
+        adc_scaling: Optional[ADCScaling] = None,
     ) -> None:
         """
         Inner handler for :meth:`.capture` to process the frames from the frame queue.

@@ -14,7 +14,7 @@ from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.sinks import CSVWriterConfig, StreamPlotterConfig
 
 
-class adcScaling(MiniscopeConfig):
+class ADCScaling(MiniscopeConfig):
     """
     Configuration for the ADC scaling factors
     """
@@ -52,14 +52,14 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     vin_voltage: int
         Input voltage. This is currently raw ADC value.
         Mapping to mV will be documented in device documentation.
-    _adc_scaling: adcScaling
+    _adc_scaling: ADCScaling
         Scaling factors for the ADC. This is used to convert raw ADC values to voltages.
     """
 
     pixel_count: int
     battery_voltage_adc: int
     input_voltage_adc: int
-    _adc_scaling: adcScaling = None
+    _adc_scaling: ADCScaling = None
 
 
 class StreamBufferHeader(BufferHeader):
@@ -71,9 +71,9 @@ class StreamBufferHeader(BufferHeader):
     pixel_count: int
     battery_voltage_adc: int
     input_voltage_adc: int
-    _adc_scaling: adcScaling = None
+    _adc_scaling: ADCScaling = None
 
-    def set_adc_scaling(self, scaling: adcScaling) -> None:
+    def set_adc_scaling(self, scaling: ADCScaling) -> None:
         """
         set adc scaling in the header format
         """
@@ -242,7 +242,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
     dummy_words: int = 0
-    adc_scale: adcScaling = adcScaling()
+    adc_scale: ADCScaling = ADCScaling()
     runtime: StreamDevRuntime = StreamDevRuntime()
 
     @field_validator("preamble", mode="before")
