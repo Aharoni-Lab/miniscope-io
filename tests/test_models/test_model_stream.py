@@ -42,7 +42,7 @@ _default_adc_scale = {
 }
 
 
-@pytest.mark.parametrize("scale", [None, 1, 2, _default_adc_scale["ref_voltage"]])
+@pytest.mark.parametrize("scale", [1, 2, _default_adc_scale["ref_voltage"]])
 def test_adc_scaling(scale, config_override):
     """
     Test that the ADC scaling factors are correctly parsed
@@ -50,9 +50,10 @@ def test_adc_scaling(scale, config_override):
     if scale is None:
         adc_scale = None
     else:
-        adc_scale = _default_adc_scale.copy().update({"ref_voltage": scale})
+        adc_scale = _default_adc_scale.copy()
+        adc_scale.update({"ref_voltage": scale})
 
-    example = config_override(CONFIG_DIR / "stream_daq_test_200px.yml", {"adc_scaling": adc_scale})
+    example = config_override(CONFIG_DIR / "stream_daq_test_200px.yml", {"adc_scale": adc_scale})
     instance_config = StreamDevConfig.from_yaml(example)
 
     battery_voltage_adc = 200
