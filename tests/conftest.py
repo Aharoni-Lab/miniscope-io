@@ -1,10 +1,10 @@
 import os
+from pathlib import Path
+from typing import Union, Callable
+from datetime import datetime
 
 import pytest
-from typing import Union
-
-from pathlib import Path
-
+import yaml
 
 DATA_DIR = Path(__file__).parent / "data"
 CONFIG_DIR = DATA_DIR / "config"
@@ -47,3 +47,21 @@ def set_okdev_input(monkeypatch):
         os.environ["PYTEST_OKDEV_DATA_FILE"] = str(file)
 
     return _set_okdev_input
+
+
+@pytest.fixture()
+def config_override(tmp_path) -> Callable[[Path, dict], Path]:
+    """
+    Create a config file with some of its properties overridden
+    """
+
+    def _config_override(path: Path, config: dict) -> Path:
+        with open(path, "r") as f:
+            data = yaml.safe_load(f)
+        data.update(config)
+        out_path = tmp_path / f"config_override_{datetime.now().strftime('%H_%M_%S_%f')}.yml"
+        with open(out_path, "w") as f:
+            yaml.safe_dump(data, f)
+        return out_path
+
+    yield _config_override
