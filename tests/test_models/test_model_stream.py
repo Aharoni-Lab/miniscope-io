@@ -1,7 +1,7 @@
 import pytest
 
 from miniscope_io import DEVICE_DIR
-from miniscope_io.models.stream import StreamDevConfig, StreamBufferHeader
+from miniscope_io.models.stream import ADCScaling, StreamDevConfig, StreamBufferHeader
 
 from ..conftest import CONFIG_DIR
 
@@ -42,10 +42,11 @@ _default_adc_scale = {
 }
 
 
-@pytest.mark.parametrize("scale", [1, 2, _default_adc_scale["ref_voltage"]])
+@pytest.mark.parametrize("scale", [None, 1, 2, _default_adc_scale["ref_voltage"]])
 def test_adc_scaling(scale, config_override):
     """
-    Test that the ADC scaling factors are correctly parsed
+    Test that the ADC scaling factors are correctly parsed,
+    and that :class:`.ADCScaling` methods are correctly applied to their relevant values
     """
     if scale is None:
         adc_scale = None
@@ -72,27 +73,15 @@ def test_adc_scaling(scale, config_override):
         battery_voltage_adc=battery_voltage_adc,
         input_voltage_adc=input_voltage_adc,
     )
-    instance_header.set_adc_scaling(instance_config.adc_scale)
+    instance_header.adc_scaling = instance_config.adc_scale
 
     if scale is None:
-        with pytest.raises(ValueError):
-            _ = instance_header.battery_voltage
-            _ = instance_header.input_voltage
+        assert instance_header.battery_voltage == battery_voltage_adc
+        assert instance_header.input_voltage == input_voltage_adc
 
     else:
-        battery_voltage = (
+        adcscale = ADCScaling(**adc_scale)
+        assert instance_header.battery_voltage == adcscale.scale_battery_voltage(
             battery_voltage_adc
-            / 2**instance_config.adc_scale.bitdepth
-            * scale
-            * instance_config.adc_scale.battery_div_factor
         )
-
-        input_voltage = (
-            input_voltage_adc
-            / 2**instance_config.adc_scale.bitdepth
-            * scale
-            * instance_config.adc_scale.vin_div_factor
-        )
-
-        assert instance_header.battery_voltage == battery_voltage
-        assert instance_header.input_voltage == input_voltage
+        assert instance_header.input_voltage == adcscale.scale_input_voltage(input_voltage_adc)

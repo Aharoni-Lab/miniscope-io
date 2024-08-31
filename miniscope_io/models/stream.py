@@ -5,7 +5,7 @@ Models for :mod:`miniscope_io.stream_daq`
 from pathlib import Path
 from typing import Literal, Optional, Union
 
-from pydantic import Field, field_validator
+from pydantic import Field, computed_field, field_validator
 
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
@@ -36,6 +36,30 @@ class ADCScaling(MiniscopeConfig):
         description="Voltage divider factor for the Vin voltage",
     )
 
+    def scale_battery_voltage(self, voltage_adc: float) -> float:
+        """
+        Scale raw input ADC voltage to Volts
+
+        Args:
+            voltage_adc: Voltage as output by the ADC
+
+        Returns:
+            float: Scaled voltage
+        """
+        return voltage_adc / 2**self.bitdepth * self.ref_voltage * self.battery_div_factor
+
+    def scale_input_voltage(self, voltage_adc: float) -> float:
+        """
+        Scale raw input ADC voltage to Volts
+
+        Args:
+            voltage_adc: Voltage as output by the ADC
+
+        Returns:
+            float: Scaled voltage
+        """
+        return voltage_adc / 2**self.bitdepth * self.ref_voltage * self.vin_div_factor
+
 
 class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
@@ -52,14 +76,11 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     vin_voltage: int
         Input voltage. This is currently raw ADC value.
         Mapping to mV will be documented in device documentation.
-    _adc_scaling: ADCScaling
-        Scaling factors for the ADC. This is used to convert raw ADC values to voltages.
     """
 
     pixel_count: int
     battery_voltage_adc: int
     input_voltage_adc: int
-    _adc_scaling: ADCScaling = None
 
 
 class StreamBufferHeader(BufferHeader):
@@ -73,39 +94,36 @@ class StreamBufferHeader(BufferHeader):
     input_voltage_adc: int
     _adc_scaling: ADCScaling = None
 
-    def set_adc_scaling(self, scaling: ADCScaling) -> None:
+    @property
+    def adc_scaling(self) -> Optional[ADCScaling]:
         """
-        set adc scaling in the header format
+        :class:`.ADCScaling` applied to voltage readings
         """
+        return self._adc_scaling
+
+    @adc_scaling.setter
+    def adc_scaling(self, scaling: ADCScaling) -> None:
         self._adc_scaling = scaling
 
-    @property
+    @computed_field
     def battery_voltage(self) -> float:
         """
         Scaled battery voltage in Volts.
         """
         if self._adc_scaling is None:
-            raise ValueError("ADC scaling factors not set")
-        return (
-            self.battery_voltage_adc
-            / 2**self._adc_scaling.bitdepth
-            * self._adc_scaling.ref_voltage
-            * self._adc_scaling.battery_div_factor
-        )
+            return self.battery_voltage_adc
+        else:
+            return self._adc_scaling.scale_battery_voltage(self.battery_voltage_adc)
 
-    @property
+    @computed_field
     def input_voltage(self) -> float:
         """
         Scaled input voltage in Volts.
         """
         if self._adc_scaling is None:
-            raise ValueError("ADC scaling factors not set")
-        return (
-            self.input_voltage_adc
-            / 2**self._adc_scaling.bitdepth
-            * self._adc_scaling.ref_voltage
-            * self._adc_scaling.vin_div_factor
-        )
+            return self.input_voltage_adc
+        else:
+            return self._adc_scaling.scale_input_voltage(self.input_voltage_adc)
 
 
 class StreamDevRuntime(MiniscopeConfig):
@@ -242,7 +260,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
     dummy_words: int = 0
-    adc_scale: ADCScaling = ADCScaling()
+    adc_scale: Optional[ADCScaling] = ADCScaling()
     runtime: StreamDevRuntime = StreamDevRuntime()
 
     @field_validator("preamble", mode="before")
