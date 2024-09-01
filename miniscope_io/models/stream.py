@@ -5,13 +5,60 @@ Models for :mod:`miniscope_io.stream_daq`
 from pathlib import Path
 from typing import Literal, Optional, Union
 
-from pydantic import Field, field_validator
+from pydantic import Field, computed_field, field_validator
 
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.sinks import CSVWriterConfig, StreamPlotterConfig
+
+
+class ADCScaling(MiniscopeConfig):
+    """
+    Configuration for the ADC scaling factors
+    """
+
+    ref_voltage: float = Field(
+        1.1,
+        description="Reference voltage of the ADC",
+    )
+    bitdepth: int = Field(
+        8,
+        description="Bit depth of the ADC",
+    )
+    battery_div_factor: float = Field(
+        5.0,
+        description="Voltage divider factor for the battery voltage",
+    )
+    vin_div_factor: float = Field(
+        11.3,
+        description="Voltage divider factor for the Vin voltage",
+    )
+
+    def scale_battery_voltage(self, voltage_raw: float) -> float:
+        """
+        Scale raw input ADC voltage to Volts
+
+        Args:
+            voltage_raw: Voltage as output by the ADC
+
+        Returns:
+            float: Scaled voltage
+        """
+        return voltage_raw / 2**self.bitdepth * self.ref_voltage * self.battery_div_factor
+
+    def scale_input_voltage(self, voltage_raw: float) -> float:
+        """
+        Scale raw input ADC voltage to Volts
+
+        Args:
+            voltage_raw: Voltage as output by the ADC
+
+        Returns:
+            float: Scaled voltage
+        """
+        return voltage_raw / 2**self.bitdepth * self.ref_voltage * self.vin_div_factor
 
 
 class StreamBufferHeaderFormat(BufferHeaderFormat):
@@ -24,14 +71,16 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     pixel_count: int
         Number of pixels in the buffer.
     battery_voltage: int
-        Battery voltage. Mapping to mV will be documented in device documentation.
-    ewl_pos: int
-        Electrical wetting lens position.
+        Battery voltage. This is currently raw ADC value.
+        Mapping to mV will be documented in device documentation.
+    vin_voltage: int
+        Input voltage. This is currently raw ADC value.
+        Mapping to mV will be documented in device documentation.
     """
 
     pixel_count: int
-    battery_voltage: int
-    ewl_pos: int
+    battery_voltage_raw: int
+    input_voltage_raw: int
 
 
 class StreamBufferHeader(BufferHeader):
@@ -41,8 +90,40 @@ class StreamBufferHeader(BufferHeader):
     """
 
     pixel_count: int
-    battery_voltage: int
-    ewl_pos: int
+    battery_voltage_raw: int
+    input_voltage_raw: int
+    _adc_scaling: ADCScaling = None
+
+    @property
+    def adc_scaling(self) -> Optional[ADCScaling]:
+        """
+        :class:`.ADCScaling` applied to voltage readings
+        """
+        return self._adc_scaling
+
+    @adc_scaling.setter
+    def adc_scaling(self, scaling: ADCScaling) -> None:
+        self._adc_scaling = scaling
+
+    @computed_field
+    def battery_voltage(self) -> float:
+        """
+        Scaled battery voltage in Volts.
+        """
+        if self._adc_scaling is None:
+            return self.battery_voltage_raw
+        else:
+            return self._adc_scaling.scale_battery_voltage(self.battery_voltage_raw)
+
+    @computed_field
+    def input_voltage(self) -> float:
+        """
+        Scaled input voltage in Volts.
+        """
+        if self._adc_scaling is None:
+            return self.input_voltage_raw
+        else:
+            return self._adc_scaling.scale_input_voltage(self.input_voltage_raw)
 
 
 class StreamDevRuntime(MiniscopeConfig):
@@ -179,6 +260,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
     reverse_payload_bits: bool = False
     reverse_payload_bytes: bool = False
     dummy_words: int = 0
+    adc_scale: Optional[ADCScaling] = ADCScaling()
     runtime: StreamDevRuntime = StreamDevRuntime()
 
     @field_validator("preamble", mode="before")
