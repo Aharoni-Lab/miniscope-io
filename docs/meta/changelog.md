@@ -2,6 +2,16 @@
 
 ## 0.4
 
+### 0.4.1 - 24-09-01
+
+#### Added Features
+- Support dummy words at the beginning of buffer to make data detection in `StreamDaq` more robust. The length of this word can be set via the device config YAML file.
+- `models.stream.ADCScaling` class for converting ADC raw values into voltage. The scaling factors can be set via the device config YAML file.
+
+Related PRs: [#41](https://github.com/Aharoni-Lab/miniscope-io/pull/41), [#44](https://github.com/Aharoni-Lab/miniscope-io/pull/44)
+Related Issues: [#36](https://github.com/Aharoni-Lab/miniscope-io/issues/36)
+Contributors: [@t-sasatani](https://github.com/t-sasatani), [@sneakers-the-rat](https://github.com/sneakers-the-rat), [@MarcelMB](https://github.com/MarcelMB).
+
 ### 0.4.0 - 24-08-27
 
 Enhancements and bugfixes to `StreamDaq`. Mostly around handling metadata.

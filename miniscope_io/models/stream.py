@@ -36,29 +36,29 @@ class ADCScaling(MiniscopeConfig):
         description="Voltage divider factor for the Vin voltage",
     )
 
-    def scale_battery_voltage(self, voltage_adc: float) -> float:
+    def scale_battery_voltage(self, voltage_raw: float) -> float:
         """
         Scale raw input ADC voltage to Volts
 
         Args:
-            voltage_adc: Voltage as output by the ADC
+            voltage_raw: Voltage as output by the ADC
 
         Returns:
             float: Scaled voltage
         """
-        return voltage_adc / 2**self.bitdepth * self.ref_voltage * self.battery_div_factor
+        return voltage_raw / 2**self.bitdepth * self.ref_voltage * self.battery_div_factor
 
-    def scale_input_voltage(self, voltage_adc: float) -> float:
+    def scale_input_voltage(self, voltage_raw: float) -> float:
         """
         Scale raw input ADC voltage to Volts
 
         Args:
-            voltage_adc: Voltage as output by the ADC
+            voltage_raw: Voltage as output by the ADC
 
         Returns:
             float: Scaled voltage
         """
-        return voltage_adc / 2**self.bitdepth * self.ref_voltage * self.vin_div_factor
+        return voltage_raw / 2**self.bitdepth * self.ref_voltage * self.vin_div_factor
 
 
 class StreamBufferHeaderFormat(BufferHeaderFormat):
@@ -79,8 +79,8 @@ class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
 
     pixel_count: int
-    battery_voltage_adc: int
-    input_voltage_adc: int
+    battery_voltage_raw: int
+    input_voltage_raw: int
 
 
 class StreamBufferHeader(BufferHeader):
@@ -90,8 +90,8 @@ class StreamBufferHeader(BufferHeader):
     """
 
     pixel_count: int
-    battery_voltage_adc: int
-    input_voltage_adc: int
+    battery_voltage_raw: int
+    input_voltage_raw: int
     _adc_scaling: ADCScaling = None
 
     @property
@@ -111,9 +111,9 @@ class StreamBufferHeader(BufferHeader):
         Scaled battery voltage in Volts.
         """
         if self._adc_scaling is None:
-            return self.battery_voltage_adc
+            return self.battery_voltage_raw
         else:
-            return self._adc_scaling.scale_battery_voltage(self.battery_voltage_adc)
+            return self._adc_scaling.scale_battery_voltage(self.battery_voltage_raw)
 
     @computed_field
     def input_voltage(self) -> float:
@@ -121,9 +121,9 @@ class StreamBufferHeader(BufferHeader):
         Scaled input voltage in Volts.
         """
         if self._adc_scaling is None:
-            return self.input_voltage_adc
+            return self.input_voltage_raw
         else:
-            return self._adc_scaling.scale_input_voltage(self.input_voltage_adc)
+            return self._adc_scaling.scale_input_voltage(self.input_voltage_raw)
 
 
 class StreamDevRuntime(MiniscopeConfig):
