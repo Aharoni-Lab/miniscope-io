@@ -352,6 +352,7 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
+        continuous: bool = False,
     ) -> None:
         """
         Group buffers together to make frames.
@@ -368,6 +369,8 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
+        continuous : bool, optional
+            If True, continue capturing until a KeyboardInterrupt is received, by default False.
         """
         locallogs = init_logger("streamDaq.buffer")
 
@@ -378,60 +381,63 @@ class StreamDaq:
         header_list = []
 
         try:
-            for serial_buffer in exact_iter(serial_buffer_queue.get, None):
+            while True:
+                for serial_buffer in exact_iter(serial_buffer_queue.get, None):
 
-                header_data, serial_buffer = self._parse_header(serial_buffer)
-                header_list.append(header_data)
+                    header_data, serial_buffer = self._parse_header(serial_buffer)
+                    header_list.append(header_data)
 
-                try:
-                    serial_buffer = self._trim(
-                        serial_buffer,
-                        self.buffer_npix,
-                        header_data,
-                        locallogs,
-                    )
-                except IndexError:
-                    locallogs.warning(
-                        f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
-                        f"(#{header_data.frame_buffer_count} in frame)\n"
-                        f"Frame buffer count {header_data.frame_buffer_count} "
-                        f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
-                        f"Discarding buffer."
-                    )
-                    if header_list:
-                        frame_buffer_queue.put((None, header_list))
-                    continue
-
-                # if first buffer of a frame
-                if header_data.frame_num != cur_fm_num:
-                    # discard first incomplete frame
-                    if cur_fm_num == -1 and header_data.frame_buffer_count != 0:
+                    try:
+                        serial_buffer = self._trim(
+                            serial_buffer,
+                            self.buffer_npix,
+                            header_data,
+                            locallogs,
+                        )
+                    except IndexError:
+                        locallogs.warning(
+                            f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
+                            f"(#{header_data.frame_buffer_count} in frame)\n"
+                            f"Frame buffer count {header_data.frame_buffer_count} "
+                            f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
+                            f"Discarding buffer."
+                        )
+                        if header_list:
+                            frame_buffer_queue.put((None, header_list))
                         continue
 
-                    # push previous frame_buffer into frame_buffer queue
-                    frame_buffer_queue.put((frame_buffer, header_list))
+                    # if first buffer of a frame
+                    if header_data.frame_num != cur_fm_num:
+                        # discard first incomplete frame
+                        if cur_fm_num == -1 and header_data.frame_buffer_count != 0:
+                            continue
 
-                    # init new frame_buffer
-                    frame_buffer = frame_buffer_prealloc.copy()
-                    header_list = []
+                        # push previous frame_buffer into frame_buffer queue
+                        frame_buffer_queue.put((frame_buffer, header_list))
 
-                    # update frame_num and index
-                    cur_fm_num = header_data.frame_num
+                        # init new frame_buffer
+                        frame_buffer = frame_buffer_prealloc.copy()
+                        header_list = []
 
-                    if header_data.frame_buffer_count != 0:
-                        locallogs.warning(
-                            f"Frame {cur_fm_num} started with buffer "
-                            f"{header_data.frame_buffer_count}"
+                        # update frame_num and index
+                        cur_fm_num = header_data.frame_num
+
+                        if header_data.frame_buffer_count != 0:
+                            locallogs.warning(
+                                f"Frame {cur_fm_num} started with buffer "
+                                f"{header_data.frame_buffer_count}"
+                            )
+
+                        # update data
+                        frame_buffer[header_data.frame_buffer_count] = serial_buffer
+
+                    else:
+                        frame_buffer[header_data.frame_buffer_count] = serial_buffer
+                        locallogs.debug(
+                            "----buffer #" + str(header_data.frame_buffer_count) + " stored"
                         )
-
-                    # update data
-                    frame_buffer[header_data.frame_buffer_count] = serial_buffer
-
-                else:
-                    frame_buffer[header_data.frame_buffer_count] = serial_buffer
-                    locallogs.debug(
-                        "----buffer #" + str(header_data.frame_buffer_count) + " stored"
-                    )
+                if continuous is False:
+                    break
 
         finally:
             frame_buffer_queue.put((None, header_list))  # for getting remaining buffers.
@@ -442,6 +448,7 @@ class StreamDaq:
         self,
         frame_buffer_queue: multiprocessing.Queue,
         imagearray: multiprocessing.Queue,
+        continuous: bool = False,
     ) -> None:
         """
         Construct frame from grouped buffers.
@@ -461,37 +468,43 @@ class StreamDaq:
             Input buffer queue.
         imagearray : multiprocessing.Queue[np.ndarray]
             Output image array queue.
+        continuous : bool, optional
+            If True, continue capturing until a KeyboardInterrupt is received, by default False.
         """
         locallogs = init_logger("streamDaq.frame")
         try:
-            for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
+            while True:
+                for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
 
-                if not frame_data:
-                    imagearray.put((None, header_list))
-                    continue
-                if len(frame_data) == 0:
-                    imagearray.put((None, header_list))
-                    continue
-                frame_data = np.concatenate(frame_data, axis=0)
+                    if not frame_data:
+                        imagearray.put((None, header_list))
+                        continue
+                    if len(frame_data) == 0:
+                        imagearray.put((None, header_list))
+                        continue
+                    frame_data = np.concatenate(frame_data, axis=0)
 
-                try:
-                    frame = np.reshape(
-                        frame_data, (self.config.frame_width, self.config.frame_height)
-                    )
-                except ValueError as e:
-                    expected_size = self.config.frame_width * self.config.frame_height
-                    provided_size = frame_data.size
-                    locallogs.exception(
-                        "Frame size doesn't match: %s. Expected size: %d, got size: %d elements. "
-                        "Replacing with zeros.",
-                        e,
-                        expected_size,
-                        provided_size,
-                    )
-                    frame = np.zeros(
-                        (self.config.frame_width, self.config.frame_height), dtype=np.uint8
-                    )
-                imagearray.put((frame, header_list))
+                    try:
+                        frame = np.reshape(
+                            frame_data, (self.config.frame_width, self.config.frame_height)
+                        )
+                    except ValueError as e:
+                        expected_size = self.config.frame_width * self.config.frame_height
+                        provided_size = frame_data.size
+                        locallogs.exception(
+                            "Frame size doesn't match: %s. "
+                            " Expected size: %d, got size: %d."
+                            "Replacing with zeros.",
+                            e,
+                            expected_size,
+                            provided_size,
+                        )
+                        frame = np.zeros(
+                            (self.config.frame_width, self.config.frame_height), dtype=np.uint8
+                        )
+                    imagearray.put((frame, header_list))
+                if continuous is False:
+                    break
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             imagearray.put(None)
@@ -536,6 +549,7 @@ class StreamDaq:
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
         show_metadata: Optional[bool] = False,
+        continuous: Optional[bool] = False,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -560,6 +574,8 @@ class StreamDaq:
             If True, display the video in real-time.
         show_metadata: bool, optional
             If True, show metadata information during capture.
+        continuous: bool, optional
+            If True, continue capturing until a KeyboardInterrupt is received.
 
         Raises
         ------
@@ -609,6 +625,7 @@ class StreamDaq:
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
+                continuous,
             ),
             name="_buffer_to_frame",
         )
@@ -617,6 +634,7 @@ class StreamDaq:
             args=(
                 frame_buffer_queue,
                 imagearray,
+                continuous,
             ),
             name="_format_frame",
         )
