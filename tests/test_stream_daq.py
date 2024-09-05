@@ -2,6 +2,8 @@ import pdb
 
 import pytest
 import pandas as pd
+import sys
+from contextlib import contextmanager
 
 from miniscope_io.stream_daq import StreamDevConfig, StreamDaq
 from miniscope_io.utils import hash_video, hash_file
@@ -114,14 +116,28 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         assert not output_csv.exists()
 
 
+@contextmanager
+def suppress_stdout(tmp_path):
+    """
+    Context manager to suppress stdout during a test
+    """
+    temp_file_path = tmp_path / "fake_stdout.txt"
+    with open(temp_file_path, 'w') as tempf:
+        old_stdout = sys.stdout
+        sys.stdout = tempf
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+
 @pytest.mark.timeout(5)
-def test_continuous_run(tmp_path, default_streamdaq, caplog):
+def test_continuous_run(tmp_path, default_streamdaq):
     """
     Make sure continuous mode runs forever (so ends up as a timeout in the test)
     """
-
     with pytest.raises(TimeoutError):
-        default_streamdaq.capture(source="fpga", show_video=False, continuous=True)
+        with suppress_stdout(tmp_path):
+            default_streamdaq.capture(source="fpga", show_video=False, continuous=True)
 
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
