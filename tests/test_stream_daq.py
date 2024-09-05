@@ -114,6 +114,15 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         assert not output_csv.exists()
 
 
+@pytest.mark.timeout(5)
+def test_continuous_run(tmp_path, default_streamdaq, caplog):
+    """
+    Make sure continuous mode runs forever (so ends up as a timeout in the test)
+    """
+
+    with pytest.raises(TimeoutError):
+        default_streamdaq.capture(source="fpga", show_video=False, continuous=True)
+
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
     Setting the capture kwarg ``show_metadata == True`` should plot the frame metadata
