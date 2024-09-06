@@ -1,8 +1,12 @@
 import pdb
 
+import multiprocessing
+import os
 import pytest
 import pandas as pd
 import sys
+import signal
+import time
 from contextlib import contextmanager
 
 from miniscope_io.stream_daq import StreamDevConfig, StreamDaq
@@ -115,29 +119,26 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         default_streamdaq.capture(source="fpga", metadata=None, show_video=False)
         assert not output_csv.exists()
 
+def capture_wrapper(default_streamdaq, source, show_video, continuous):
+    try:
+        default_streamdaq.capture(source=source, show_video=show_video, continuous=continuous)
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt caught as expected")
 
-@contextmanager
-def suppress_stdout(tmp_path):
+@pytest.mark.parametrize("timeout", [1, 5])
+def test_continuous_and_termination(tmp_path, timeout, default_streamdaq):
     """
-    Context manager to suppress stdout during a test
+    Make sure continuous mode runs forever until interrupted, and that all processes are
+    cleaned up when the capture process is terminated.
     """
-    temp_file_path = tmp_path / "fake_stdout.txt"
-    with open(temp_file_path, 'w') as tempf:
-        old_stdout = sys.stdout
-        sys.stdout = tempf
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
+    capture_process = multiprocessing.Process(target=capture_wrapper, args=(default_streamdaq, "fpga", False, True))
 
-@pytest.mark.timeout(5)
-def test_continuous_run(tmp_path, default_streamdaq):
-    """
-    Make sure continuous mode runs forever (so ends up as a timeout in the test)
-    """
-    with pytest.raises(TimeoutError):
-        with suppress_stdout(tmp_path):
-            default_streamdaq.capture(source="fpga", show_video=False, continuous=True)
+    capture_process.start()
+    time.sleep(timeout)
+    alive_processes = default_streamdaq.alive_processes()
+    assert len(alive_processes) == 3  # make this stronger    
+    os.kill(capture_process.pid, signal.SIGINT)
+    capture_process.join()
 
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
