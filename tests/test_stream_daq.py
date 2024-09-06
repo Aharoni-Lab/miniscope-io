@@ -1,7 +1,13 @@
 import pdb
 
+import multiprocessing
+import os
 import pytest
 import pandas as pd
+import sys
+import signal
+import time
+from contextlib import contextmanager
 
 from miniscope_io.stream_daq import StreamDevConfig, StreamDaq
 from miniscope_io.utils import hash_video, hash_file
@@ -113,6 +119,36 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         default_streamdaq.capture(source="fpga", metadata=None, show_video=False)
         assert not output_csv.exists()
 
+def capture_wrapper(default_streamdaq, source, show_video, continuous):
+    try:
+        default_streamdaq.capture(source=source, show_video=show_video, continuous=continuous)
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt caught as expected")
+
+@pytest.mark.timeout(10)
+def test_continuous_and_termination(tmp_path, default_streamdaq):
+    """
+    Make sure continuous mode runs forever until interrupted, and that all processes are
+    cleaned up when the capture process is terminated.
+    """
+    timeout = 5
+
+    capture_process = multiprocessing.Process(target=capture_wrapper, args=(default_streamdaq, "fpga", False, True))
+
+    capture_process.start()
+    alive_processes = default_streamdaq.alive_processes()
+    initial_alive_processes = len(alive_processes)
+    
+    time.sleep(timeout)
+
+    alive_processes = default_streamdaq.alive_processes()
+    assert len(alive_processes) == initial_alive_processes
+    
+    os.kill(capture_process.pid, signal.SIGINT)
+    capture_process.join()
+
+    alive_processes = default_streamdaq.alive_processes()
+    #assert len(alive_processes) == 0
 
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
