@@ -206,6 +206,12 @@ class StreamDaq:
 
         return data
 
+    def terminate_capture(self) -> None:
+        """
+        Terminate the capture process.
+        """
+        self.terminate.set()
+
     def _uart_recv(
         self, serial_buffer_queue: multiprocessing.Queue, comport: str, baudrate: int
     ) -> None:
@@ -235,7 +241,7 @@ class StreamDaq:
         log_uart_buffer = BitArray([x for x in uart_bites])
 
         try:
-            while 1:
+            while not self.terminate.is_set():
                 # read UART data until preamble and put into queue
                 uart_bites = serial_port.read_until(pre_bytes)
                 log_uart_buffer = [x for x in uart_bites]
@@ -381,7 +387,7 @@ class StreamDaq:
         header_list = []
 
         try:
-            while True:
+            while not self.terminate.is_set():
                 for serial_buffer in exact_iter(serial_buffer_queue.get, None):
 
                     header_data, serial_buffer = self._parse_header(serial_buffer)
@@ -438,7 +444,6 @@ class StreamDaq:
                         )
                 if continuous is False:
                     break
-
         finally:
             frame_buffer_queue.put((None, header_list))  # for getting remaining buffers.
             locallogs.debug("Quitting, putting sentinel in queue")
@@ -473,7 +478,7 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.frame")
         try:
-            while True:
+            while not self.terminate.is_set():
                 for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
 
                     if not frame_data:
@@ -538,6 +543,17 @@ class StreamDaq:
         frame_size = (self.config.frame_width, self.config.frame_height)
         out = cv2.VideoWriter(str(path), fourcc, frame_rate, frame_size, **kwargs)
         return out
+
+    def alive_processes(self) -> List[multiprocessing.Process]:
+        """
+        Return a list of alive processes.
+
+        Returns
+        -------
+        List[multiprocessing.Process]
+            List of alive processes.
+        """
+        return [p for p in multiprocessing.active_children() if p.is_alive()]
 
     def capture(
         self,
@@ -657,16 +673,18 @@ class StreamDaq:
             self._buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
 
         try:
-            for image, header_list in exact_iter(imagearray.get, None):
-                self._handle_frame(
-                    image,
-                    header_list,
-                    show_video=show_video,
-                    writer=writer,
-                    show_metadata=show_metadata,
-                    metadata=metadata,
-                )
-
+            while not self.terminate.is_set():
+                for image, header_list in exact_iter(imagearray.get, None):
+                    self._handle_frame(
+                        image,
+                        header_list,
+                        show_video=show_video,
+                        writer=writer,
+                        show_metadata=show_metadata,
+                        metadata=metadata,
+                    )
+                if continuous is False:
+                    break
         except KeyboardInterrupt:
             self.logger.exception(
                 "Quitting capture, processing remaining frames. Ctrl+C again to force quit"
