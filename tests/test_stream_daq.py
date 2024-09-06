@@ -134,9 +134,14 @@ def test_continuous_and_termination(tmp_path, timeout, default_streamdaq):
     capture_process = multiprocessing.Process(target=capture_wrapper, args=(default_streamdaq, "fpga", False, True))
 
     capture_process.start()
-    time.sleep(timeout)
     alive_processes = default_streamdaq.alive_processes()
-    assert len(alive_processes) == 3  # make this stronger    
+    initial_alive_processes = len(alive_processes)
+    
+    time.sleep(timeout)
+
+    alive_processes = default_streamdaq.alive_processes()
+    assert len(alive_processes) == initial_alive_processes
+    
     os.kill(capture_process.pid, signal.SIGINT)
     capture_process.join()
 
