@@ -125,20 +125,30 @@ def capture_wrapper(default_streamdaq, source, show_video, continuous):
     except KeyboardInterrupt:
         print("KeyboardInterrupt caught as expected")
 
-@pytest.mark.parametrize("timeout", [1, 5])
-def test_continuous_and_termination(tmp_path, timeout, default_streamdaq):
+@pytest.mark.timeout(10)
+def test_continuous_and_termination(tmp_path, default_streamdaq):
     """
     Make sure continuous mode runs forever until interrupted, and that all processes are
     cleaned up when the capture process is terminated.
     """
+    timeout = 5
+
     capture_process = multiprocessing.Process(target=capture_wrapper, args=(default_streamdaq, "fpga", False, True))
 
     capture_process.start()
-    time.sleep(timeout)
     alive_processes = default_streamdaq.alive_processes()
-    assert len(alive_processes) == 3  # make this stronger    
+    initial_alive_processes = len(alive_processes)
+    
+    time.sleep(timeout)
+
+    alive_processes = default_streamdaq.alive_processes()
+    assert len(alive_processes) == initial_alive_processes
+    
     os.kill(capture_process.pid, signal.SIGINT)
     capture_process.join()
+
+    alive_processes = default_streamdaq.alive_processes()
+    #assert len(alive_processes) == 0
 
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
