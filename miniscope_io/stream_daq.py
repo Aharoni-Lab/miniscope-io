@@ -747,12 +747,19 @@ class StreamDaq:
             Further refactor to break into smaller pieces, not have to pass 100 args every time.
 
         """
-        if show_video is True:
-            cv2.imshow("image", image)
-            cv2.waitKey(1)
-        if writer:
-            picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
-            writer.write(picture)
+        if show_video and image is not None and image.size > 0:
+            try:
+                cv2.imshow("image", image)
+                cv2.waitKey(1)
+            except cv2.error as e:
+                self.logger.exception(f"Error displaying frame: {e}")
+
+        if writer and image is not None and image.size > 0:
+            try:
+                picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
+                writer.write(picture)
+            except cv2.error as e:
+                self.logger.exception(f"Exception writing frame: {e}")
         if show_metadata or metadata:
             for header in header_list:
                 if show_metadata:
