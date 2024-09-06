@@ -145,6 +145,9 @@ def test_continuous_and_termination(tmp_path, timeout, default_streamdaq):
     os.kill(capture_process.pid, signal.SIGINT)
     capture_process.join()
 
+    alive_processes = default_streamdaq.alive_processes()
+    assert len(alive_processes) == 0
+
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
     Setting the capture kwarg ``show_metadata == True`` should plot the frame metadata
