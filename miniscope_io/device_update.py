@@ -7,138 +7,167 @@ Update miniscope device configuration.
 
 """
 
-import argparse
-import sys
 import time
+from enum import Enum
+from typing import Optional
 
-import numpy as np
 import serial
+import serial.tools.list_ports
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-from miniscope_io import init_logger
+from miniscope_io.logging import init_logger
 
-# Parsers for update LED
-updateDeviceParser = argparse.ArgumentParser("updateDevice")
-updateDeviceParser.add_argument("port", help="serial port")
-updateDeviceParser.add_argument("baudrate", help="baudrate")
-updateDeviceParser.add_argument("module", help="module to update")
-updateDeviceParser.add_argument("value", help="LED value")
+logger = init_logger(name="device_update", level="DEBUG")
 
+class UpdateTarget(Enum):
+    """Targets to update."""
+    LED = 0
+    GAIN = 1
 
-def updateDevice() -> None:
+class DevUpdateCommand(BaseModel):
     """
-    Script to update hardware settings over a generic UART-USB converter.
-    This script currently supports updating the excitation LED brightness and
-    electrical wetting lens driver gain.
+    Command to update device configuration.
+    """
+
+    port: str
+    target: UpdateTarget
+    value: int
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @model_validator(mode="after")
+    def validate_values(cls, values: dict) -> dict:
+        """
+        Validate values based on target.
+        """
+        target = values.target
+        value = values.value
+
+        if target == UpdateTarget.LED:
+            assert 0 <= value <= 100, "For LED, value must be between 0 and 100"
+        elif target == UpdateTarget.GAIN:
+            assert 0 <= value <= 255, "For GAIN, value must be between 0 and 255"
+        return values
+
+    @field_validator("port")
+    def validate_port(cls, value: str)->str:
+        """
+        Validate port.
+
+        Args:
+            value: Port to validate.
+
+        Returns:
+            Validated port.
+
+        Raises:
+            ValueError: If no serial ports found or port not found.
+        """
+        portlist = list(serial.tools.list_ports.comports())
+
+        if len(portlist) == 0:
+            raise ValueError("No serial ports found")
+        if value not in [port.device for port in portlist]:
+            raise ValueError(f"Port {value} not found")
+        return value
+
+    @field_validator("target", mode="before")
+    def validate_target(cls, value: str) -> UpdateTarget:
+        """
+        Validate and convert target string to UpdateTarget Enum type.
+
+        Args:
+            value (str): Target to validate.
+
+        Returns:
+            UpdateTarget: Validated target as UpdateTarget.
+
+        Raises:
+            ValueError: If target not found.
+        """
+        try:
+            return UpdateTarget[value]
+        except KeyError as e:
+            raise ValueError(f"Target {value} not found.") from e
+
+def DevUpdate(
+        target: str,
+        value: int,
+        port: Optional[str] = None,
+) -> None:
+    """
+    IR-based update of device configuration.
 
     .. note::
 
         Not tested after separating from stream_daq.py.
 
-    Examples
-    --------
-    >>> updateDevice [COM port] [baudrate] [module] [value]
+    Args:
+        port: Serial port to which the device is connected.
+        target: What to update on the device (e.g., LED or GAIN).
+        value: Value to which the target should be updated.
 
-    ..todo::
-        Test to see if changing package structure broke anything.
+    Returns:
+        None
     """
-    logger = init_logger("streamDaq")
 
-    args = updateDeviceParser.parse_args()
-    moduleList = ["LED", "EWL"]
+    if port:
+        logger.info(f"Using port {port}")
+        command = DevUpdateCommand(port=port, target=target, value=value)
+    else:
+        ftdi_port_list = find_ftdi_device()
+        if len(ftdi_port_list) == 0:
+            raise ValueError("No FTDI devices found.")
+        if len(ftdi_port_list) > 1:
+            raise ValueError("Multiple FTDI devices found. Please specify the port.")
+        if len(ftdi_port_list) == 1:
+            port = ftdi_port_list[0]
+            logger.info(f"Using port {port}")
+    
+    command = DevUpdateCommand(port=port, target=target, value=value)
+    logger.info(f"Updating {target} to {value} on port {port}")
 
-    ledMAX = 100
-    ledMIN = 0
-
-    ewlMAX = 255
-    ewlMIN = 0
-
-    ledDeviceTag = 0  # 2-bits each for now
-    ewlDeviceTag = 1  # 2-bits each for now
-
-    deviceTagPos = 4
-    preamblePos = 6
-
-    Preamble = [2, 1]  # 2-bits each for now
-
-    uartPayload = 4
-    uartRepeat = 5
-    uartTimeGap = 0.01
-
-    try:
-        assert len(vars(args)) == 4
-    except AssertionError as msg:
-        logger.exception("Usage: updateDevice [COM port] [baudrate] [module] [value]")
-        raise msg
+    #Header to indicate target/value. This should be a bit pattern that is unlikely to be the value.
+    target_mask     = 0b01110000 
+    value_mask      = 0b10000000
+    reset_byte      = 0b00000000
 
     try:
-        comport = str(args.port)
-    except (ValueError, IndexError) as e:
-        logger.exception(e)
-        raise e
-
-    try:
-        baudrate = int(args.baudrate)
-    except (ValueError, IndexError) as e:
-        logger.exception(e)
-        raise e
-
-    try:
-        module = str(args.module)
-        assert module in moduleList
-    except AssertionError as msg:
-        err_str = "Available modules:\n"
-        for module in moduleList:
-            err_str += "\t" + module + "\n"
-        logger.exception(err_str)
-        raise msg
-
-    try:
-        value = int(args.value)
-    except Exception as e:
-        logger.exception("Value needs to be an integer")
-        raise e
-
-    try:
-        if module == "LED":
-            assert value <= ledMAX and value >= ledMIN
-        if module == "EWL":
-            assert value <= ewlMAX and value >= ewlMIN
-    except AssertionError as msg:
-        if module == "LED":
-            logger.exception("LED value need to be a integer within 0-100")
-        if module == "EWL":
-            logger.exception("EWL value need to be an integer within 0-255")
-        raise msg
-
-    if module == "LED":
-        deviceTag = ledDeviceTag << deviceTagPos
-    elif module == "EWL":
-        deviceTag = ewlDeviceTag << deviceTagPos
-
-    command = [0, 0]
-
-    command[0] = int(
-        Preamble[0] * 2**preamblePos + deviceTag + np.floor(value / (2**uartPayload))
-    ).to_bytes(1, "big")
-    command[1] = int(
-        Preamble[1] * 2**preamblePos + deviceTag + value % (2**uartPayload)
-    ).to_bytes(1, "big")
-
-    # set up serial port
-    try:
-        serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
+        serial_port = serial.Serial(port=command.port, baudrate=2400, timeout=5, stopbits=2)
     except Exception as e:
         logger.exception(e)
         raise e
     logger.info("Open serial port")
 
-    for uartCommand in command:
-        for _ in range(uartRepeat):
-            # read UART data until preamble and put into queue
-            serial_port.write(uartCommand)
-            time.sleep(uartTimeGap)
+    try:
+        target_command = command.target.value + target_mask
+        serial_port.write(target_command.to_bytes(1, 'big'))
+        logger.debug(f"Target {command.target}; command: {bin(target_command)}")
+        time.sleep(0.1)
 
-    serial_port.close()
-    logger.info("\t" + module + ": " + str(value))
-    logger.info("Close serial port")
-    sys.exit(1)
+        value_command = command.value + value_mask
+        serial_port.write(value_command.to_bytes(1, 'big'))
+        logger.debug(f"Value {command.value}; command: {bin(value_command)}")
+        time.sleep(0.1)
+
+        serial_port.write(reset_byte.to_bytes(1, "big"))
+
+    finally:
+        serial_port.close()
+        logger.info("Closed serial port")
+
+
+def find_ftdi_device() -> list:
+    """
+    Find FTDI devices connected to the computer.
+    """
+    FTDI_VENDOR_ID = 0x0403
+    FTDI_PRODUCT_ID = 0x6001
+    ports = serial.tools.list_ports.comports()
+    ftdi_ports = []
+    
+    for port in ports:
+        if port.vid == FTDI_VENDOR_ID and port.pid == FTDI_PRODUCT_ID:
+            ftdi_ports.append(port.device)
+    
+    return ftdi_ports
