@@ -19,10 +19,13 @@ from miniscope_io.logging import init_logger
 
 logger = init_logger(name="device_update", level="DEBUG")
 
+
 class UpdateTarget(Enum):
     """Targets to update."""
+
     LED = 0
     GAIN = 1
+
 
 class DevUpdateCommand(BaseModel):
     """
@@ -50,7 +53,7 @@ class DevUpdateCommand(BaseModel):
         return values
 
     @field_validator("port")
-    def validate_port(cls, value: str)->str:
+    def validate_port(cls, value: str) -> str:
         """
         Validate port.
 
@@ -90,10 +93,11 @@ class DevUpdateCommand(BaseModel):
         except KeyError as e:
             raise ValueError(f"Target {value} not found.") from e
 
+
 def DevUpdate(
-        target: str,
-        value: int,
-        port: Optional[str] = None,
+    target: str,
+    value: int,
+    port: Optional[str] = None,
 ) -> None:
     """
     IR-based update of device configuration.
@@ -123,14 +127,15 @@ def DevUpdate(
         if len(ftdi_port_list) == 1:
             port = ftdi_port_list[0]
             logger.info(f"Using port {port}")
-    
+
     command = DevUpdateCommand(port=port, target=target, value=value)
     logger.info(f"Updating {target} to {value} on port {port}")
 
-    #Header to indicate target/value. This should be a bit pattern that is unlikely to be the value.
-    target_mask     = 0b01110000 
-    value_mask      = 0b10000000
-    reset_byte      = 0b00000000
+    # Header to indicate target/value.
+    # This should be a bit pattern that is unlikely to be the value.
+    target_mask = 0b01110000
+    value_mask = 0b10000000
+    reset_byte = 0b00000000
 
     try:
         serial_port = serial.Serial(port=command.port, baudrate=2400, timeout=5, stopbits=2)
@@ -141,12 +146,12 @@ def DevUpdate(
 
     try:
         target_command = command.target.value + target_mask
-        serial_port.write(target_command.to_bytes(1, 'big'))
+        serial_port.write(target_command.to_bytes(1, "big"))
         logger.debug(f"Target {command.target}; command: {bin(target_command)}")
         time.sleep(0.1)
 
         value_command = command.value + value_mask
-        serial_port.write(value_command.to_bytes(1, 'big'))
+        serial_port.write(value_command.to_bytes(1, "big"))
         logger.debug(f"Value {command.value}; command: {bin(value_command)}")
         time.sleep(0.1)
 
@@ -165,9 +170,9 @@ def find_ftdi_device() -> list:
     FTDI_PRODUCT_ID = 0x6001
     ports = serial.tools.list_ports.comports()
     ftdi_ports = []
-    
+
     for port in ports:
         if port.vid == FTDI_VENDOR_ID and port.pid == FTDI_PRODUCT_ID:
             ftdi_ports.append(port.device)
-    
+
     return ftdi_ports
