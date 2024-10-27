@@ -11,6 +11,7 @@ import time
 from enum import Enum
 from typing import Optional
 
+import numpy as np
 import serial
 import serial.tools.list_ports
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -25,7 +26,11 @@ class UpdateTarget(Enum):
 
     LED = 0
     GAIN = 1
-
+    ROI_X = 2
+    ROI_Y = 3
+    ROI_WIDTH = 4 # not implemented
+    ROI_HEIGHT = 5 # not implemented
+    EWL = 6 # not implemented
 
 class DevUpdateCommand(BaseModel):
     """
@@ -49,7 +54,7 @@ class DevUpdateCommand(BaseModel):
         if target == UpdateTarget.LED:
             assert 0 <= value <= 100, "For LED, value must be between 0 and 100"
         elif target == UpdateTarget.GAIN:
-            assert 0 <= value <= 255, "For GAIN, value must be between 0 and 255"
+            assert value in [1, 2, 4], "For GAIN, value must be 1, 2, or 4"
         return values
 
     @field_validator("port")
@@ -134,7 +139,7 @@ def DevUpdate(
     # Header to indicate target/value.
     # This should be a bit pattern that is unlikely to be the value.
     target_mask = 0b01110000
-    value_mask = 0b10000000
+    value_mask = 0b00000000
     reset_byte = 0b00000000
 
     try:
@@ -150,7 +155,7 @@ def DevUpdate(
         logger.debug(f"Target {command.target}; command: {bin(target_command)}")
         time.sleep(0.1)
 
-        value_command = command.value + value_mask
+        value_command = (command.value + value_mask) & 0xFF
         serial_port.write(value_command.to_bytes(1, "big"))
         logger.debug(f"Value {command.value}; command: {bin(value_command)}")
         time.sleep(0.1)
