@@ -11,7 +11,6 @@ import time
 from enum import Enum
 from typing import Optional
 
-import numpy as np
 import serial
 import serial.tools.list_ports
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -28,15 +27,17 @@ class UpdateTarget(Enum):
     GAIN = 1
     ROI_X = 2
     ROI_Y = 3
-    ROI_WIDTH = 4 # not implemented
-    ROI_HEIGHT = 5 # not implemented
-    EWL = 6 # not implemented
+    ROI_WIDTH = 4  # not implemented
+    ROI_HEIGHT = 5  # not implemented
+    EWL = 6  # not implemented
+
 
 class DevUpdateCommand(BaseModel):
     """
     Command to update device configuration.
     """
 
+    device_id: int
     port: str
     target: UpdateTarget
     value: int
@@ -102,6 +103,7 @@ class DevUpdateCommand(BaseModel):
 def DevUpdate(
     target: str,
     value: int,
+    device_id: int,
     port: Optional[str] = None,
 ) -> None:
     """
@@ -112,6 +114,7 @@ def DevUpdate(
         Not tested after separating from stream_daq.py.
 
     Args:
+        device_id: ID of the device. 0 will update all devices.
         port: Serial port to which the device is connected.
         target: What to update on the device (e.g., LED or GAIN).
         value: Value to which the target should be updated.
@@ -122,7 +125,6 @@ def DevUpdate(
 
     if port:
         logger.info(f"Using port {port}")
-        command = DevUpdateCommand(port=port, target=target, value=value)
     else:
         ftdi_port_list = find_ftdi_device()
         if len(ftdi_port_list) == 0:
@@ -133,17 +135,18 @@ def DevUpdate(
             port = ftdi_port_list[0]
             logger.info(f"Using port {port}")
 
-    command = DevUpdateCommand(port=port, target=target, value=value)
+    command = DevUpdateCommand(device_id=device_id, port=port, target=target, value=value)
     logger.info(f"Updating {target} to {value} on port {port}")
 
     # Header to indicate target/value.
     # This should be a bit pattern that is unlikely to be the value.
-    target_mask = 0b11000000
+    id_header = 0b00000000
+    target_header = 0b11000000
     LSB_header = 0b01000000
     MSB_header = 0b10000000
-    LSB_value_mask = 0b000000111111 #value below 12-bit
-    MSB_value_mask = 0b111111000000 #value below 12-bit
-    reset_byte = 0b00000000
+    LSB_value_mask = 0b000000111111  # value below 12-bit
+    MSB_value_mask = 0b111111000000  # value below 12-bit
+    reset_byte = 0b11111111
 
     try:
         serial_port = serial.Serial(port=command.port, baudrate=2400, timeout=5, stopbits=2)
@@ -153,19 +156,24 @@ def DevUpdate(
     logger.info("Open serial port")
 
     try:
-        target_command = command.target.value + target_mask
+        id_command = (command.device_id + id_header) & 0xFF
+        serial_port.write(id_command.to_bytes(1, "big"))
+        logger.debug(f"Command: {format(id_command, '08b')}; Device ID: {command.device_id}")
+        time.sleep(0.1)
+
+        target_command = (command.target.value + target_header) & 0xFF
         serial_port.write(target_command.to_bytes(1, "big"))
-        logger.debug(f"Target {command.target}; command: {bin(target_command)}")
+        logger.debug(f"Command: {format(target_command, '08b')}; Target: {command.target.name}")
         time.sleep(0.1)
 
         value_LSB_command = ((command.value & LSB_value_mask) + LSB_header) & 0xFF
         serial_port.write(value_LSB_command.to_bytes(1, "big"))
-        logger.debug(f"Value {command.value}; command_LSB: {bin(value_LSB_command)}")
+        logger.debug(f"Command: {format(value_LSB_command, '08b')}; Value: {command.value} (LSB)")
         time.sleep(0.1)
 
         value_MSB_command = (((command.value & MSB_value_mask) >> 6) + MSB_header) & 0xFF
         serial_port.write(value_MSB_command.to_bytes(1, "big"))
-        logger.debug(f"Value {command.value}; command_MSB: {bin(value_MSB_command)}")
+        logger.debug(f"Command: {format(value_MSB_command, '08b')}; Value: {command.value} (MSB)")
         time.sleep(0.1)
 
         serial_port.write(reset_byte.to_bytes(1, "big"))
