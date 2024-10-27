@@ -138,8 +138,11 @@ def DevUpdate(
 
     # Header to indicate target/value.
     # This should be a bit pattern that is unlikely to be the value.
-    target_mask = 0b01110000
-    value_mask = 0b00000000
+    target_mask = 0b11000000
+    LSB_header = 0b01000000
+    MSB_header = 0b10000000
+    LSB_value_mask = 0b000000111111 #value below 12-bit
+    MSB_value_mask = 0b111111000000 #value below 12-bit
     reset_byte = 0b00000000
 
     try:
@@ -155,9 +158,14 @@ def DevUpdate(
         logger.debug(f"Target {command.target}; command: {bin(target_command)}")
         time.sleep(0.1)
 
-        value_command = (command.value + value_mask) & 0xFF
-        serial_port.write(value_command.to_bytes(1, "big"))
-        logger.debug(f"Value {command.value}; command: {bin(value_command)}")
+        value_LSB_command = ((command.value & LSB_value_mask) + LSB_header) & 0xFF
+        serial_port.write(value_LSB_command.to_bytes(1, "big"))
+        logger.debug(f"Value {command.value}; command_LSB: {bin(value_LSB_command)}")
+        time.sleep(0.1)
+
+        value_MSB_command = (((command.value & MSB_value_mask) >> 6) + MSB_header) & 0xFF
+        serial_port.write(value_MSB_command.to_bytes(1, "big"))
+        logger.debug(f"Value {command.value}; command_MSB: {bin(value_MSB_command)}")
         time.sleep(0.1)
 
         serial_port.write(reset_byte.to_bytes(1, "big"))
