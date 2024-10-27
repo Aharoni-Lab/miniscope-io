@@ -15,7 +15,11 @@ from miniscope_io.device_update import DevUpdate
     help="Serial port to connect to. Needed if multiple FTDI devices are connected.",
 )
 @click.option(
-    "-t", "--target", required=True, type=click.Choice(["LED", "GAIN"]), help="Target to update"
+    "-t",
+    "--target",
+    required=True,
+    type=click.Choice(["LED", "GAIN", "ROI_X", "ROI_Y"]),
+    help="Target to update"
 )
 @click.option("-v", "--value", required=True, type=int, help="Value to set")
 def update(port: str, target: str, value: int) -> None:
