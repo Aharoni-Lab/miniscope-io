@@ -28,6 +28,7 @@ device: "OK"
 
 # The configuration bitstream file to upload to the Opal Kelly board. This uploads a Manchester decoder HDL and different bitstream files are required to configure different data rates and bit polarity. This is a binary file synthesized using Vivado, and details for generating this file will be provided in later updates.
 bitstream: "USBInterface-6mhz-3v3-INVERSE.bit"
+nomenclature: Frequency of SPI clock (Fpga can only create bit files with speed: 100 / i MHz where i is an integer), J2_2 indicates signal goes into second pin of J2 pin headers in breakout board, 3v3 V inoput from digitization board, following the IEEE convention of Manchester encoding
 
 # COM port and baud rate is only required for UART mode
 port: null
