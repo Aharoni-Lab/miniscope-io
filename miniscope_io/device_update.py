@@ -9,7 +9,7 @@ import serial
 import serial.tools.list_ports
 
 from miniscope_io.logging import init_logger
-from miniscope_io.models.devupdate import CommandDefinitions, DevUpdateCommand
+from miniscope_io.models.devupdate import DevUpdateCommand, UpdateCommandDefinitions
 
 logger = init_logger(name="device_update", level="INFO")
 
@@ -21,16 +21,12 @@ def DevUpdate(
     port: Optional[str] = None,
 ) -> None:
     """
-    IR-based update of device configuration.
-
-    .. note::
-
-        Not tested after separating from stream_daq.py.
+    Remote update of device configuration.
 
     Args:
         device_id: ID of the device. 0 will update all devices.
         port: Serial port to which the device is connected.
-        target: What to update on the device (e.g., LED or GAIN).
+        target: What to update on the device (e.g., LED, GAIN).
         value: Value to which the target should be updated.
 
     Returns:
@@ -60,32 +56,33 @@ def DevUpdate(
     logger.info("Open serial port")
 
     try:
-        id_command = (command.device_id + CommandDefinitions.id_header) & 0xFF
+        id_command = (command.device_id + UpdateCommandDefinitions.id_header) & 0xFF
         serial_port.write(id_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(id_command, '08b')}; Device ID: {command.device_id}")
         time.sleep(0.1)
 
-        target_command = (command.target.value + CommandDefinitions.target_header) & 0xFF
+        target_command = (command.target.value + UpdateCommandDefinitions.target_header) & 0xFF
         serial_port.write(target_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(target_command, '08b')}; Target: {command.target.name}")
         time.sleep(0.1)
 
         value_LSB_command = (
-            (command.value & CommandDefinitions.LSB_value_mask) + CommandDefinitions.LSB_header
+            (command.value & UpdateCommandDefinitions.LSB_value_mask)
+            + UpdateCommandDefinitions.LSB_header
         ) & 0xFF
         serial_port.write(value_LSB_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(value_LSB_command, '08b')}; Value: {command.value} (LSB)")
         time.sleep(0.1)
 
         value_MSB_command = (
-            ((command.value & CommandDefinitions.MSB_value_mask) >> 6)
-            + CommandDefinitions.MSB_header
+            ((command.value & UpdateCommandDefinitions.MSB_value_mask) >> 6)
+            + UpdateCommandDefinitions.MSB_header
         ) & 0xFF
         serial_port.write(value_MSB_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(value_MSB_command, '08b')}; Value: {command.value} (MSB)")
         time.sleep(0.1)
 
-        serial_port.write(CommandDefinitions.reset_byte.to_bytes(1, "big"))
+        serial_port.write(UpdateCommandDefinitions.reset_byte.to_bytes(1, "big"))
 
     finally:
         serial_port.close()
