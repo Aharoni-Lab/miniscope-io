@@ -9,7 +9,7 @@ import serial
 import serial.tools.list_ports
 
 from miniscope_io.logging import init_logger
-from miniscope_io.models.devupdate import DevUpdateCommand
+from miniscope_io.models.devupdate import CommandDefinitions, DevUpdateCommand
 
 logger = init_logger(name="device_update", level="INFO")
 
@@ -52,16 +52,6 @@ def DevUpdate(
     command = DevUpdateCommand(device_id=device_id, port=port, target=target, value=value)
     logger.info(f"Updating {target} to {value} on port {port}")
 
-    # Header to indicate target/value.
-    # This should be a bit pattern that is unlikely to be the value.
-    id_header = 0b00000000
-    target_header = 0b11000000
-    LSB_header = 0b01000000
-    MSB_header = 0b10000000
-    LSB_value_mask = 0b000000111111  # value below 12-bit
-    MSB_value_mask = 0b111111000000  # value below 12-bit
-    reset_byte = 0b11111111
-
     try:
         serial_port = serial.Serial(port=command.port, baudrate=2400, timeout=5, stopbits=2)
     except Exception as e:
@@ -70,27 +60,32 @@ def DevUpdate(
     logger.info("Open serial port")
 
     try:
-        id_command = (command.device_id + id_header) & 0xFF
+        id_command = (command.device_id + CommandDefinitions.id_header) & 0xFF
         serial_port.write(id_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(id_command, '08b')}; Device ID: {command.device_id}")
         time.sleep(0.1)
 
-        target_command = (command.target.value + target_header) & 0xFF
+        target_command = (command.target.value + CommandDefinitions.target_header) & 0xFF
         serial_port.write(target_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(target_command, '08b')}; Target: {command.target.name}")
         time.sleep(0.1)
 
-        value_LSB_command = ((command.value & LSB_value_mask) + LSB_header) & 0xFF
+        value_LSB_command = (
+            (command.value & CommandDefinitions.LSB_value_mask) + CommandDefinitions.LSB_header
+        ) & 0xFF
         serial_port.write(value_LSB_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(value_LSB_command, '08b')}; Value: {command.value} (LSB)")
         time.sleep(0.1)
 
-        value_MSB_command = (((command.value & MSB_value_mask) >> 6) + MSB_header) & 0xFF
+        value_MSB_command = (
+            ((command.value & CommandDefinitions.MSB_value_mask) >> 6)
+            + CommandDefinitions.MSB_header
+        ) & 0xFF
         serial_port.write(value_MSB_command.to_bytes(1, "big"))
         logger.debug(f"Command: {format(value_MSB_command, '08b')}; Value: {command.value} (MSB)")
         time.sleep(0.1)
 
-        serial_port.write(reset_byte.to_bytes(1, "big"))
+        serial_port.write(CommandDefinitions.reset_byte.to_bytes(1, "big"))
 
     finally:
         serial_port.close()

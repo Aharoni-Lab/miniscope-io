@@ -14,6 +14,22 @@ class DeviceCommand(Enum):
     RESTART = 200
 
 
+class CommandDefinitions(BaseModel):
+    """
+    Definitions of Bit masks and headers for commands.
+    """
+
+    # Header to indicate target/value.
+    # It probably won't be used in other places so defined here.
+    id_header = 0b00000000
+    target_header = 0b11000000
+    LSB_header = 0b01000000
+    MSB_header = 0b10000000
+    LSB_value_mask = 0b000000111111  # value below 12-bit
+    MSB_value_mask = 0b111111000000  # value below 12-bit
+    reset_byte = 0b11111111
+
+
 class UpdateTarget(Enum):
     """Targets to update."""
 
