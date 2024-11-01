@@ -353,7 +353,9 @@ class StreamDaq:
                             buf_stop + len(self.preamble),
                         )
                     try:
-                        serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes(), block=True, timeout=1)
+                        serial_buffer_queue.put(
+                            cur_buffer[buf_start:buf_stop].tobytes(), block=True, timeout=1
+                        )
                     except queue.Full:
                         locallogs.warning("Serial buffer queue full, skipping buffer.")
                 if pre_pos:
@@ -435,7 +437,9 @@ class StreamDaq:
 
                         # push previous frame_buffer into frame_buffer queue
                         try:
-                            frame_buffer_queue.put((frame_buffer, header_list), block=True, timeout=1)
+                            frame_buffer_queue.put(
+                                (frame_buffer, header_list), block=True, timeout=1
+                            )
                         except queue.Full:
                             locallogs.warning("Frame buffer queue full, skipping frame.")
 
@@ -464,7 +468,8 @@ class StreamDaq:
                     break
         finally:
             try:
-                frame_buffer_queue.put((None, header_list), block=True, timeout=1)  # get remaining buffers.
+                # get remaining buffers.
+                frame_buffer_queue.put((None, header_list), block=True, timeout=1)
             except queue.Full:
                 locallogs.warning("Frame buffer queue full, skipping frame.")
 
