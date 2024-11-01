@@ -19,6 +19,9 @@ from miniscope_io.logging import init_logger
 
 logger = init_logger(name="device_update", level="DEBUG")
 
+class DeviceCommand(Enum):
+    """Commands for device."""
+    RESTART = 200
 
 class UpdateTarget(Enum):
     """Targets to update."""
@@ -30,7 +33,7 @@ class UpdateTarget(Enum):
     ROI_WIDTH = 4  # not implemented
     ROI_HEIGHT = 5  # not implemented
     EWL = 6  # not implemented
-
+    DEVICE = 99 # for device commands
 
 class DevUpdateCommand(BaseModel):
     """
