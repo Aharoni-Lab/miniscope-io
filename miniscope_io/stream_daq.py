@@ -5,6 +5,7 @@ DAQ For use with FPGA and Uart streaming video sources.
 import logging
 import multiprocessing
 import os
+import queue
 import sys
 import time
 from pathlib import Path
@@ -249,7 +250,7 @@ class StreamDaq:
                 log_uart_buffer = [x for x in uart_bites]
                 try:
                     serial_buffer_queue.put(log_uart_buffer, block=False)
-                except multiprocessing.queues.Full:
+                except queue.Full:
                     self.logger.warning("Serial buffer queue full, skipping buffer.")
         finally:
             time.sleep(1)  # time for ending other process
@@ -353,7 +354,7 @@ class StreamDaq:
                         )
                     try:
                         serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes(), block=False)
-                    except multiprocessing.queues.Full:
+                    except queue.Full:
                         locallogs.warning("Serial buffer queue full, skipping buffer.")
                 if pre_pos:
                     cur_buffer = cur_buffer[pre_pos[-1] :]
@@ -362,7 +363,7 @@ class StreamDaq:
             locallogs.debug("Quitting, putting sentinel in queue")
             try:
                 serial_buffer_queue.put(None, block=False)
-            except multiprocessing.queues.Full:
+            except queue.Full:
                 locallogs.error("Serial buffer queue full, Could not put sentinel.")
 
     def _buffer_to_frame(
@@ -422,7 +423,7 @@ class StreamDaq:
                         if header_list:
                             try:
                                 frame_buffer_queue.put((None, header_list), block=False)
-                            except multiprocessing.queues.Full:
+                            except queue.Full:
                                 locallogs.warning("Frame buffer queue full, skipping frame.")
                         continue
 
@@ -435,7 +436,7 @@ class StreamDaq:
                         # push previous frame_buffer into frame_buffer queue
                         try:
                             frame_buffer_queue.put((frame_buffer, header_list), block=False)
-                        except multiprocessing.queues.Full:
+                        except queue.Full:
                             locallogs.warning("Frame buffer queue full, skipping frame.")
 
                         # init new frame_buffer
@@ -464,13 +465,13 @@ class StreamDaq:
         finally:
             try:
                 frame_buffer_queue.put((None, header_list), block=False)  # get remaining buffers.
-            except multiprocessing.queues.Full:
+            except queue.Full:
                 locallogs.warning("Frame buffer queue full, skipping frame.")
 
             try:
                 frame_buffer_queue.put(None, block=False)
                 locallogs.debug("Quitting, putting sentinel in queue")
-            except multiprocessing.queues.Full:
+            except queue.Full:
                 locallogs.error("Frame buffer queue full, Could not put sentinel.")
 
     def _format_frame(
@@ -508,7 +509,7 @@ class StreamDaq:
                     if not frame_data or len(frame_data) == 0:
                         try:
                             imagearray.put((None, header_list), block=False)
-                        except multiprocessing.queues.Full:
+                        except queue.Full:
                             locallogs.warning("Image array queue full, skipping frame.")
                         continue
                     frame_data = np.concatenate(frame_data, axis=0)
@@ -533,7 +534,7 @@ class StreamDaq:
                         )
                     try:
                         imagearray.put((frame, header_list), block=False)
-                    except multiprocessing.queues.Full:
+                    except queue.Full:
                         locallogs.warning("Image array queue full, skipping frame.")
                 if continuous is False:
                     break
@@ -541,7 +542,7 @@ class StreamDaq:
             locallogs.debug("Quitting, putting sentinel in queue")
             try:
                 imagearray.put(None, block=False)
-            except multiprocessing.queues.Full:
+            except queue.Full:
                 locallogs.error("Image array queue full, Could not put sentinel.")
 
     def init_video(
