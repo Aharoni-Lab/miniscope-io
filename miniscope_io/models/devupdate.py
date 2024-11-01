@@ -14,9 +14,9 @@ class DeviceCommand(Enum):
     RESTART = 200
 
 
-class CommandDefinitions(BaseModel):
+class UpdateCommandDefinitions:
     """
-    Definitions of Bit masks and headers for commands.
+    Definitions of Bit masks and headers for remote update commands.
     """
 
     # Header to indicate target/value.
