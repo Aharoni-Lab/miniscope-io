@@ -11,7 +11,7 @@ import serial.tools.list_ports
 from miniscope_io.logging import init_logger
 from miniscope_io.models.devupdate import DevUpdateCommand
 
-logger = init_logger(name="device_update", level="DEBUG")
+logger = init_logger(name="device_update", level="INFO")
 
 
 def DevUpdate(

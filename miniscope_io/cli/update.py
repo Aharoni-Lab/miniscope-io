@@ -4,7 +4,8 @@ CLI for updating device over IR or UART.
 
 import click
 
-from miniscope_io.device_update import DeviceCommand, DevUpdate
+from miniscope_io.device_update import DevUpdate
+from miniscope_io.models.devupdate import DeviceCommand
 
 
 @click.command()
@@ -57,6 +58,9 @@ def update(port: str, target: str, value: int, device_id: int, restart: bool) ->
     if target and value:
         DevUpdate(port=port, target=target, value=value, device_id=device_id)
     elif restart:
-        DevUpdate(port=port, target="DEVICE", value=DeviceCommand.RESTART, device_id=device_id)
+        DevUpdate(port=port,
+                  target="DEVICE",
+                  value=DeviceCommand.RESTART.value,
+                  device_id=device_id)
     else:
         raise click.UsageError("Either --target with --value or --restart must be specified.")
