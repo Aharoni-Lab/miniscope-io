@@ -153,7 +153,7 @@ class StreamPlotter:
         plt.ion()
         fig: plt.Figure
         axes: np.ndarray[Any, np.dtype[plt.Axes]]
-        fig, axes = plt.subplots(len(self.header_keys), 1, figsize=(6, len(self.header_keys) * 3))
+        fig, axes = plt.subplots(len(self.header_keys), 1, figsize=(6, len(self.header_keys) * 2))
         axes = np.array(axes).reshape(-1)  # Ensure axes is an array
 
         # Initialize line objects
