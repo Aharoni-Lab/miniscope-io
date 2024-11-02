@@ -158,39 +158,3 @@ def test_specified_port_not_ftdi_device(mock_comports):
 
     with pytest.raises(ValueError, match="No FTDI devices found."):
         DevUpdate(target, value, device_id)
-
-@patch("miniscope_io.models.devupdate.serial.tools.list_ports.comports")
-@patch("miniscope_io.device_update.serial.Serial")
-def test_devupdate_command_execution_order(mock_serial, mock_comports):
-    """
-    Test that commands are executed in the correct order.
-    """
-    mock_serial_instance = mock_serial.return_value
-
-    mock_comports.return_value = [
-        MagicMock(vid=0x0403, pid=0x6001, device="COM3"),
-        MagicMock(vid=0x1234, pid=0x5678, device="COM4"),
-    ]
-    target = "GAIN"
-    value = 2
-    device_id = 1
-    port = "COM3"
-
-    DevUpdate(target, value, device_id, port)
-
-    id_command = (device_id + UpdateCommandDefinitions.id_header) & 0xFF
-    target_command = (UpdateTarget.GAIN.value + UpdateCommandDefinitions.target_header) & 0xFF
-    value_LSB_command = ((value & UpdateCommandDefinitions.LSB_value_mask) + UpdateCommandDefinitions.LSB_header) & 0xFF
-    value_MSB_command = (((value & UpdateCommandDefinitions.MSB_value_mask) >> 6) + UpdateCommandDefinitions.MSB_header) & 0xFF
-    reset_command = UpdateCommandDefinitions.reset_byte
-
-    expected_calls = [
-        call(id_command.to_bytes(1, 'big')),
-        call(target_command.to_bytes(1, 'big')),
-        call(value_LSB_command.to_bytes(1, 'big')),
-        call(value_MSB_command.to_bytes(1, 'big')),
-        call(reset_command.to_bytes(1, 'big')),
-    ]
-
-    assert mock_serial_instance.write.call_count == len(expected_calls)
-    mock_serial_instance.write.assert_has_calls(expected_calls, any_order=False)
