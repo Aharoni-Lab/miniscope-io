@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 class DeviceCommand(Enum):
     """Commands for device."""
 
-    RESTART = 200
+    REBOOT = 200
 
 
 class UpdateCommandDefinitions:
@@ -31,7 +31,9 @@ class UpdateCommandDefinitions:
 
 
 class UpdateTarget(Enum):
-    """Targets to update."""
+    """
+    Targets to update. Needs to be under 6-bit.
+    """
 
     LED = 0
     GAIN = 1
@@ -40,7 +42,7 @@ class UpdateTarget(Enum):
     ROI_WIDTH = 4  # not implemented
     ROI_HEIGHT = 5  # not implemented
     EWL = 6  # not implemented
-    DEVICE = 99  # for device commands
+    DEVICE = 50  # for device commands
 
 
 class DevUpdateCommand(BaseModel):
