@@ -15,6 +15,7 @@ cli/main
 :maxdepth: 1
 
 device/test_device
+device/update_controller
 ```
 
 ```{toctree}
