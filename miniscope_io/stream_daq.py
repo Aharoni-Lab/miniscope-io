@@ -714,7 +714,9 @@ class StreamDaq:
             self._buffered_writer = BufferedCSVWriter(
                 metadata, buffer_size=self.config.runtime.csvwriter.buffer
             )
-            self._buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
+            self._buffered_writer.append(
+                list(StreamBufferHeader.model_fields.keys()) + ["unix_time"]
+            )
 
         try:
             while not self.terminate.is_set():
@@ -813,7 +815,9 @@ class StreamDaq:
                 if metadata:
                     self.logger.debug("Saving header metadata")
                     try:
-                        self._buffered_writer.append(list(header.model_dump().values()))
+                        self._buffered_writer.append(
+                            list(header.model_dump().values()) + [time.time()]
+                        )
                     except Exception as e:
                         self.logger.exception(f"Exception saving headers: \n{e}")
 
