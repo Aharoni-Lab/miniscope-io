@@ -70,7 +70,7 @@ class DevUpdateCommand(BaseModel):
         elif target == UpdateTarget.GAIN:
             assert value in [1, 2, 4], "For GAIN, value must be 1, 2, or 4"
         elif target == UpdateTarget.DEVICE:
-            assert value in [DeviceCommand.RESTART.value], "For DEVICE, value must be in [200]"
+            assert value in [DeviceCommand.REBOOT.value], "For DEVICE, value must be in [200]"
         elif (
             target == UpdateTarget.ROI_X
             or target == UpdateTarget.ROI_Y

@@ -44,5 +44,5 @@ def test_invalid_port():
             DevUpdateCommand(device_id=1, port="COM3", target="LED", value=50)
 
 def test_device_command(mock_serial_ports):
-    cmd = DevUpdateCommand(device_id=1, port="COM2", target="DEVICE", value=DeviceCommand.RESTART.value)
-    assert cmd.value == DeviceCommand.RESTART.value
+    cmd = DevUpdateCommand(device_id=1, port="COM2", target="DEVICE", value=DeviceCommand.REBOOT.value)
+    assert cmd.value == DeviceCommand.REBOOT.value
