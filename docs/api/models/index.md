@@ -21,6 +21,7 @@ config
 data
 mixins
 models
+pipeline
 sdcard
 stream
 ```
