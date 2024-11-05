@@ -42,7 +42,7 @@ class StreamReadError(StreamError):
 
 class DeviceError(RuntimeError):
     """
-    Base class for errors when communicating with or configuring devices
+    Base class for errors when communicating with or configuring sources
     """
 
 

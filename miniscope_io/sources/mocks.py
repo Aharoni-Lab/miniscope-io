@@ -1,7 +1,7 @@
 """
-Hardware mocks for devices.
+Hardware mocks for sources.
 
-Used in testing, but kept in-package since for now some devices
+Used in testing, but kept in-package since for now some sources
 need modifications to their source (and we can't import from tests)
 
 Not to be considered part of the public interface of miniscope-io <3
@@ -18,7 +18,7 @@ from miniscope_io.exceptions import EndOfRecordingException
 
 class okDevMock:
     """
-    Mock class for :class:`~miniscope_io.devices.opalkelly.okDev`
+    Mock class for :class:`~miniscope_io.sources.opalkelly.okDev`
     """
 
     DATA_FILE: Optional[Path] = None

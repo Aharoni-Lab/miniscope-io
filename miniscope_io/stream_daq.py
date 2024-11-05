@@ -17,7 +17,6 @@ from bitstring import BitArray, Bits
 
 from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
-from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
 from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
 from miniscope_io.io import BufferedCSVWriter
@@ -29,11 +28,12 @@ from miniscope_io.models.stream import (
     StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
 )
 from miniscope_io.plots.headers import StreamPlotter
+from miniscope_io.sources.mocks import okDevMock
 
 HAVE_OK = False
 ok_error = None
 try:
-    from miniscope_io.devices.opalkelly import okDev
+    from miniscope_io.sources.opalkelly import okDev
 
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError):
@@ -61,7 +61,7 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
 class StreamDaq:
     """
     A combined class for configuring and reading frames from a UART and FPGA source.
-    Supported devices and required inputs are described in StreamDevConfig model documentation.
+    Supported sources and required inputs are described in StreamDevConfig model documentation.
     This function's entry point is the main function, which should be used from the
     stream_image_capture command installed with the package.
     Example configuration yaml files are stored in /miniscope-io/config/.
@@ -70,7 +70,7 @@ class StreamDaq:
     --------
     $ mio stream capture -c path/to/config.yml -o output_filename.avi
     Connected to XEM7310-A75
-    Succesfully uploaded /miniscope-io/miniscope_io/devices/selected_bitfile.bit
+    Succesfully uploaded /miniscope-io/miniscope_io/sources/selected_bitfile.bit
     FrontPanel is supported
 
     .. todo::

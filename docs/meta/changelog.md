@@ -77,7 +77,7 @@ StreamDaq enhancements and testing
 Testing:
 
 - [@t-sasatani](https://github.com/t-sasatani) - add end-to-end test for {class}`~miniscope_io.stream_daq.streamDaq`
-- Add a mock class for {class}`~miniscope_io.devices.opalkelly.okDev`
+- Add a mock class for {class}`~miniscope_io.sources.opalkelly.okDev`
 - replace `tmpdir` fixture and `tempfile` module with `tmp_path`
 
 New:
@@ -95,7 +95,7 @@ New:
 
 Fixed:
 
-- Removed `print` statements in {class}`~miniscope_io.devices.opalkelly.okDev`
+- Removed `print` statements in {class}`~miniscope_io.sources.opalkelly.okDev`
 - {meth}`~miniscope_io.stream_daq.StreamDaq.capture`
   - Don't require `config`
   - Replace logging with {func}`~miniscope_io.logging.init_logger`
@@ -137,7 +137,7 @@ New features:
 
 - Added support for the wireless FPGA and UART daqs - work in progress unifying the API, but
   initial version of code is present in `stream_daq.py`
-- Vendored opalkelly device drivers - see `devices` and `vendor`
+- Vendored opalkelly device drivers - see `devices` (now `sources`) and `vendor`
 
 ### 0.1.5 - 23-09-03
 

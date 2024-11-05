@@ -114,7 +114,7 @@ timeout = 60
 [tool.coverage.run]
 omit = [
     "miniscope_io/vendor/*",
-    "miniscope_io/devices/opalkelly.py", # can't test hardware interface directly
+    "miniscope_io/sources/opalkelly.py", # can't test hardware interface directly
 ]
 
 [tool.ruff]

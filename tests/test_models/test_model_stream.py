@@ -25,7 +25,7 @@ def test_preamble_hex_parsing(config):
 
 def test_absolute_bitstream():
     """
-    Relative paths should be resolved relative to the devices dir
+    Relative paths should be resolved relative to the sources dir
     """
     example = CONFIG_DIR / "wireless_example.yml"
 
