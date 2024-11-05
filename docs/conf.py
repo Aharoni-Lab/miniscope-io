@@ -108,7 +108,6 @@ const make_config = () => {
 const init_mermaid = () => {
     let graphs = document.querySelectorAll(".mermaid");
     [...graphs].forEach((element) => {
-        console.log(element.innerText);
         if (!element.hasAttribute("data-source")) {
             element.setAttribute("data-source", element.innerText);
         }
@@ -123,7 +122,6 @@ const init_mermaid = () => {
     });
 
     let config = make_config()
-    console.log(config);
     mermaid.initialize(config);
     mermaid.run();
 }
@@ -132,11 +130,8 @@ init_mermaid();
 
 let theme_observer = new MutationObserver(init_mermaid);
 let body = document.getElementsByTagName("body")[0];
-console.log(body);
 theme_observer.observe(body, {attributes: true});
 window.theme_observer = theme_observer;
-
-
 
 """
 
