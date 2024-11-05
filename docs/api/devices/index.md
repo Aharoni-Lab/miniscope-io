@@ -1,6 +1,8 @@
 # devices
 
 ```{toctree}
+:max-depth: 2
+
 camera
 ```
 
