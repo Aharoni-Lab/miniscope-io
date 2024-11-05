@@ -1,6 +1,6 @@
 import pytest
 
-from miniscope_io import DEVICE_DIR
+from miniscope_io import SOURCES_DIR
 from miniscope_io.models.stream import ADCScaling, StreamDevConfig, StreamBufferHeader
 
 from ..conftest import CONFIG_DIR
@@ -31,7 +31,7 @@ def test_absolute_bitstream():
 
     instance = StreamDevConfig.from_yaml(example)
     assert instance.bitstream.is_absolute()
-    assert str(instance.bitstream).startswith(str(DEVICE_DIR))
+    assert str(instance.bitstream).startswith(str(SOURCES_DIR))
 
 
 _default_adc_scale = {

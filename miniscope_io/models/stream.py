@@ -7,7 +7,7 @@ from typing import Literal, Optional, Union
 
 from pydantic import Field, computed_field, field_validator
 
-from miniscope_io import DEVICE_DIR
+from miniscope_io import SOURCES_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 from miniscope_io.models.mixins import YAMLMixin
@@ -289,7 +289,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
         the device path
         """
         if not value.is_absolute():
-            value = DEVICE_DIR / value
+            value = SOURCES_DIR / value
         return value
 
     @field_validator("bitstream", mode="after")
