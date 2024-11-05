@@ -289,7 +289,7 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
         the device path
         """
         if not value.is_absolute():
-            value = SOURCES_DIR / value
+            value = SOURCES_DIR / "opalkelly" / value
         return value
 
     @field_validator("bitstream", mode="after")
