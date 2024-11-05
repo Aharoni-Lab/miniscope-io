@@ -1,18 +1,33 @@
-[tool.poetry]
+[project]
 name = "miniscope_io"
 version = "0.4.1"
 description = "Generic I/O for miniscopes"
 authors = [
-    "sneakers-the-rat <JLSaunders987@gmail.com>",
-    "t-sasatani <sasatani.dev@gmail.com>",
+    {name = "sneakers-the-rat", email = "sneakers-the-rat@protonmail.com"},
+    {name = "t-sasatani", email = "sasatani.dev@gmail.com"},
 ]
+license = {text = "AGPL-3.0"}
+requires-python = "<4.0,>=3.9"
+dependencies = [
+    "opencv-python>=4.7.0.72",
+    "numpy>=1.25.0",
+    "pandas>=2.1.0",
+    "pydantic>=2.3.0",
+    "pyserial>=3.5",
+    "tqdm>=4.66.1",
+    "bitstring>=4.2.3",
+    "pydantic-settings>=2.0.3",
+    "rich>=13.6.0",
+    "pyyaml>=6.0.1",
+    "click>=8.1.7",
+]
+
 readme = "README.md"
-packages = [{include = "miniscope_io"}]
-license = "AGPL-3.0"
-homepage = "https://miniscope-io.readthedocs.io/"
-repository = "https://github.com/Aharoni-Lab/miniscope-io"
-documentation = "https://miniscope-io.readthedocs.io/"
-keywords = ["miniscope", "neuroscience", "io"]
+keywords = [
+    "miniscope",
+    "neuroscience",
+    "io",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -29,54 +44,58 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Multimedia :: Video",
     "Topic :: Multimedia :: Video :: Capture",
-    "Topic :: Scientific/Engineering"
+    "Topic :: Scientific/Engineering",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-opencv-python = "^4.7.0.72"
-numpy = ">=1.25.0"
-pandas = "^2.1.0"
-pydantic = "^2.3.0"
-pyserial = "^3.5"
-tqdm = "^4.66.1"
-bitstring = "^4.2.3"
-pydantic-settings = "^2.0.3"
-rich = "^13.6.0"
-pyyaml = "^6.0.1"
-matplotlib = {version=">=3.9.2", optional=true}
-pytest = {version="^8.2.2", optional=true}
-pytest-cov = {version = "^5.0.0", optional = true}
-pytest-timeout = {version="^2.3.1", optional=true}
-sphinx = {version=">=6.2.1", optional=true}
-sphinx-click = {version="^6.0.0", optional=true}
-furo = {version=">2023.07.26", optional=true}
-myst-parser = {version=">3.0.0", optional=true}
-autodoc-pydantic = {version="^2.0.1", optional=true}
-black = {version="^24.1.1", optional=true}
-ruff = {version="^0.2.0", optional=true}
-pre-commit = {version = "^3.7.1", optional = true}
-nox = {version = ">=2024.4.15", optional = true}
-click = "^8.1.7"
+[project.urls]
+homepage = "https://miniscope-io.readthedocs.io/"
+repository = "https://github.com/Aharoni-Lab/miniscope-io"
+documentation = "https://miniscope-io.readthedocs.io/"
 
-[tool.poetry.extras]
-tests = ["pytest", "pytest-cov", "pytest-timeout", "matplotlib"]
-docs = ["sphinx", "sphinx-click", "furo", "myst-parser", "autodoc-pydantic", "matplotlib"]
-plot = ["matplotlib"]
+[project.optional-dependencies]
+plot = ["matplotlib>=3.9.2"]
+tests = [
+    "pytest>=8.2.2",
+    "pytest-cov>=5.0.0",
+    "pytest-timeout>=2.3.1",
+    "miniscope_io[plot]",
+]
+docs = [
+    "sphinx>=6.2.1",
+    "sphinx-click>=6.0.0",
+    "furo>2023.07.26",
+    "myst-parser>3.0.0",
+    "autodoc-pydantic>=2.0.1",
+]
 dev = [
-    "black", "ruff", "pre-commit", "nox",
-    # tests
-    "pytest", "pytest-cov", "pytest-timeout", "matplotlib",
-    # docs
-    "sphinx", "sphinx-click", "furo", "myst-parser", "autodoc-pydantic"
+    "black>=24.1.1",
+    "ruff>=0.2.0",
+    "pre-commit>=3.7.1",
 ]
+all = [
+    "miniscope_io[tests,docs,dev]"
+]
+
+[project.scripts]
+mio = "miniscope_io.cli.main:cli"
+
+[tool.pdm.scripts]
+test = "pytest"
+lint.composite = [
+    "ruff check",
+    "black miniscope_io --diff"
+]
+format.composite = [
+    "ruff check --fix",
+    "black miniscope_io"
+]
+
+[tool.pdm.build]
+includes = ["miniscope_io"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-mio = "miniscope_io.cli.main:cli"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [tool.pytest.ini_options]
 addopts = [

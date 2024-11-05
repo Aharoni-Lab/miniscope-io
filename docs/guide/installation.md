@@ -13,11 +13,11 @@ cd miniscope-io
 pip install .
 ```
 
-Or poetry:
+Or pdm:
 ```bash
 git clone https://github.com/Aharoni-Lab/miniscope-io
 cd miniscope-io
-poetry install
+pdm install
 ```
 
 

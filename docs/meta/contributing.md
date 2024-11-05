@@ -27,12 +27,12 @@ arbitrary and expansive power)
 
 ## Development Environment
 
-Install using the `dev` extra, which should have all other extras in it
+Install using the `all` extra, which should have all other extras in it
 
 ```shell
-poetry install --extras dev
+pdm install --with all
 # or
-pip install '.[dev]'
+pip install '.[all]'
 ```
 
 ### Linting
@@ -49,23 +49,19 @@ ruff check --fix
 black miniscope_io
 ```
 
+Or using pdm scripts
+
+```shell
+# check for problems
+pdm run lint
+
+# format code & try to resolve linter errors
+pdm run format
+```
+
 Or you can use the `pre-commit` action to automatically run them
 before committing code:
 
 ```shell
 pre-commit install
 ```
-
-Or you can use the `noxfile.py`
-
-```shell
-# just lint without formatting
-nox -s lint
-# lint and apply formatting
-nox -s format
-```
-
-
-
-
-
