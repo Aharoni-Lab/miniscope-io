@@ -2,13 +2,19 @@
 Base ABCs for pipeline classes
 """
 
+import sys
 from abc import abstractmethod
-from typing import ClassVar, Final, Generic, Self, TypeVar, Union, final
+from typing import ClassVar, Final, Generic, TypeVar, Union, final
 
 from pydantic import Field
 
 from miniscope_io.exceptions import ConfigurationMismatchError
 from miniscope_io.models.models import MiniscopeConfig, PipelineModel
+
+if sys.version_info < (3, 11):
+    from typing_extensions import Self
+else:
+    from typing import Self
 
 T = TypeVar("T")
 """
