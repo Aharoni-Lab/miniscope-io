@@ -8,7 +8,14 @@ from miniscope_io.models.models import (
     MiniscopeIOModel,
     PipelineModel,
 )
-from miniscope_io.models.pipeline import Node, Pipeline, ProcessingNode, Sink, Source
+from miniscope_io.models.pipeline import (
+    Node,
+    Pipeline,
+    PipelineConfig,
+    ProcessingNode,
+    Sink,
+    Source,
+)
 
 __all__ = [
     "Container",
@@ -16,6 +23,7 @@ __all__ = [
     "MiniscopeIOModel",
     "Node",
     "Pipeline",
+    "PipelineConfig",
     "PipelineModel",
     "ProcessingNode",
     "Sink",
