@@ -3,6 +3,10 @@ Custom exceptions!
 """
 
 
+class ConfigurationError(ValueError):
+    """Base exception class for errors in configuration"""
+
+
 class InvalidSDException(Exception):
     """
     Raised when :class:`.io.SDCard` is used with a drive that doesn't have the
@@ -52,7 +56,13 @@ class DeviceOpenError(DeviceError):
     """
 
 
-class DeviceConfigurationError(DeviceError):
+class DeviceConfigurationError(DeviceError, ConfigurationError):
     """
     Error while configuring a device
+    """
+
+
+class ConfigurationMismatchError(ConfigurationError):
+    """
+    Mismatch between the fields in some config model and the fields in the model it is configuring
     """
