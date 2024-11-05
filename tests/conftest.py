@@ -26,7 +26,7 @@ def pytest_sessionstart(session):
 @pytest.fixture(autouse=True)
 def mock_okdev(monkeypatch):
     from miniscope_io.sources.mocks import okDevMock
-    from miniscope_io.sources import opalkelly
+    from miniscope_io.sources.opalkelly import opalkelly
     from miniscope_io import stream_daq
 
     monkeypatch.setattr(opalkelly, "okDev", okDevMock)

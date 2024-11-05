@@ -1,5 +1,5 @@
 """
-Control interfaces for external hardware sources
+Source classes for the opalkelly FPGA DAQ
 """
 
 from miniscope_io.sources.opalkelly.opalkelly import okDev
