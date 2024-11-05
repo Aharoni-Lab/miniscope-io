@@ -159,3 +159,4 @@ cython_debug/
 #.idea/
 wirefree_example.mp4
 wirefree_example.avi
+.pdm-python
