@@ -57,7 +57,7 @@ class Node(PipelineModel, Generic[T, U]):
 
     id: str
     """Unique identifier of the node"""
-    config: NodeConfig = NodeConfig()
+    config: NodeConfig
 
     input_type: ClassVar[type[T]]
     inputs: dict[str, Union["Source", "ProcessingNode"]] = Field(default_factory=dict)
@@ -103,7 +103,7 @@ class Node(PipelineModel, Generic[T, U]):
         return node_types
 
 
-class Source(Node, Generic[U]):
+class Source(Node, Generic[T, U]):
     """A source of data in a processing pipeline"""
 
     inputs: Final[None] = None
@@ -124,7 +124,7 @@ class Source(Node, Generic[U]):
         """
 
 
-class Sink(Node, Generic[T]):
+class Sink(Node, Generic[T, U]):
     """A sink of data in a processing pipeline"""
 
     output_type: ClassVar[None] = None

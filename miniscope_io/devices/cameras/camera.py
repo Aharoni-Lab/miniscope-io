@@ -2,10 +2,10 @@
 ABCs for Camera and Miniscope source classes
 """
 
-from miniscope_io.models import Source
+from miniscope_io.devices.device import Device
 
 
-class Camera(Source):
+class Camera(Device):
     """
     A data source that captures images, often in a sequence known as a "video"
     """
