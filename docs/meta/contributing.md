@@ -27,12 +27,12 @@ arbitrary and expansive power)
 
 ## Development Environment
 
-Install using the `dev` extra, which should have all other extras in it
+Install using the `all` extra, which should have all other extras in it
 
 ```shell
-poetry install --extras dev
+pdm install --with all
 # or
-pip install '.[dev]'
+pip install '.[all]'
 ```
 
 ### Linting
