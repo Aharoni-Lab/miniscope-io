@@ -8,14 +8,9 @@ module, inheriting from the relevant parent class. Rule of thumb:
 keep what is common common, and what is unique unique.
 
 
-
-```{eval-rst}
-.. automodule:: miniscope_io.models
-    :members:
-    :undoc-members:
-```
-
 ```{toctree}
+:maxdepth: 1
+
 buffer
 config
 data

@@ -24,6 +24,7 @@ reference/object_model
 :maxdepth: 1
 :caption: API:
 
+api/devices/index
 api/formats/index
 api/io
 api/logging
