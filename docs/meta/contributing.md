@@ -49,23 +49,19 @@ ruff check --fix
 black miniscope_io
 ```
 
+Or using pdm scripts
+
+```shell
+# check for problems
+pdm run lint
+
+# format code & try to resolve linter errors
+pdm run format
+```
+
 Or you can use the `pre-commit` action to automatically run them
 before committing code:
 
 ```shell
 pre-commit install
 ```
-
-Or you can use the `noxfile.py`
-
-```shell
-# just lint without formatting
-nox -s lint
-# lint and apply formatting
-nox -s format
-```
-
-
-
-
-
