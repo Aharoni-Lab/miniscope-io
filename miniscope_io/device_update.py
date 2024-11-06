@@ -89,7 +89,7 @@ def DevUpdate(
         logger.info("Closed serial port")
 
 
-def find_ftdi_device() -> list:
+def find_ftdi_device() -> list[str]:
     """
     Find FTDI devices connected to the computer.
     """
