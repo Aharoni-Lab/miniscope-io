@@ -97,6 +97,8 @@ def device(port: str, device_id: int, reboot: bool) -> None:
 
     # Check mutual exclusivity
     if reboot:
-        device_update(port=port, key="DEVICE", value=DeviceCommand.REBOOT.value, device_id=device_id)
+        device_update(
+            port=port, key="DEVICE", value=DeviceCommand.REBOOT.value, device_id=device_id
+        )
     else:
         raise click.UsageError("Only --reboot is currently implemented.")

@@ -30,7 +30,7 @@ class UpdateCommandDefinitions:
     reset_byte = 0b11111111
 
 
-class UpdateTarget(Enum):
+class UpdateTarget(int, Enum):
     """
     Targets to update. Needs to be under 6-bit.
     """

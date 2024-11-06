@@ -12,6 +12,8 @@ from miniscope_io.logging import init_logger
 from miniscope_io.models.devupdate import DevUpdateCommand, UpdateCommandDefinitions
 
 logger = init_logger(name="device_update", level="INFO")
+FTDI_VENDOR_ID = 0x0403
+FTDI_PRODUCT_ID = 0x6001
 
 
 def device_update(
@@ -93,8 +95,6 @@ def find_ftdi_device() -> list[str]:
     """
     Find FTDI devices connected to the computer.
     """
-    FTDI_VENDOR_ID = 0x0403
-    FTDI_PRODUCT_ID = 0x6001
     ports = serial.tools.list_ports.comports()
     ftdi_ports = []
 
