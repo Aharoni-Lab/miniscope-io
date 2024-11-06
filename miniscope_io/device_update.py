@@ -1,144 +1,105 @@
 """
-Update miniscope device configuration.
-
-.. todo::
-
-    What kind of devices does this apply to?
-
+Update miniscope device configuration, such as LED, GAIN, etc.
 """
 
-import argparse
-import sys
 import time
+from typing import Optional
 
-import numpy as np
 import serial
+import serial.tools.list_ports
 
-from miniscope_io import init_logger
+from miniscope_io.logging import init_logger
+from miniscope_io.models.devupdate import DevUpdateCommand, UpdateCommandDefinitions
 
-# Parsers for update LED
-updateDeviceParser = argparse.ArgumentParser("updateDevice")
-updateDeviceParser.add_argument("port", help="serial port")
-updateDeviceParser.add_argument("baudrate", help="baudrate")
-updateDeviceParser.add_argument("module", help="module to update")
-updateDeviceParser.add_argument("value", help="LED value")
+logger = init_logger(name="device_update", level="INFO")
+FTDI_VENDOR_ID = 0x0403
+FTDI_PRODUCT_ID = 0x6001
 
 
-def updateDevice() -> None:
+def device_update(
+    target: str,
+    value: int,
+    device_id: int,
+    port: Optional[str] = None,
+) -> None:
     """
-    Script to update hardware settings over a generic UART-USB converter.
-    This script currently supports updating the excitation LED brightness and
-    electrical wetting lens driver gain.
+    Remote update of device configuration.
 
-    .. note::
+    Args:
+        device_id: ID of the device. 0 will update all devices.
+        port: Serial port to which the device is connected.
+        target: What to update on the device (e.g., LED, GAIN).
+        value: Value to which the target should be updated.
 
-        Not tested after separating from stream_daq.py.
-
-    Examples
-    --------
-    >>> updateDevice [COM port] [baudrate] [module] [value]
-
-    ..todo::
-        Test to see if changing package structure broke anything.
+    Returns:
+        None
     """
-    logger = init_logger("streamDaq")
 
-    args = updateDeviceParser.parse_args()
-    moduleList = ["LED", "EWL"]
+    if port:
+        logger.info(f"Using port {port}")
+    else:
+        ftdi_port_list = find_ftdi_device()
+        if len(ftdi_port_list) == 0:
+            raise ValueError("No FTDI devices found.")
+        if len(ftdi_port_list) > 1:
+            raise ValueError("Multiple FTDI devices found. Please specify the port.")
+        if len(ftdi_port_list) == 1:
+            port = ftdi_port_list[0]
+            logger.info(f"Using port {port}")
 
-    ledMAX = 100
-    ledMIN = 0
-
-    ewlMAX = 255
-    ewlMIN = 0
-
-    ledDeviceTag = 0  # 2-bits each for now
-    ewlDeviceTag = 1  # 2-bits each for now
-
-    deviceTagPos = 4
-    preamblePos = 6
-
-    Preamble = [2, 1]  # 2-bits each for now
-
-    uartPayload = 4
-    uartRepeat = 5
-    uartTimeGap = 0.01
+    command = DevUpdateCommand(device_id=device_id, port=port, target=target, value=value)
+    logger.info(f"Updating {target} to {value} on port {port}")
 
     try:
-        assert len(vars(args)) == 4
-    except AssertionError as msg:
-        logger.exception("Usage: updateDevice [COM port] [baudrate] [module] [value]")
-        raise msg
-
-    try:
-        comport = str(args.port)
-    except (ValueError, IndexError) as e:
-        logger.exception(e)
-        raise e
-
-    try:
-        baudrate = int(args.baudrate)
-    except (ValueError, IndexError) as e:
-        logger.exception(e)
-        raise e
-
-    try:
-        module = str(args.module)
-        assert module in moduleList
-    except AssertionError as msg:
-        err_str = "Available modules:\n"
-        for module in moduleList:
-            err_str += "\t" + module + "\n"
-        logger.exception(err_str)
-        raise msg
-
-    try:
-        value = int(args.value)
-    except Exception as e:
-        logger.exception("Value needs to be an integer")
-        raise e
-
-    try:
-        if module == "LED":
-            assert value <= ledMAX and value >= ledMIN
-        if module == "EWL":
-            assert value <= ewlMAX and value >= ewlMIN
-    except AssertionError as msg:
-        if module == "LED":
-            logger.exception("LED value need to be a integer within 0-100")
-        if module == "EWL":
-            logger.exception("EWL value need to be an integer within 0-255")
-        raise msg
-
-    if module == "LED":
-        deviceTag = ledDeviceTag << deviceTagPos
-    elif module == "EWL":
-        deviceTag = ewlDeviceTag << deviceTagPos
-
-    command = [0, 0]
-
-    command[0] = int(
-        Preamble[0] * 2**preamblePos + deviceTag + np.floor(value / (2**uartPayload))
-    ).to_bytes(1, "big")
-    command[1] = int(
-        Preamble[1] * 2**preamblePos + deviceTag + value % (2**uartPayload)
-    ).to_bytes(1, "big")
-
-    # set up serial port
-    try:
-        serial_port = serial.Serial(port=comport, baudrate=baudrate, timeout=5, stopbits=1)
+        serial_port = serial.Serial(port=command.port, baudrate=2400, timeout=5, stopbits=2)
     except Exception as e:
         logger.exception(e)
         raise e
     logger.info("Open serial port")
 
-    for uartCommand in command:
-        for _ in range(uartRepeat):
-            # read UART data until preamble and put into queue
-            serial_port.write(uartCommand)
-            time.sleep(uartTimeGap)
+    try:
+        id_command = (command.device_id + UpdateCommandDefinitions.id_header) & 0xFF
+        serial_port.write(id_command.to_bytes(1, "big"))
+        logger.debug(f"Command: {format(id_command, '08b')}; Device ID: {command.device_id}")
+        time.sleep(0.1)
 
-    serial_port.close()
-    logger.info("\t" + module + ": " + str(value))
-    logger.info("Close serial port")
-    sys.exit(1)
+        target_command = (command.target.value + UpdateCommandDefinitions.target_header) & 0xFF
+        serial_port.write(target_command.to_bytes(1, "big"))
+        logger.debug(f"Command: {format(target_command, '08b')}; Target: {command.target.name}")
+        time.sleep(0.1)
+
+        value_LSB_command = (
+            (command.value & UpdateCommandDefinitions.LSB_value_mask)
+            + UpdateCommandDefinitions.LSB_header
+        ) & 0xFF
+        serial_port.write(value_LSB_command.to_bytes(1, "big"))
+        logger.debug(f"Command: {format(value_LSB_command, '08b')}; Value: {command.value} (LSB)")
+        time.sleep(0.1)
+
+        value_MSB_command = (
+            ((command.value & UpdateCommandDefinitions.MSB_value_mask) >> 6)
+            + UpdateCommandDefinitions.MSB_header
+        ) & 0xFF
+        serial_port.write(value_MSB_command.to_bytes(1, "big"))
+        logger.debug(f"Command: {format(value_MSB_command, '08b')}; Value: {command.value} (MSB)")
+        time.sleep(0.1)
+
+        serial_port.write(UpdateCommandDefinitions.reset_byte.to_bytes(1, "big"))
+
+    finally:
+        serial_port.close()
+        logger.info("Closed serial port")
+
+
+def find_ftdi_device() -> list[str]:
+    """
+    Find FTDI devices connected to the computer.
+    """
+    ports = serial.tools.list_ports.comports()
+    ftdi_ports = []
+
+    for port in ports:
+        if port.vid == FTDI_VENDOR_ID and port.pid == FTDI_PRODUCT_ID:
+            ftdi_ports.append(port.device)
+
+    return ftdi_ports
