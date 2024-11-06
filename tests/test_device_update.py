@@ -5,18 +5,24 @@ from unittest.mock import MagicMock, patch, call
 from miniscope_io.models.devupdate import UpdateCommandDefinitions, UpdateTarget
 from miniscope_io.device_update import device_update, find_ftdi_device
 
+@pytest.fixture
+def mock_serial_fixture(request):
+    device_list = request.param
+    with patch('serial.Serial') as mock_serial, patch('serial.tools.list_ports.comports') as mock_comports:
+        mock_serial_instance = mock_serial.return_value
+        mock_comports.return_value = [MagicMock(vid=device['vid'], pid=device['pid'], device=device['device'])
+                                      for device in device_list]
+        yield mock_serial, mock_comports, mock_serial_instance
 
-@patch("miniscope_io.device_update.serial.tools.list_ports.comports")
-@patch("miniscope_io.device_update.serial.Serial")
-def test_devupdate_with_device_connected(mock_serial, mock_comports):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0403, 'pid': 0x6001, 'device': 'COM3'},
+     {'vid': 0x0111, 'pid': 0x6111, 'device': 'COM2'}],
+], indirect=True)
+def test_devupdate_with_device_connected(mock_serial_fixture):
     """
     Test device_update function with a device connected.
     """
-    mock_serial_instance = mock_serial.return_value
-    mock_comports.return_value = [
-        MagicMock(vid=0x0403, pid=0x6001, device="COM3"),
-        MagicMock(vid=0x1234, pid=0x5678, device="COM4"),
-    ]
+    mock_serial, mock_comports, mock_serial_instance = mock_serial_fixture
     target = "LED"
     value = 2
     device_id = 1
@@ -47,13 +53,15 @@ def test_devupdate_with_device_connected(mock_serial, mock_comports):
     assert mock_serial_instance.write.call_count == len(expected_calls)
     mock_serial_instance.write.assert_has_calls(expected_calls, any_order=False)
 
-@patch("miniscope_io.device_update.serial.tools.list_ports.comports")
-def test_devupdate_without_device_connected(mock_comports):
+
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [],
+], indirect=True)
+def test_devupdate_without_device_connected(mock_serial_fixture):
     """
     Test device_update function without a device connected.
     """
-    mock_comports.return_value = [
-    ]
+
     target = "GAIN"
     value = 2
     device_id = 0
@@ -61,29 +69,26 @@ def test_devupdate_without_device_connected(mock_comports):
     with pytest.raises(ValueError, match="No FTDI devices found."):
         device_update(target, value, device_id)
 
-@patch("miniscope_io.device_update.serial.tools.list_ports.comports")
-def test_find_ftdi_device(mock_comports):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0403, 'pid': 0x6001, 'device': 'COM3'},
+     {'vid': 0x0111, 'pid': 0x6111, 'device': 'COM2'}],
+], indirect=True)
+def test_find_ftdi_device(mock_serial_fixture):
     """
     Test find_ftdi_device function.
     """
-    mock_comports.return_value = [
-        MagicMock(vid=0x0403, pid=0x6001, device="COM3"),
-        MagicMock(vid=0x1234, pid=0x5678, device="COM4"),
-    ]
-
     result = find_ftdi_device()
 
     assert result == ["COM3"]
 
-@patch("miniscope_io.models.devupdate.serial.tools.list_ports.comports")
-def test_invalid_target_raises_error(mock_comports):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0403, 'pid': 0x6001, 'device': 'COM3'},
+     {'vid': 0x0111, 'pid': 0x6111, 'device': 'COM2'}],
+], indirect=True)
+def test_invalid_target_raises_error(mock_serial_fixture):
     """
     Test that an invalid target raises an error.
     """
-    mock_comports.return_value = [
-        MagicMock(vid=0x0403, pid=0x6001, device="COM3"),
-        MagicMock(vid=0x1234, pid=0x5678, device="COM4"),
-    ]
 
     target = "RANDOM_STRING"
     value = 50
@@ -93,15 +98,16 @@ def test_invalid_target_raises_error(mock_comports):
     with pytest.raises(ValidationError, match="Target RANDOM_STRING not found"):
         device_update(target, value, device_id, port)
 
-@patch("miniscope_io.models.devupdate.serial.tools.list_ports.comports")
-def test_invalid_led_value_raises_error(mock_comports):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0403, 'pid': 0x6001, 'device': 'COM3'},
+     {'vid': 0x0111, 'pid': 0x6111, 'device': 'COM2'}],
+], indirect=True)
+def test_invalid_led_value_raises_error(mock_serial_fixture):
     """
     Test that an invalid LED value raises an error.
     """
-    mock_comports.return_value = [
-        MagicMock(vid=0x0403, pid=0x6001, device="COM3"),
-        MagicMock(vid=0x1234, pid=0x5678, device="COM4"),
-    ]
+    mock_serial, mock_comports, mock_serial_instance = mock_serial_fixture
+
     target = "LED"
     value = 150  # LED value should be between 0 and 100
     device_id = 1
@@ -110,16 +116,14 @@ def test_invalid_led_value_raises_error(mock_comports):
     with pytest.raises(ValidationError, match="For LED, value must be between 0 and 100"):
         device_update(target, value, device_id, port)
 
-
-@patch("miniscope_io.device_update.serial.tools.list_ports.comports")
-def test_devupdate_with_multiple_ftdi_devices(mock_comports):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0403, 'pid': 0x6001, 'device': 'COM3'},
+     {'vid': 0x0403, 'pid': 0x6001, 'device': 'COM2'}],
+], indirect=True)
+def test_devupdate_with_multiple_ftdi_devices(mock_serial_fixture):
     """
     Test that multiple FTDI devices raise an error.
     """
-    mock_comports.return_value = [
-        MagicMock(vid=0x0403, pid=0x6001, device="COM1"),
-        MagicMock(vid=0x0403, pid=0x6001, device="COM2"),
-    ]
 
     target = "GAIN"
     value = 5
@@ -128,11 +132,16 @@ def test_devupdate_with_multiple_ftdi_devices(mock_comports):
     with pytest.raises(ValueError, match="Multiple FTDI devices found. Please specify the port."):
         device_update(target, value, device_id)
 
-@patch("miniscope_io.device_update.serial.Serial")
-def test_devupdate_serial_exception_handling(mock_serial):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0403, 'pid': 0x6001, 'device': 'COM3'}],
+], indirect=True)
+def test_devupdate_serial_exception_handling(mock_serial_fixture):
     """
     Test exception handling when serial port cannot be opened.
+    Might be too obvious so it might be better to re-think this test.
     """
+    mock_serial, mock_comports, mock_serial_instance = mock_serial_fixture
+
     mock_serial.side_effect = serial.SerialException("Serial port error")
 
     target = "LED"
@@ -140,17 +149,17 @@ def test_devupdate_serial_exception_handling(mock_serial):
     device_id = 1
     port = "COM3"
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(serial.SerialException):
         device_update(target, value, device_id, port)
 
-@patch("miniscope_io.device_update.serial.tools.list_ports.comports")
-def test_specified_port_not_ftdi_device(mock_comports):
+@pytest.mark.parametrize('mock_serial_fixture', [
+    [{'vid': 0x0413, 'pid': 0x6111, 'device': 'COM2'}],
+], indirect=True)
+def test_specified_port_not_ftdi_device(mock_serial_fixture):
     """
     Test with a specified port not corresponding to an FTDI device.
     """
-    mock_comports.return_value = [
-        MagicMock(vid=None, pid=None, device="COM3")
-    ]
+    mock_serial, mock_comports, mock_serial_instance = mock_serial_fixture
 
     target = "GAIN"
     value = 10
