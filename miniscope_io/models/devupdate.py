@@ -71,14 +71,10 @@ class DevUpdateCommand(BaseModel):
             assert value in [1, 2, 4], "For GAIN, value must be 1, 2, or 4"
         elif target == UpdateTarget.DEVICE:
             assert value in [DeviceCommand.REBOOT.value], "For DEVICE, value must be in [200]"
-        elif (
-            target == UpdateTarget.ROI_X
-            or target == UpdateTarget.ROI_Y
-            or target == UpdateTarget.ROI_WIDTH
-            or target == UpdateTarget.ROI_HEIGHT
-            or target == UpdateTarget.EWL
-        ):
-            pass  # Need to implement
+        elif target in UpdateTarget:
+            raise NotImplementedError()
+        else:
+            raise ValueError(f"{target} is not a valid update target, need an instance of UpdateTarget")
         return values
 
     @field_validator("port")
