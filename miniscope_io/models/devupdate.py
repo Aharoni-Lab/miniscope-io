@@ -116,4 +116,4 @@ class DevUpdateCommand(BaseModel):
         try:
             return UpdateTarget[value]
         except KeyError as e:
-            raise ValueError(f"Target {value} not found.") from e
+            raise ValueError(f"Target {value} not found, must be a member of UpdateTarget: {list(UpdateTarget.__members__.keys())}.") from e
