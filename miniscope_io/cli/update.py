@@ -22,7 +22,7 @@ from miniscope_io.models.devupdate import DeviceCommand
     required=False,
     default=0,
     type=int,
-    help="ID of the device to update. 0 will update all devices.",
+    help="[EXPERIMENTAL FEATURE] ID of the device to update. 0 (default) will update all devices.",
 )
 @click.option(
     "-k",
@@ -43,7 +43,10 @@ from miniscope_io.models.devupdate import DeviceCommand
     "--batch",
     required=False,
     type=click.Path(exists=True, dir_okay=False),
-    help="YAML file that works as a batch file to update. Specify key and value pairs in the file.",
+    help=(
+        "[EXPERIMENTAL FEATURE] YAML file that works as a batch file to update."
+        "Specify key and value pairs in the file."
+    ),
 )
 def update(port: str, key: str, value: int, device_id: int, batch: str) -> None:
     """
@@ -82,7 +85,7 @@ def update(port: str, key: str, value: int, device_id: int, batch: str) -> None:
     required=False,
     default=0,
     type=int,
-    help="ID of the device to update. 0 will update all devices.",
+    help="[EXPERIMENTAL FEATURE] ID of the device to update. 0 (default) will update all devices.",
 )
 @click.option(
     "--reboot",
