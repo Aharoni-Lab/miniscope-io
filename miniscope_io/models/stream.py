@@ -291,3 +291,12 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
         if not value.is_absolute():
             value = DEVICE_DIR / value
         return value
+
+    @field_validator("bitstream", mode="after")
+    def ensure_exists(cls, value: Optional[Path]) -> Optional[Path]:
+        """If a bitstream file has been provided, ensure it exists"""
+        if isinstance(value, Path):
+            assert (
+                value.exists()
+            ), f"Configured to use bitstream file {value}, but it does not exist"
+        return value
