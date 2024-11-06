@@ -39,13 +39,13 @@ from miniscope_io.models.devupdate import DeviceCommand
     help="Value to set. Must be used with --key and cannot be used with --restart.",
 )
 @click.option(
-    "-c",
-    "--config",
+    "-b",
+    "--batch",
     required=False,
     type=click.Path(exists=True, dir_okay=False),
-    help="YAML file with configuration to update. Specify key and value pairs in the file.",
+    help="YAML file that works as a batch file to update. Specify key and value pairs in the file.",
 )
-def update(port: str, key: str, value: int, device_id: int, config: str) -> None:
+def update(port: str, key: str, value: int, device_id: int, batch: str) -> None:
     """
     Update device configuration.
     """
@@ -54,16 +54,16 @@ def update(port: str, key: str, value: int, device_id: int, config: str) -> None
     if (key and not value) or (value and not key):
         raise click.UsageError("Both --key and --value are required if one is specified.")
 
-    if config and (key or value):
+    if batch and (key or value):
         raise click.UsageError(
-            "Options --key/--value and --restart" " and --config are mutually exclusive."
+            "Options --key/--value and --restart" " and --batch are mutually exclusive."
         )
     if key and value:
         device_update(port=port, key=key, value=value, device_id=device_id)
-    elif config:
-        with open(config) as f:
-            config_file = yaml.safe_load(f)
-        for key, value in config_file:
+    elif batch:
+        with open(batch) as f:
+            batch_file = yaml.safe_load(f)
+        for key, value in batch_file:
             device_update(port=port, key=key, value=value, device_id=device_id)
     else:
         raise click.UsageError("Either --key with --value or --restart must be specified.")
