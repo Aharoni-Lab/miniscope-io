@@ -297,6 +297,7 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.fpga_recv")
         if not HAVE_OK:
+            serial_buffer_queue.put(None)
             raise RuntimeError(
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
             )
