@@ -3,14 +3,14 @@ import serial
 from pydantic import ValidationError
 from unittest.mock import MagicMock, patch, call
 from miniscope_io.models.devupdate import UpdateCommandDefinitions, UpdateTarget
-from miniscope_io.device_update import DevUpdate, find_ftdi_device
+from miniscope_io.device_update import device_update, find_ftdi_device
 
 
 @patch("miniscope_io.device_update.serial.tools.list_ports.comports")
 @patch("miniscope_io.device_update.serial.Serial")
 def test_devupdate_with_device_connected(mock_serial, mock_comports):
     """
-    Test DevUpdate function with a device connected.
+    Test device_update function with a device connected.
     """
     mock_serial_instance = mock_serial.return_value
     mock_comports.return_value = [
@@ -22,7 +22,7 @@ def test_devupdate_with_device_connected(mock_serial, mock_comports):
     device_id = 1
     port = "COM3"
 
-    DevUpdate(target, value, device_id, port)
+    device_update(target, value, device_id, port)
 
     mock_serial.assert_called_once_with(port=port, baudrate=2400, timeout=5, stopbits=2)
 
@@ -50,7 +50,7 @@ def test_devupdate_with_device_connected(mock_serial, mock_comports):
 @patch("miniscope_io.device_update.serial.tools.list_ports.comports")
 def test_devupdate_without_device_connected(mock_comports):
     """
-    Test DevUpdate function without a device connected.
+    Test device_update function without a device connected.
     """
     mock_comports.return_value = [
     ]
@@ -59,7 +59,7 @@ def test_devupdate_without_device_connected(mock_comports):
     device_id = 0
 
     with pytest.raises(ValueError, match="No FTDI devices found."):
-        DevUpdate(target, value, device_id)
+        device_update(target, value, device_id)
 
 @patch("miniscope_io.device_update.serial.tools.list_ports.comports")
 def test_find_ftdi_device(mock_comports):
@@ -91,7 +91,7 @@ def test_invalid_target_raises_error(mock_comports):
     port = "COM3"
 
     with pytest.raises(ValidationError, match="Target RANDOM_STRING not found"):
-        DevUpdate(target, value, device_id, port)
+        device_update(target, value, device_id, port)
 
 @patch("miniscope_io.models.devupdate.serial.tools.list_ports.comports")
 def test_invalid_led_value_raises_error(mock_comports):
@@ -108,7 +108,7 @@ def test_invalid_led_value_raises_error(mock_comports):
     port = "COM3"
 
     with pytest.raises(ValidationError, match="For LED, value must be between 0 and 100"):
-        DevUpdate(target, value, device_id, port)
+        device_update(target, value, device_id, port)
 
 
 @patch("miniscope_io.device_update.serial.tools.list_ports.comports")
@@ -126,7 +126,7 @@ def test_devupdate_with_multiple_ftdi_devices(mock_comports):
     device_id = 1
 
     with pytest.raises(ValueError, match="Multiple FTDI devices found. Please specify the port."):
-        DevUpdate(target, value, device_id)
+        device_update(target, value, device_id)
 
 @patch("miniscope_io.device_update.serial.Serial")
 def test_devupdate_serial_exception_handling(mock_serial):
@@ -141,7 +141,7 @@ def test_devupdate_serial_exception_handling(mock_serial):
     port = "COM3"
 
     with pytest.raises(ValidationError):
-        DevUpdate(target, value, device_id, port)
+        device_update(target, value, device_id, port)
 
 @patch("miniscope_io.device_update.serial.tools.list_ports.comports")
 def test_specified_port_not_ftdi_device(mock_comports):
@@ -157,4 +157,4 @@ def test_specified_port_not_ftdi_device(mock_comports):
     device_id = 1
 
     with pytest.raises(ValueError, match="No FTDI devices found."):
-        DevUpdate(target, value, device_id)
+        device_update(target, value, device_id)

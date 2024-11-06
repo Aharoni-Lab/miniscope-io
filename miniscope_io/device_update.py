@@ -14,7 +14,7 @@ from miniscope_io.models.devupdate import DevUpdateCommand, UpdateCommandDefinit
 logger = init_logger(name="device_update", level="INFO")
 
 
-def DevUpdate(
+def device_update(
     target: str,
     value: int,
     device_id: int,

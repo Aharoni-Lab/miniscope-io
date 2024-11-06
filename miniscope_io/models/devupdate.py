@@ -74,7 +74,9 @@ class DevUpdateCommand(BaseModel):
         elif target in UpdateTarget:
             raise NotImplementedError()
         else:
-            raise ValueError(f"{target} is not a valid update target, need an instance of UpdateTarget")
+            raise ValueError(
+                f"{target} is not a valid update target," "need an instance of UpdateTarget"
+            )
         return values
 
     @field_validator("port")
@@ -116,4 +118,7 @@ class DevUpdateCommand(BaseModel):
         try:
             return UpdateTarget[value]
         except KeyError as e:
-            raise ValueError(f"Target {value} not found, must be a member of UpdateTarget: {list(UpdateTarget.__members__.keys())}.") from e
+            raise ValueError(
+                f"Target {value} not found, must be a member of UpdateTarget:"
+                f" {list(UpdateTarget.__members__.keys())}."
+            ) from e
