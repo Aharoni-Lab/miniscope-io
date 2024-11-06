@@ -297,6 +297,7 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.fpga_recv")
         if not HAVE_OK:
+            serial_buffer_queue.put(None)
             raise RuntimeError(
                 "Couldnt import OpalKelly device. Check the docs for install instructions!"
             )
@@ -307,9 +308,10 @@ class StreamDaq:
         # set up fpga devices
         BIT_FILE = self.config.bitstream
         if not BIT_FILE.exists():
+            serial_buffer_queue.put(None)
             raise RuntimeError(f"Configured to use bitfile at {BIT_FILE} but no such file exists")
-        # set up fpga devices
 
+        # set up fpga devices
         dev = self._init_okdev(BIT_FILE)
 
         # read loop
