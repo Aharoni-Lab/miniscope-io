@@ -40,7 +40,7 @@ Below is an example configuration YAML file. More examples can be found in `mini
 device: "OK"
 
 # bitstream file to upload to Opal Kelly board
-bitstream: "XEM7310-A75/USBInterface-8.33mhz-J2_2-3v3-IEEE.bit"
+bitstream: "XEM7310-A75/USBInterface-8_33mhz-J2_2-3v3-IEEE.bit"
 
 # COM port and baud rate is only required for UART mode
 port: null
