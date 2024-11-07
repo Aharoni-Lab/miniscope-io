@@ -1,4 +1,5 @@
-import pdb
+import re
+from pathlib import Path
 
 import multiprocessing
 import os
@@ -9,6 +10,7 @@ import signal
 import time
 from contextlib import contextmanager
 
+from miniscope_io import BASE_DIR
 from miniscope_io.stream_daq import StreamDevConfig, StreamDaq
 from miniscope_io.utils import hash_video, hash_file
 from .conftest import DATA_DIR, CONFIG_DIR
@@ -176,3 +178,12 @@ def test_metadata_plotting(tmp_path, default_streamdaq):
         len(default_streamdaq._header_plotter.index)
         == default_streamdaq.config.runtime.plot.history
     )
+
+
+def test_bitfile_names():
+    """
+    Bitfile names should have no periods or whitespace in the filenames (except for the .bit extension)
+    """
+    pattern = re.compile(r"\.(?!bit$)|\s")
+    for path in Path(BASE_DIR).glob("**/*.bit"):
+        assert not pattern.search(str(path.name))

@@ -19,6 +19,19 @@ A window displaying the image transferred from the Miniscope and a graph plottin
 ## Device configuration
 A YAML file is used to configure Stream DAQ based on the device configuration. The device configuration needs to match the imaging and data capture hardware for proper operation. This file is used to set up hardware, define data formats, and set data preambles. The contents of this YAML file will be parsed into a model [miniscope_io.models.stream](../api/models/stream.md), which then configures the Stream DAQ.
 
+### FPGA (Opal Kelly) configuration
+The `bitstream` field in the device configuration yaml file specifies the image that will be uploaded to the opal kelly board. This file needs to be placed in `miniscope_io.devices`.
+
+
+#### Bitstream file nomenclature
+Name format of the bitstream files and directory:
+`[DEVICE_DIR]/USBInterface-[CLOCK_FREQUENCY]-[INPUT_PIN]_[IO_VOLTAGE]-[ENCODING_POLARITY]`
+- **DEVICE_DIR**: FPGA module name. The current package supports XEM7310-A75 (Opal kelly).
+- **CLOCK_FREQUENCY**: Manchester encoding clock frequency. For the current FPGA (XEM7310-A75), this frequency can be configured to 100 / *i* MHz where *i* is an integer.
+- **INPUT_PIN**: Signal input pin. `J2_2` means signal goes into second pin of J2 pin headers in the hardware module.
+- **IO_VOLTAGE**: I/O voltage of the FPGA `INPUT_PIN`. The current package supports 3.3V input.
+- **ENCODING_POLARITY**: Manchester encoding convention, which corresponds to bit polarity. The current package supports IEEE convention Manchester encoding.
+
 ### Example device configuration
 Below is an example configuration YAML file. More examples can be found in `miniscope_io.data.config`.
 
@@ -26,8 +39,8 @@ Below is an example configuration YAML file. More examples can be found in `mini
 # capture device. "OK" (Opal Kelly) or "UART"
 device: "OK"
 
-# The configuration bitstream file to upload to the Opal Kelly board. This uploads a Manchester decoder HDL and different bitstream files are required to configure different data rates and bit polarity. This is a binary file synthesized using Vivado, and details for generating this file will be provided in later updates.
-bitstream: "USBInterface-6mhz-3v3-INVERSE.bit"
+# bitstream file to upload to Opal Kelly board
+bitstream: "XEM7310-A75/USBInterface-8_33mhz-J2_2-3v3-IEEE.bit"
 
 # COM port and baud rate is only required for UART mode
 port: null
@@ -46,6 +59,7 @@ header_len: 384 # 12 * 32 (in bits)
 buffer_block_length: 10
 block_size: 512
 num_buffers: 32
+dummy_words: 10
 
 # Flags to flip bit/byte order when recovering headers and data. See model document for details.
 reverse_header_bits: True
@@ -53,6 +67,27 @@ reverse_header_bytes: True
 reverse_payload_bits: True
 reverse_payload_bytes: True
 
+adc_scale:
+  ref_voltage: 1.1
+  bitdepth: 8
+  battery_div_factor: 5
+  vin_div_factor: 11.3
+
+runtime:
+  serial_buffer_queue_size: 10
+  frame_buffer_queue_size: 5
+  image_buffer_queue_size: 5
+  csv:
+    buffer: 100
+  plot:
+    keys:
+      - timestamp
+      - buffer_count
+      - frame_buffer_count
+      - battery_voltage
+      - input_voltage
+    update_ms: 1000
+    history: 500
 ```
 
 ```{eval-rst}

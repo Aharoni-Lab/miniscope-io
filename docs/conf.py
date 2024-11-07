@@ -11,7 +11,7 @@ import sys
 from unittest.mock import Mock
 
 # Mock _ok module
-sys.modules['_ok'] = Mock()
+sys.modules["_ok"] = Mock()
 
 project = "miniscope-io"
 copyright = "2023, Jonny"
@@ -49,6 +49,7 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
     "rich": ("https://rich.readthedocs.io/en/stable/", None),
+    "pyserial": ("https://pyserial.readthedocs.io/en/stable/", None),
 }
 
 # ----------
