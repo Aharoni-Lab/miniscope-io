@@ -1,4 +1,4 @@
-# Example stream device
+# Capture from a Wireless Miniscope
 
 **Under Construction:** This section will be populated when devices are released.
 

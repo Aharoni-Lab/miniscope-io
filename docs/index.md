@@ -10,7 +10,6 @@ guide/installation
 guide/cli
 guide/capture/index
 guide/update/index
-guide/examples/index
 ```
 
 ```{toctree}
