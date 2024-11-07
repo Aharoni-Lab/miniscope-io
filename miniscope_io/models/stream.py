@@ -7,7 +7,7 @@ from typing import Literal, Optional, Union
 
 from pydantic import Field, computed_field, field_validator
 
-from miniscope_io import SOURCES_DIR
+from miniscope_io import DATA_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
 from miniscope_io.models.mixins import YAMLMixin
@@ -283,13 +283,13 @@ class StreamDevConfig(MiniscopeConfig, YAMLMixin):
             return value
 
     @field_validator("bitstream", mode="after")
-    def resolve_relative(cls, value: Path) -> Path:
+    def resolve_bitfile(cls, value: Path) -> Path:
         """
         If we are given a relative path to a bitstream, resolve it relative to
-        the device path
+        the bitfiles directory
         """
         if not value.is_absolute():
-            value = SOURCES_DIR / "opalkelly" / value
+            value = DATA_DIR / "bitfile" / value
         return value
 
     @field_validator("bitstream", mode="after")
