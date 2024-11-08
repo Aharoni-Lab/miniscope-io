@@ -66,9 +66,9 @@ class Node(PipelineModel, Generic[T, U]):
     config: NodeConfig
 
     input_type: ClassVar[type[T]]
-    inputs: dict[str, Union["Source", "ProcessingNode"]] = Field(default_factory=dict)
+    inputs: dict[str, Union["Source", "Transform"]] = Field(default_factory=dict)
     output_type: ClassVar[type[U]]
-    outputs: dict[str, Union["Sink", "ProcessingNode"]] = Field(default_factory=dict)
+    outputs: dict[str, Union["Sink", "Transform"]] = Field(default_factory=dict)
 
     @abstractmethod
     def start(self) -> None:
@@ -149,7 +149,7 @@ class Sink(Node, Generic[T, U]):
         """
 
 
-class ProcessingNode(Node, Generic[T, U]):
+class Transform(Node, Generic[T, U]):
     """
     An intermediate processing node that transforms some input to output
     """
@@ -184,9 +184,9 @@ class Pipeline(PipelineModel):
         return {k: v for k, v in self.nodes.items() if isinstance(v, Source)}
 
     @property
-    def processing_nodes(self) -> dict[str, "ProcessingNode"]:
-        """All :class:`.ProcessingNode` s in the processing graph"""
-        return {k: v for k, v in self.nodes.items() if isinstance(v, ProcessingNode)}
+    def transforms(self) -> dict[str, "Transform"]:
+        """All :class:`.Transform` s in the processing graph"""
+        return {k: v for k, v in self.nodes.items() if isinstance(v, Transform)}
 
     @property
     def sinks(self) -> dict[str, "Sink"]:

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Union
 from miniscope_io.models import MiniscopeConfig, MiniscopeIOModel, Pipeline, PipelineConfig
 
 if TYPE_CHECKING:
-    from miniscope_io.models.pipeline import ProcessingNode, Sink, Source
+    from miniscope_io.models.pipeline import Sink, Source, Transform
 
 
 class DeviceConfig(MiniscopeConfig):
@@ -130,9 +130,9 @@ class Device(MiniscopeIOModel):
         return self.pipeline.sources
 
     @property
-    def processing_nodes(self) -> dict[str, "ProcessingNode"]:
-        """Convenience method to access :attr:`.Pipeline.processing_nodes`"""
-        return self.pipeline.processing_nodes
+    def transforms(self) -> dict[str, "Transform"]:
+        """Convenience method to access :attr:`.Pipeline.transforms`"""
+        return self.pipeline.transforms
 
     @property
     def sinks(self) -> dict[str, "Sink"]:

@@ -12,9 +12,9 @@ from miniscope_io.models.pipeline import (
     Node,
     Pipeline,
     PipelineConfig,
-    ProcessingNode,
     Sink,
     Source,
+    Transform,
 )
 
 __all__ = [
@@ -25,7 +25,7 @@ __all__ = [
     "Pipeline",
     "PipelineConfig",
     "PipelineModel",
-    "ProcessingNode",
+    "Transform",
     "Sink",
     "Source",
 ]
