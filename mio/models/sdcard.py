@@ -111,7 +111,7 @@ class SDLayout(MiniscopeConfig, ConfigYAMLMixin):
     """
     Data layout of an SD Card.
 
-    Used by the :class:`.io.SDCard` class to tell it how data on the SD card is laid out.
+    Used by the :class:`.io.WireFreeMiniscope` class to tell it how data on the SD card is laid out.
     """
 
     sectors: SectorConfig

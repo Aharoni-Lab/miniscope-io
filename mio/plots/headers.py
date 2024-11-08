@@ -1,5 +1,5 @@
 """
-Plot headers from :class:`.SDCard`
+Plot headers from :class:`.WireFreeMiniscope`
 """
 
 from collections import deque
