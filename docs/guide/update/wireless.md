@@ -1,4 +1,4 @@
-# Update controller
+# Update A Wireless Miniscope
 
 **Under Construction:** This section will be populated when these devices are released.
 

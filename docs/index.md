@@ -7,28 +7,30 @@ Generic I/O interfaces for miniscopes :)
 :maxdepth: 2
 
 guide/installation
-cli/main
+guide/cli
+guide/capture/index
+guide/update/index
 ```
 
 ```{toctree}
-:caption: Device:
+:caption: Reference:
 :maxdepth: 1
 
-device/test_device
-device/update_controller
+reference/object_model
 ```
 
 ```{toctree}
 :maxdepth: 1
 :caption: API:
 
-api/devices
+api/devices/index
 api/formats/index
 api/io
 api/logging
 api/models/index
 api/exceptions
 api/plots/index
+api/sources
 api/utils
 api/stream_daq
 api/bit_operation

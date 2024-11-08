@@ -1,0 +1,5 @@
+# Update Devices
+
+```{toctree}
+wireless
+```

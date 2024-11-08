@@ -137,7 +137,7 @@ New features:
 
 - Added support for the wireless FPGA and UART daqs - work in progress unifying the API, but
   initial version of code is present in `stream_daq.py`
-- Vendored opalkelly device drivers - see `devices` and `vendor`
+- Vendored opalkelly device drivers - see `devices` (now `sources` in later versions) and `vendor`
 
 ### 0.1.5 - 23-09-03
 

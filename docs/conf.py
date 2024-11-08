@@ -6,6 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+from pathlib import Path
 from importlib.metadata import version as _version
 import sys
 from unittest.mock import Mock
@@ -27,10 +28,12 @@ extensions = [
     "myst_parser",
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
-    "sphinxcontrib.autodoc_pydantic",
+    "sphinx.ext.inheritance_diagram",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx_click",
+    "sphinxcontrib.autodoc_pydantic",
+    "sphinxcontrib.mermaid",
 ]
 
 templates_path = ["_templates"]
@@ -83,3 +86,56 @@ autodoc_mock_imports = ["routine"]
 
 # todo
 todo_include_todos = True
+
+# mermaid
+
+mermaid_include_elk = "latest"
+mermaid_version = None
+mermaid_use_local = "https://example.com"
+mermaid_init_js = """
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs'
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+const make_config = () => {
+  let prefersDark = localStorage.getItem('theme') === 'dark' || (localStorage.getItem('theme') === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return({
+    startOnLoad:false,
+    darkMode: prefersDark,
+    theme: prefersDark ? "dark" : "default"
+  })
+}
+
+const init_mermaid = () => {
+    let graphs = document.querySelectorAll(".mermaid");
+    [...graphs].forEach((element) => {
+        if (!element.hasAttribute("data-source")) {
+            element.setAttribute("data-source", element.innerText);
+        }
+        if (element.hasAttribute("data-processed")) {
+            let new_elt = document.createElement("pre");
+            let graph_source = element.getAttribute("data-source");
+            new_elt.appendChild(document.createTextNode(graph_source));
+            new_elt.classList.add("mermaid");
+            new_elt.setAttribute("data-source", graph_source);
+            element.replaceWith(new_elt);
+        }
+    });
+
+    let config = make_config()
+    mermaid.initialize(config);
+    mermaid.run();
+}
+
+init_mermaid();
+
+let theme_observer = new MutationObserver(init_mermaid);
+let body = document.getElementsByTagName("body")[0];
+theme_observer.observe(body, {attributes: true});
+window.theme_observer = theme_observer;
+
+"""
+
+# inheritance graphs
+inheritance_graph_attrs = {
+    "rankdir": "TB",
+}

@@ -25,8 +25,8 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(autouse=True)
 def mock_okdev(monkeypatch):
-    from miniscope_io.devices.mocks import okDevMock
-    from miniscope_io.devices import opalkelly
+    from miniscope_io.sources.mocks import okDevMock
+    from miniscope_io.sources import opalkelly
     from miniscope_io import stream_daq
 
     monkeypatch.setattr(opalkelly, "okDev", okDevMock)
@@ -41,7 +41,7 @@ def set_okdev_input(monkeypatch):
     """
 
     def _set_okdev_input(file: Union[str, Path]):
-        from miniscope_io.devices.mocks import okDevMock
+        from miniscope_io.sources.mocks import okDevMock
 
         monkeypatch.setattr(okDevMock, "DATA_FILE", file)
         os.environ["PYTEST_OKDEV_DATA_FILE"] = str(file)

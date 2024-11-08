@@ -1,6 +1,6 @@
 import pytest
 
-from miniscope_io import DEVICE_DIR
+from miniscope_io import DATA_DIR
 from miniscope_io.models.stream import ADCScaling, StreamDevConfig, StreamBufferHeader
 
 from ..conftest import CONFIG_DIR
@@ -25,13 +25,13 @@ def test_preamble_hex_parsing(config):
 
 def test_absolute_bitstream():
     """
-    Relative paths should be resolved relative to the devices dir
+    Relative paths should be resolved relative to the sources dir
     """
     example = CONFIG_DIR / "wireless_example.yml"
 
     instance = StreamDevConfig.from_yaml(example)
     assert instance.bitstream.is_absolute()
-    assert str(instance.bitstream).startswith(str(DEVICE_DIR))
+    assert str(instance.bitstream).startswith(str(DATA_DIR))
 
 
 _default_adc_scale = {

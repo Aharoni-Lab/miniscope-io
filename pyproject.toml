@@ -20,6 +20,7 @@ dependencies = [
     "rich>=13.6.0",
     "pyyaml>=6.0.1",
     "click>=8.1.7",
+    "typing-extensions>=4.12.2; python_version<'3.11'",
 ]
 
 readme = "README.md"
@@ -66,6 +67,7 @@ docs = [
     "furo>2023.07.26",
     "myst-parser>3.0.0",
     "autodoc-pydantic>=2.0.1",
+    "sphinxcontrib-mermaid>=1.0.0",
 ]
 dev = [
     "black>=24.1.1",
@@ -114,11 +116,11 @@ timeout = 60
 [tool.coverage.run]
 omit = [
     "miniscope_io/vendor/*",
-    "miniscope_io/devices/opalkelly.py", # can't test hardware interface directly
+    "miniscope_io/sources/opalkelly.py", # can't test hardware interface directly
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py39"
 include = ["miniscope_io/**/*.py", "pyproject.toml"]
 exclude = ["docs", "tests", "miniscope_io/vendor", "noxfile.py"]
 line-length = 100

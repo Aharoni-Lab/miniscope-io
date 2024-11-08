@@ -1,5 +1,12 @@
 """
 Base and meta model classes.
+
+All the models here should be empty - these are abstract parent classes
+to group child classes in a semantic inheritance hierarchy.
+
+More specific models should either be defined in their own
+module within the `miniscope_io.models` package or in their own
+package.
 """
 
 from pydantic import BaseModel
@@ -32,3 +39,7 @@ class Container(MiniscopeIOModel):
 
     See also: :class:`.MiniscopeConfig`
     """
+
+
+class PipelineModel(MiniscopeIOModel):
+    """A model used in a processing pipeline"""
