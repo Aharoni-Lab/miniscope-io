@@ -7,7 +7,7 @@ data.
 
 It encapsulates a {class}`.Pipeline` object that parameterizes one of several
 {class}`.Source` nodes (like the {class}`.okDev`, {class]`.SDCard`, etc.),
-zero-to-several {class}`.ProcessingNode`s that transform the source ouput,
+zero-to-several {class}`.Transform` nodes that transform the source ouput,
 and then one or several {class}`.Sink` nodes for saving data, plotting, and so on.
  
 ```{autoclasstree} miniscope_io.devices.Device miniscope_io.devices.Camera miniscope_io.devices.Miniscope 
@@ -22,7 +22,7 @@ A {class}`.Pipeline` contains a set of {class}`.Node`s, which have three root ty
 
 - {class}`.Source` nodes have outputs but no inputs
 - {class}`.Sink` nodes have inputs but no outputs
-- {class}`.ProcessingNode`s have both inputs and outputs
+- {class}`.Transform` nodes have both inputs and outputs
 
 Nodes can be connected to any number of `input` or `output` nodes,
 and it is the responsibility of the {class}`.Pipeline` class to orchestrate
