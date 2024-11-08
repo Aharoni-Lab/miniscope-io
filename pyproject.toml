@@ -122,6 +122,9 @@ testpaths = [
     "tests"
 ]
 timeout = 60
+markers = [
+    "wirefree: tests for the wirefree miniscope"
+]
 
 [tool.coverage.run]
 omit = [

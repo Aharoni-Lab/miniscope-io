@@ -6,7 +6,8 @@ import yaml
 import tomli_w
 from _pytest.monkeypatch import MonkeyPatch
 
-from mio import Config, WireFreeMiniscope
+from mio import Config
+from mio.devices import WireFreeMiniscope
 from mio.models.config import _global_config_path, set_user_dir
 from mio.models.data import Frames
 from mio.models.mixins import ConfigYAMLMixin, YamlDumper
