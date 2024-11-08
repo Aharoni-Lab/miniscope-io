@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from miniscope_io import WireFreeMiniscope
+from miniscope_io.devices import WireFreeMiniscope
 from miniscope_io.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
 from miniscope_io.models.data import Frames
 

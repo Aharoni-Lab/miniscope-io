@@ -6,6 +6,8 @@ from datetime import datetime
 import pytest
 import yaml
 
+from .fixtures import *
+
 DATA_DIR = Path(__file__).parent / "data"
 CONFIG_DIR = DATA_DIR / "config"
 MOCK_DIR = Path(__file__).parent / "mock"
