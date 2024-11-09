@@ -56,7 +56,6 @@ def _capture_options(fn: Callable) -> Callable:
         help="Display metadata in real time. \n"
         "**WARNING:** This is still an **EXPERIMENTAL** feature and is **UNSTABLE**.",
     )(fn)
-    fn = click.option("--timeout", is_flag=True, help="Stop capture if there is no input")(fn)
 
     return fn
 
@@ -71,7 +70,6 @@ def capture(
     no_display: Optional[bool],
     binary_export: Optional[bool],
     metadata_display: Optional[bool],
-    timeout: Optional[bool],
     **kwargs: dict,
 ) -> None:
     """
@@ -99,7 +97,6 @@ def capture(
         binary=binary_output,
         show_video=not no_display,
         show_metadata=metadata_display,
-        continuous=not timeout,
     )
 
 

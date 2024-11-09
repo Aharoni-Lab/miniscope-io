@@ -61,6 +61,7 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
         except queue.Empty:
             pass
 
+
 class StreamDaq:
     """
     A combined class for configuring and reading frames from a UART and FPGA source.
@@ -376,7 +377,6 @@ class StreamDaq:
         self,
         serial_buffer_queue: multiprocessing.Queue,
         frame_buffer_queue: multiprocessing.Queue,
-        continuous: bool = False,
     ) -> None:
         """
         Group buffers together to make frames.
@@ -393,12 +393,6 @@ class StreamDaq:
             Input buffer queue.
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
-        continuous : bool, optional
-        continuous: bool, optional
-            This flag changes the termination behavior when the input queue is empty.
-            In both cases the capture terminates when KeyboardInterrupt is received.
-            If True, capture continues waiting when the input queue is empty.
-            If false, the capture will terminate when the input queue is empty.
         """
         locallogs = init_logger("streamDaq.buffer")
 
@@ -497,7 +491,6 @@ class StreamDaq:
         self,
         frame_buffer_queue: multiprocessing.Queue,
         imagearray: multiprocessing.Queue,
-        continuous: bool = False,
     ) -> None:
         """
         Construct frame from grouped buffers.
@@ -517,8 +510,6 @@ class StreamDaq:
             Input buffer queue.
         imagearray : multiprocessing.Queue[np.ndarray]
             Output image array queue.
-        continuous : bool, optional
-            If True, continue capturing until a KeyboardInterrupt is received, by default False.
         """
         locallogs = init_logger("streamDaq.frame")
         try:
@@ -622,7 +613,6 @@ class StreamDaq:
         binary: Optional[Path] = None,
         show_video: Optional[bool] = True,
         show_metadata: Optional[bool] = False,
-        continuous: Optional[bool] = False,
     ) -> None:
         """
         Entry point to start frame capture.
@@ -647,11 +637,6 @@ class StreamDaq:
             If True, display the video in real-time.
         show_metadata: bool, optional
             If True, show metadata information during capture.
-        continuous: bool, optional
-            This flag changes the termination behavior when the input queue is empty.
-            In both cases the capture terminates when KeyboardInterrupt is received.
-            If True, capture continues waiting when the input queue is empty.
-            If false, the capture will terminate when the input queue is empty.
 
         Raises
         ------
@@ -701,7 +686,6 @@ class StreamDaq:
             args=(
                 serial_buffer_queue,
                 frame_buffer_queue,
-                continuous,
             ),
             name="_buffer_to_frame",
         )
@@ -710,7 +694,6 @@ class StreamDaq:
             args=(
                 frame_buffer_queue,
                 imagearray,
-                continuous,
             ),
             name="_format_frame",
         )
