@@ -28,7 +28,7 @@ from miniscope_io.models.devupdate import DeviceCommand
     "-k",
     "--key",
     required=False,
-    type=click.Choice(["LED", "GAIN", "ROI_X", "ROI_Y"]),
+    type=click.Choice(["LED", "GAIN", "ROI_X", "ROI_Y", "SUBSAMPLE"]),
     help="key to update.",
 )
 @click.option(

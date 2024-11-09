@@ -39,9 +39,12 @@ class UpdateKey(int, Enum):
     GAIN = 1
     ROI_X = 2
     ROI_Y = 3
+    SUBSAMPLE = 4
+    '''
     ROI_WIDTH = 4  # not implemented
     ROI_HEIGHT = 5  # not implemented
     EWL = 6  # not implemented
+    '''
     DEVICE = 50  # for device commands
 
 
@@ -71,6 +74,8 @@ class DevUpdateCommand(BaseModel):
             assert value in [1, 2, 4], "For GAIN, value must be 1, 2, or 4"
         elif key == UpdateKey.DEVICE:
             assert value in [DeviceCommand.REBOOT.value], "For DEVICE, value must be in [200]"
+        elif key == UpdateKey.SUBSAMPLE:
+            assert value in [0, 1], "For SUBSAMPLE, value must be in [0, 1]"
         elif key in [UpdateKey.ROI_X, UpdateKey.ROI_Y]:
             # validation not implemented
             pass
