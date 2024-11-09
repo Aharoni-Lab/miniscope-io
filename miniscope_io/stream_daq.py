@@ -209,12 +209,6 @@ class StreamDaq:
 
         return data
 
-    def terminate_capture(self) -> None:
-        """
-        Terminate the capture process.
-        """
-        self.terminate.set()
-
     def _uart_recv(
         self, serial_buffer_queue: multiprocessing.Queue, comport: str, baudrate: int
     ) -> None:
