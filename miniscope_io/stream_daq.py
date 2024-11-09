@@ -336,9 +336,13 @@ class StreamDaq:
             while 1:
                 try:
                     buf = dev.readData(read_length)
-                except (EndOfRecordingException, StreamReadError, KeyboardInterrupt):
+                except (EndOfRecordingException, KeyboardInterrupt):
                     locallogs.debug("Got end of recording exception, breaking")
                     break
+                except StreamReadError:
+                    locallogs.exception("Read failed, continuing")
+                    # It might be better to choose continue or break with a continuous flag
+                    continue
 
                 if capture_binary:
                     with open(capture_binary, "ab") as file:
