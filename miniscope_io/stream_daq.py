@@ -264,13 +264,13 @@ class StreamDaq:
         else:
             dev = okDev()
 
-        dev.uploadBit(str(BIT_FILE))
-        dev.setWire(0x00, 0b0010)
+        dev.upload_bit(str(BIT_FILE))
+        dev.set_wire(0x00, 0b0010)
         time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
-        dev.setWire(0x00, 0b1000)
+        dev.set_wire(0x00, 0b0)
+        dev.set_wire(0x00, 0b1000)
         time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
+        dev.set_wire(0x00, 0b0)
         return dev
 
     def _fpga_recv(
@@ -335,7 +335,7 @@ class StreamDaq:
         try:
             while 1:
                 try:
-                    buf = dev.readData(read_length)
+                    buf = dev.read_data(read_length)
                 except (EndOfRecordingException, KeyboardInterrupt):
                     locallogs.debug("Got end of recording exception, breaking")
                     break

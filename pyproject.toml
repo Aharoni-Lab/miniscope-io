@@ -151,6 +151,8 @@ select = [
     "D210", "D211",
     # emptiness
     "D419",
+    # snake case function name
+    "N802"
 ]
 ignore = [
     "ANN101", "ANN102", "ANN401", "ANN204",
