@@ -141,7 +141,7 @@ def test_continuous_and_termination(tmp_path, default_streamdaq):
     cleaned up when the capture process is terminated.
     """
     """
-    timeout = 5
+    timeout = 1
 
     capture_process = multiprocessing.Process(target=capture_wrapper, args=(default_streamdaq, "fpga", False, True))
 
