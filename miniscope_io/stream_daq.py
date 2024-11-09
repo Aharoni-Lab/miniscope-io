@@ -599,7 +599,9 @@ class StreamDaq:
         List[multiprocessing.Process]
             List of alive processes.
         """
-        return [p for p in multiprocessing.active_children() if p.is_alive()]
+
+        raise NotImplementedError("Not implemented yet")
+        return None
 
     def capture(
         self,
