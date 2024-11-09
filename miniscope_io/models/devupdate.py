@@ -40,11 +40,11 @@ class UpdateKey(int, Enum):
     ROI_X = 2
     ROI_Y = 3
     SUBSAMPLE = 4
-    '''
+    """
     ROI_WIDTH = 4  # not implemented
     ROI_HEIGHT = 5  # not implemented
     EWL = 6  # not implemented
-    '''
+    """
     DEVICE = 50  # for device commands
 
 

@@ -57,9 +57,7 @@ def update(port: str, key: str, value: int, device_id: int, batch: str) -> None:
         raise click.UsageError("Both --key and --value are required if one is specified.")
 
     if batch and (key or value):
-        raise click.UsageError(
-            "Options --key/--value and --batch are mutually exclusive."
-        )
+        raise click.UsageError("Options --key/--value and --batch are mutually exclusive.")
     if key and value is not None:
         device_update(port=port, key=key, value=value, device_id=device_id)
     elif batch:
