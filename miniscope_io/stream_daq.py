@@ -52,12 +52,14 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
     because truth value of numpy arrays is ambiguous.
     """
     while True:
-        val = f()
-        if val is sentinel:
-            break
-        else:
-            yield val
-
+        try:
+            val = f()
+            if val is sentinel:
+                break
+            else:
+                yield val
+        except queue.Empty:
+            pass
 
 class StreamDaq:
     """
@@ -330,7 +332,7 @@ class StreamDaq:
 
         locallogs.debug("Starting capture")
         try:
-            while not self.terminate.is_set():
+            while 1:
                 try:
                     buf = dev.readData(read_length)
                 except (EndOfRecordingException, StreamReadError, KeyboardInterrupt):
@@ -407,77 +409,73 @@ class StreamDaq:
         header_list = []
 
         try:
-            while not self.terminate.is_set():
-                for serial_buffer in exact_iter(serial_buffer_queue.get, None):
+            for serial_buffer in exact_iter(serial_buffer_queue.get, None):
+                header_data, serial_buffer = self._parse_header(serial_buffer)
+                header_list.append(header_data)
 
-                    header_data, serial_buffer = self._parse_header(serial_buffer)
-                    header_list.append(header_data)
-
-                    try:
-                        serial_buffer = self._trim(
-                            serial_buffer,
-                            self.buffer_npix,
-                            header_data,
-                            locallogs,
-                        )
-                    except IndexError:
-                        locallogs.warning(
-                            f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
-                            f"(#{header_data.frame_buffer_count} in frame)\n"
-                            f"Frame buffer count {header_data.frame_buffer_count} "
-                            f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
-                            f"Discarding buffer."
-                        )
-                        if header_list:
-                            try:
-                                frame_buffer_queue.put(
-                                    (None, header_list),
-                                    block=True,
-                                    timeout=self.config.runtime.queue_put_timeout,
-                                )
-                            except queue.Full:
-                                locallogs.warning("Frame buffer queue full, skipping frame.")
-                        continue
-
-                    # if first buffer of a frame
-                    if header_data.frame_num != cur_fm_num:
-                        # discard first incomplete frame
-                        if cur_fm_num == -1 and header_data.frame_buffer_count != 0:
-                            continue
-
-                        # push previous frame_buffer into frame_buffer queue
+                try:
+                    serial_buffer = self._trim(
+                        serial_buffer,
+                        self.buffer_npix,
+                        header_data,
+                        locallogs,
+                    )
+                except IndexError:
+                    locallogs.warning(
+                        f"Frame {header_data.frame_num}; Buffer {header_data.buffer_count} "
+                        f"(#{header_data.frame_buffer_count} in frame)\n"
+                        f"Frame buffer count {header_data.frame_buffer_count} "
+                        f"exceeds buffer number per frame {len(self.buffer_npix)}\n"
+                        f"Discarding buffer."
+                    )
+                    if header_list:
                         try:
                             frame_buffer_queue.put(
-                                (frame_buffer, header_list),
+                                (None, header_list),
                                 block=True,
                                 timeout=self.config.runtime.queue_put_timeout,
                             )
                         except queue.Full:
                             locallogs.warning("Frame buffer queue full, skipping frame.")
+                    continue
 
-                        # init new frame_buffer
-                        frame_buffer = frame_buffer_prealloc.copy()
-                        header_list = []
+                # if first buffer of a frame
+                if header_data.frame_num != cur_fm_num:
+                    # discard first incomplete frame
+                    if cur_fm_num == -1 and header_data.frame_buffer_count != 0:
+                        continue
 
-                        # update frame_num and index
-                        cur_fm_num = header_data.frame_num
-
-                        if header_data.frame_buffer_count != 0:
-                            locallogs.warning(
-                                f"Frame {cur_fm_num} started with buffer "
-                                f"{header_data.frame_buffer_count}"
-                            )
-
-                        # update data
-                        frame_buffer[header_data.frame_buffer_count] = serial_buffer
-
-                    else:
-                        frame_buffer[header_data.frame_buffer_count] = serial_buffer
-                        locallogs.debug(
-                            "----buffer #" + str(header_data.frame_buffer_count) + " stored"
+                    # push previous frame_buffer into frame_buffer queue
+                    try:
+                        frame_buffer_queue.put(
+                            (frame_buffer, header_list),
+                            block=True,
+                            timeout=self.config.runtime.queue_put_timeout,
                         )
-                if continuous is False:
-                    break
+                    except queue.Full:
+                        locallogs.warning("Frame buffer queue full, skipping frame.")
+
+                    # init new frame_buffer
+                    frame_buffer = frame_buffer_prealloc.copy()
+                    header_list = []
+
+                    # update frame_num and index
+                    cur_fm_num = header_data.frame_num
+
+                    if header_data.frame_buffer_count != 0:
+                        locallogs.warning(
+                            f"Frame {cur_fm_num} started with buffer "
+                            f"{header_data.frame_buffer_count}"
+                        )
+
+                    # update data
+                    frame_buffer[header_data.frame_buffer_count] = serial_buffer
+
+                else:
+                    frame_buffer[header_data.frame_buffer_count] = serial_buffer
+                    locallogs.debug(
+                        "----buffer #" + str(header_data.frame_buffer_count) + " stored"
+                    )
         finally:
             try:
                 # get remaining buffers.
@@ -524,49 +522,46 @@ class StreamDaq:
         """
         locallogs = init_logger("streamDaq.frame")
         try:
-            while not self.terminate.is_set():
-                for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
+            for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
 
-                    if not frame_data or len(frame_data) == 0:
-                        try:
-                            imagearray.put(
-                                (None, header_list),
-                                block=True,
-                                timeout=self.config.runtime.queue_put_timeout,
-                            )
-                        except queue.Full:
-                            locallogs.warning("Image array queue full, skipping frame.")
-                        continue
-                    frame_data = np.concatenate(frame_data, axis=0)
-
-                    try:
-                        frame = np.reshape(
-                            frame_data, (self.config.frame_width, self.config.frame_height)
-                        )
-                    except ValueError as e:
-                        expected_size = self.config.frame_width * self.config.frame_height
-                        provided_size = frame_data.size
-                        locallogs.exception(
-                            "Frame size doesn't match: %s. "
-                            " Expected size: %d, got size: %d."
-                            "Replacing with zeros.",
-                            e,
-                            expected_size,
-                            provided_size,
-                        )
-                        frame = np.zeros(
-                            (self.config.frame_width, self.config.frame_height), dtype=np.uint8
-                        )
+                if not frame_data or len(frame_data) == 0:
                     try:
                         imagearray.put(
-                            (frame, header_list),
+                            (None, header_list),
                             block=True,
                             timeout=self.config.runtime.queue_put_timeout,
                         )
                     except queue.Full:
                         locallogs.warning("Image array queue full, skipping frame.")
-                if continuous is False:
-                    break
+                    continue
+                frame_data = np.concatenate(frame_data, axis=0)
+
+                try:
+                    frame = np.reshape(
+                        frame_data, (self.config.frame_width, self.config.frame_height)
+                    )
+                except ValueError as e:
+                    expected_size = self.config.frame_width * self.config.frame_height
+                    provided_size = frame_data.size
+                    locallogs.exception(
+                        "Frame size doesn't match: %s. "
+                        " Expected size: %d, got size: %d."
+                        "Replacing with zeros.",
+                        e,
+                        expected_size,
+                        provided_size,
+                    )
+                    frame = np.zeros(
+                        (self.config.frame_width, self.config.frame_height), dtype=np.uint8
+                    )
+                try:
+                    imagearray.put(
+                        (frame, header_list),
+                        block=True,
+                        timeout=self.config.runtime.queue_put_timeout,
+                    )
+                except queue.Full:
+                    locallogs.warning("Image array queue full, skipping frame.")
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             try:
@@ -740,18 +735,15 @@ class StreamDaq:
             )
 
         try:
-            while not self.terminate.is_set():
-                for image, header_list in exact_iter(imagearray.get, None):
-                    self._handle_frame(
-                        image,
-                        header_list,
-                        show_video=show_video,
-                        writer=writer,
-                        show_metadata=show_metadata,
-                        metadata=metadata,
-                    )
-                if continuous is False:
-                    break
+            for image, header_list in exact_iter(imagearray.get, None):
+                self._handle_frame(
+                    image,
+                    header_list,
+                    show_video=show_video,
+                    writer=writer,
+                    show_metadata=show_metadata,
+                    metadata=metadata,
+                )
         except KeyboardInterrupt:
             self.logger.exception(
                 "Quitting capture, processing remaining frames. Ctrl+C again to force quit"
