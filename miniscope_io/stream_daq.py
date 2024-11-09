@@ -396,7 +396,11 @@ class StreamDaq:
         frame_buffer_queue : multiprocessing.Queue[ndarray]
             Output frame queue.
         continuous : bool, optional
-            If True, continue capturing until a KeyboardInterrupt is received, by default False.
+        continuous: bool, optional
+            This flag changes the termination behavior when the input queue is empty.
+            In both cases the capture terminates when KeyboardInterrupt is received.
+            If True, capture continues waiting when the input queue is empty.
+            If false, the capture will terminate when the input queue is empty.
         """
         locallogs = init_logger("streamDaq.buffer")
 
@@ -639,7 +643,10 @@ class StreamDaq:
         show_metadata: bool, optional
             If True, show metadata information during capture.
         continuous: bool, optional
-            If True, continue capturing until a KeyboardInterrupt is received.
+            This flag changes the termination behavior when the input queue is empty.
+            In both cases the capture terminates when KeyboardInterrupt is received.
+            If True, capture continues waiting when the input queue is empty.
+            If false, the capture will terminate when the input queue is empty.
 
         Raises
         ------
