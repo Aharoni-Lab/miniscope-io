@@ -17,7 +17,7 @@ FTDI_PRODUCT_ID = 0x6001
 
 
 def device_update(
-    target: str,
+    key: str,
     value: int,
     device_id: int,
     port: Optional[str] = None,
@@ -28,8 +28,8 @@ def device_update(
     Args:
         device_id: ID of the device. 0 will update all devices.
         port: Serial port to which the device is connected.
-        target: What to update on the device (e.g., LED, GAIN).
-        value: Value to which the target should be updated.
+        key: What to update on the device (e.g., LED, GAIN).
+        value: Value to which the key should be updated.
 
     Returns:
         None
@@ -47,8 +47,8 @@ def device_update(
             port = ftdi_port_list[0]
             logger.info(f"Using port {port}")
 
-    command = DevUpdateCommand(device_id=device_id, port=port, target=target, value=value)
-    logger.info(f"Updating {target} to {value} on port {port}")
+    command = DevUpdateCommand(device_id=device_id, port=port, key=key, value=value)
+    logger.info(f"Updating {key} to {value} on port {port}")
 
     try:
         serial_port = serial.Serial(port=command.port, baudrate=2400, timeout=5, stopbits=2)
@@ -63,9 +63,9 @@ def device_update(
         logger.debug(f"Command: {format(id_command, '08b')}; Device ID: {command.device_id}")
         time.sleep(0.1)
 
-        target_command = (command.target.value + UpdateCommandDefinitions.target_header) & 0xFF
-        serial_port.write(target_command.to_bytes(1, "big"))
-        logger.debug(f"Command: {format(target_command, '08b')}; Target: {command.target.name}")
+        key_command = (command.key.value + UpdateCommandDefinitions.key_header) & 0xFF
+        serial_port.write(key_command.to_bytes(1, "big"))
+        logger.debug(f"Command: {format(key_command, '08b')}; Key: {command.key.name}")
         time.sleep(0.1)
 
         value_LSB_command = (

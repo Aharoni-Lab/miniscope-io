@@ -19,10 +19,10 @@ class UpdateCommandDefinitions:
     Definitions of Bit masks and headers for remote update commands.
     """
 
-    # Header to indicate target/value.
+    # Header to indicate key/value.
     # It probably won't be used in other places so defined here.
     id_header = 0b00000000
-    target_header = 0b11000000
+    key_header = 0b11000000
     LSB_header = 0b01000000
     MSB_header = 0b10000000
     LSB_value_mask = 0b000000111111  # value below 12-bit
@@ -30,9 +30,9 @@ class UpdateCommandDefinitions:
     reset_byte = 0b11111111
 
 
-class UpdateTarget(int, Enum):
+class UpdateKey(int, Enum):
     """
-    Targets to update. Needs to be under 6-bit.
+    Keys to update. Needs to be under 6-bit.
     """
 
     LED = 0
@@ -52,7 +52,7 @@ class DevUpdateCommand(BaseModel):
 
     device_id: int
     port: str
-    target: UpdateTarget
+    key: UpdateKey
     value: int
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -60,23 +60,24 @@ class DevUpdateCommand(BaseModel):
     @model_validator(mode="after")
     def validate_values(cls, values: dict) -> dict:
         """
-        Validate values based on target.
+        Validate values based on key.
         """
-        target = values.target
+        key = values.key
         value = values.value
 
-        if target == UpdateTarget.LED:
+        if key == UpdateKey.LED:
             assert 0 <= value <= 100, "For LED, value must be between 0 and 100"
-        elif target == UpdateTarget.GAIN:
+        elif key == UpdateKey.GAIN:
             assert value in [1, 2, 4], "For GAIN, value must be 1, 2, or 4"
-        elif target == UpdateTarget.DEVICE:
+        elif key == UpdateKey.DEVICE:
             assert value in [DeviceCommand.REBOOT.value], "For DEVICE, value must be in [200]"
-        elif target in UpdateTarget:
+        elif key in [UpdateKey.ROI_X, UpdateKey.ROI_Y]:
+            # validation not implemented
+            pass
+        elif key in UpdateKey:
             raise NotImplementedError()
         else:
-            raise ValueError(
-                f"{target} is not a valid update target," "need an instance of UpdateTarget"
-            )
+            raise ValueError(f"{key} is not a valid update key," "need an instance of UpdateKey")
         return values
 
     @field_validator("port")
@@ -101,24 +102,24 @@ class DevUpdateCommand(BaseModel):
             raise ValueError(f"Port {value} not found")
         return value
 
-    @field_validator("target", mode="before")
-    def validate_target(cls, value: str) -> UpdateTarget:
+    @field_validator("key", mode="before")
+    def validate_key(cls, value: str) -> UpdateKey:
         """
-        Validate and convert target string to UpdateTarget Enum type.
+        Validate and convert key string to UpdateKey Enum type.
 
         Args:
-            value (str): Target to validate.
+            value (str): Key to validate.
 
         Returns:
-            UpdateTarget: Validated target as UpdateTarget.
+            UpdateKey: Validated key as UpdateKey.
 
         Raises:
-            ValueError: If target not found.
+            ValueError: If key not found.
         """
         try:
-            return UpdateTarget[value]
+            return UpdateKey[value]
         except KeyError as e:
             raise ValueError(
-                f"Target {value} not found, must be a member of UpdateTarget:"
-                f" {list(UpdateTarget.__members__.keys())}."
+                f"Key {value} not found, must be a member of UpdateKey:"
+                f" {list(UpdateKey.__members__.keys())}."
             ) from e
