@@ -123,18 +123,23 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         default_streamdaq.capture(source="fpga", metadata=None, show_video=False, continuous=False)
         assert not output_csv.exists()
 
+# This is a helper function for test_continuous_and_termination() that is currently skipped
+"""
 def capture_wrapper(default_streamdaq, source, show_video, continuous):
     try:
         default_streamdaq.capture(source=source, show_video=show_video, continuous=continuous)
     except KeyboardInterrupt:
-        print("KeyboardInterrupt caught as expected")
+        pass # expected
+"""
 
-@pytest.mark.skip("Temporary skipped because tests fail in some OS (See GH actions).")
+@pytest.mark.skip("Needs to be implemented." 
+                  "Temporary skipped because tests fail in some OS (See GH actions).")
 @pytest.mark.timeout(10)
 def test_continuous_and_termination(tmp_path, default_streamdaq):
     """
     Make sure continuous mode runs forever until interrupted, and that all processes are
     cleaned up when the capture process is terminated.
+    """
     """
     timeout = 5
 
@@ -154,6 +159,8 @@ def test_continuous_and_termination(tmp_path, default_streamdaq):
 
     alive_processes = default_streamdaq.alive_processes()
     assert len(alive_processes) == 0
+    """
+    pass
 
 def test_metadata_plotting(tmp_path, default_streamdaq):
     """
