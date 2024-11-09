@@ -146,6 +146,10 @@ class StreamDevRuntime(MiniscopeConfig):
         5,
         description="Buffer length for storing images in streamDaq",
     )
+    queue_put_timeout: int = Field(
+        5,
+        description="Timeout for putting data into the queue",
+    )
     plot: Optional[StreamPlotterConfig] = Field(
         StreamPlotterConfig(
             keys=["timestamp", "buffer_count", "frame_buffer_count"], update_ms=1000, history=500

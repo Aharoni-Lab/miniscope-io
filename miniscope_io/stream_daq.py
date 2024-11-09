@@ -31,8 +31,6 @@ from miniscope_io.models.stream import (
 )
 from miniscope_io.plots.headers import StreamPlotter
 
-queue_put_timeout = 5
-
 HAVE_OK = False
 ok_error = None
 try:
@@ -251,7 +249,9 @@ class StreamDaq:
                 uart_bites = serial_port.read_until(pre_bytes)
                 log_uart_buffer = [x for x in uart_bites]
                 try:
-                    serial_buffer_queue.put(log_uart_buffer, block=True, timeout=queue_put_timeout)
+                    serial_buffer_queue.put(
+                        log_uart_buffer, block=True, timeout=self.config.runtime.queue_put_timeout
+                    )
                 except queue.Full:
                     self.logger.warning("Serial buffer queue full, skipping buffer.")
         finally:
@@ -360,7 +360,7 @@ class StreamDaq:
                         serial_buffer_queue.put(
                             cur_buffer[buf_start:buf_stop].tobytes(),
                             block=True,
-                            timeout=queue_put_timeout,
+                            timeout=self.config.runtime.queue_put_timeout,
                         )
                     except queue.Full:
                         locallogs.warning("Serial buffer queue full, skipping buffer.")
@@ -370,7 +370,9 @@ class StreamDaq:
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             try:
-                serial_buffer_queue.put(None, block=True, timeout=queue_put_timeout)
+                serial_buffer_queue.put(
+                    None, block=True, timeout=self.config.runtime.queue_put_timeout
+                )
             except queue.Full:
                 locallogs.error("Serial buffer queue full, Could not put sentinel.")
 
@@ -435,7 +437,9 @@ class StreamDaq:
                         if header_list:
                             try:
                                 frame_buffer_queue.put(
-                                    (None, header_list), block=True, timeout=queue_put_timeout
+                                    (None, header_list),
+                                    block=True,
+                                    timeout=self.config.runtime.queue_put_timeout,
                                 )
                             except queue.Full:
                                 locallogs.warning("Frame buffer queue full, skipping frame.")
@@ -450,7 +454,9 @@ class StreamDaq:
                         # push previous frame_buffer into frame_buffer queue
                         try:
                             frame_buffer_queue.put(
-                                (frame_buffer, header_list), block=True, timeout=queue_put_timeout
+                                (frame_buffer, header_list),
+                                block=True,
+                                timeout=self.config.runtime.queue_put_timeout,
                             )
                         except queue.Full:
                             locallogs.warning("Frame buffer queue full, skipping frame.")
@@ -481,12 +487,16 @@ class StreamDaq:
         finally:
             try:
                 # get remaining buffers.
-                frame_buffer_queue.put((None, header_list), block=True, timeout=queue_put_timeout)
+                frame_buffer_queue.put(
+                    (None, header_list), block=True, timeout=self.config.runtime.queue_put_timeout
+                )
             except queue.Full:
                 locallogs.warning("Frame buffer queue full, skipping frame.")
 
             try:
-                frame_buffer_queue.put(None, block=True, timeout=queue_put_timeout)
+                frame_buffer_queue.put(
+                    None, block=True, timeout=self.config.runtime.queue_put_timeout
+                )
                 locallogs.debug("Quitting, putting sentinel in queue")
             except queue.Full:
                 locallogs.error("Frame buffer queue full, Could not put sentinel.")
@@ -526,7 +536,9 @@ class StreamDaq:
                     if not frame_data or len(frame_data) == 0:
                         try:
                             imagearray.put(
-                                (None, header_list), block=True, timeout=queue_put_timeout
+                                (None, header_list),
+                                block=True,
+                                timeout=self.config.runtime.queue_put_timeout,
                             )
                         except queue.Full:
                             locallogs.warning("Image array queue full, skipping frame.")
@@ -552,7 +564,11 @@ class StreamDaq:
                             (self.config.frame_width, self.config.frame_height), dtype=np.uint8
                         )
                     try:
-                        imagearray.put((frame, header_list), block=True, timeout=queue_put_timeout)
+                        imagearray.put(
+                            (frame, header_list),
+                            block=True,
+                            timeout=self.config.runtime.queue_put_timeout,
+                        )
                     except queue.Full:
                         locallogs.warning("Image array queue full, skipping frame.")
                 if continuous is False:
@@ -560,7 +576,7 @@ class StreamDaq:
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
             try:
-                imagearray.put(None, block=True, timeout=queue_put_timeout)
+                imagearray.put(None, block=True, timeout=self.config.runtime.queue_put_timeout)
             except queue.Full:
                 locallogs.error("Image array queue full, Could not put sentinel.")
 
@@ -833,6 +849,7 @@ class StreamDaq:
                 writer.write(picture)
             except cv2.error as e:
                 self.logger.exception(f"Exception writing frame: {e}")
+
 
 # DEPRECATION: v0.3.0
 if __name__ == "__main__":
