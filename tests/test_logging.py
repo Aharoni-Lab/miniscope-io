@@ -45,7 +45,8 @@ def test_init_logger(capsys, tmp_path):
     assert 'INFO' not in log_str
 
 @pytest.mark.parametrize('level', ['DEBUG', 'INFO', 'WARNING', 'ERROR'])
-def test_init_logger_from_dotenv(tmp_path, level):
+@pytest.mark.parametrize('dotenv_direct_setting', [True, False])
+def test_init_logger_from_dotenv(tmp_path, level,dotenv_direct_setting):
     """
     Set log levels from dotenv MINISCOPE_IO_LOGS__LEVEL key
     """
@@ -60,8 +61,14 @@ def test_init_logger_from_dotenv(tmp_path, level):
     tmp_path.mkdir(exist_ok=True,parents=True)
     dotenv = tmp_path / '.env'
     with open(dotenv, 'w') as denvfile:
-        denvfile.write(f'MINISCOPE_IO_LOGS__LEVEL="{level}"')
-    
+        if dotenv_direct_setting:
+            denvfile.write(
+                f'MINISCOPE_IO_LOGS__LEVEL="{level}"\n'
+                f'MINISCOPE_IO_LOGS__LEVEL_FILE={level}\n'
+                f'MINISCOPE_IO_LOGS__LEVEL_STDOUT={level}'
+                )
+        else:
+            denvfile.write(f'MINISCOPE_IO_LOGS__LEVEL="{level}"')
+        
     dotenv_logger = init_logger(name='test_logger', log_dir=tmp_path)
-
     assert dotenv_logger.level == level_name_map.get(level)
