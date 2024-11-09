@@ -65,7 +65,7 @@ def test_video_output(
     set_okdev_input(data_file)
 
     daq_inst = StreamDaq(device_config=daqConfig)
-    daq_inst.capture(source="fpga", video=output_video, show_video=show_video, continuous=False)
+    daq_inst.capture(source="fpga", video=output_video, show_video=show_video)
 
     assert output_video.exists()
 
@@ -93,7 +93,7 @@ def test_binary_output(config, data, set_okdev_input, tmp_path):
     output_file = tmp_path / "output.bin"
 
     daq_inst = StreamDaq(device_config=daqConfig)
-    daq_inst.capture(source="fpga", binary=output_file, show_video=False, continuous=False)
+    daq_inst.capture(source="fpga", binary=output_file, show_video=False)
 
     assert output_file.exists()
 
@@ -108,7 +108,7 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
     output_csv = tmp_path / "output.csv"
 
     if write_metadata:
-        default_streamdaq.capture(source="fpga", metadata=output_csv, show_video=False, continuous=False)
+        default_streamdaq.capture(source="fpga", metadata=output_csv, show_video=False)
 
         df = pd.read_csv(output_csv)
         # actually not sure what we should be looking for here, for now we just check for shape
@@ -120,7 +120,7 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         for record in caplog.records:
             assert "Exception saving headers" not in record.msg
     else:
-        default_streamdaq.capture(source="fpga", metadata=None, show_video=False, continuous=False)
+        default_streamdaq.capture(source="fpga", metadata=None, show_video=False)
         assert not output_csv.exists()
 
 # This is a helper function for test_continuous_and_termination() that is currently skipped
@@ -167,7 +167,7 @@ def test_metadata_plotting(tmp_path, default_streamdaq):
     Setting the capture kwarg ``show_metadata == True`` should plot the frame metadata
     during capture.
     """
-    default_streamdaq.capture(source="fpga", show_metadata=True, show_video=False, continuous=False)
+    default_streamdaq.capture(source="fpga", show_metadata=True, show_video=False)
 
     # unit tests for the stream plotter should go elsewhere, here we just
     # test that the object was instantiated and that it got the data it should have
