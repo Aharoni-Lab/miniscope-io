@@ -11,7 +11,7 @@ import serial.tools.list_ports
 from miniscope_io.logging import init_logger
 from miniscope_io.models.devupdate import DevUpdateCommand, UpdateCommandDefinitions
 
-logger = init_logger(name="device_update", level="INFO")
+logger = init_logger(name="device_update")
 FTDI_VENDOR_ID = 0x0403
 FTDI_PRODUCT_ID = 0x6001
 
