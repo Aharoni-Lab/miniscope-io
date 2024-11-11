@@ -2,7 +2,7 @@
 ABCs for Camera and Miniscope source classes
 """
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Optional, Union
 
 from miniscope_io.devices.device import Device, DeviceConfig
@@ -208,6 +208,47 @@ class Camera(Device):
             NotImplementedError
         """
         raise NotImplementedError("roi setter is not implemented")
+
+
+class RecordingCameraMixin(ABC):
+    """
+    A mixin for cameras that record their videos, rather than stream them,
+    like the :class:`.WireFreeMiniscope`
+    """
+
+    @property
+    @abstractmethod
+    def frame(self) -> int:
+        """
+        When reading, the number of the frame that would be read if we were to call
+        :meth:`.read`
+
+        Returns:
+            int:
+        """
+
+    @frame.setter
+    @abstractmethod
+    def frame(self, value: int) -> None:
+        """
+        Seek to a specific frame
+
+        Arguments:
+            frame (int): The frame to seek to!
+        """
+
+    @property
+    @abstractmethod
+    def frame_count(self) -> int:
+        """
+        Total number of frames in recording.
+        """
+
+    @abstractmethod
+    def skip(self) -> None:
+        """
+        Skip a frame
+        """
 
 
 class MiniscopeConfig(CameraConfig):

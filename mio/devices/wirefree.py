@@ -11,14 +11,21 @@ import numpy as np
 from tqdm import tqdm
 
 from miniscope_io import init_logger
+from miniscope_io.devices import DeviceConfig, Miniscope, RecordingCameraMixin
 from miniscope_io.exceptions import EndOfRecordingException, ReadHeaderException
 from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
 
-class WireFreeMiniscope:
+class WireFreeConfig(DeviceConfig):
+    """Configuration for wire free miniscope"""
+
+    pass
+
+
+class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
     """
-    I/O for data on an WireFreeMiniscope
+    I/O for data on an SD Card recorded with a WireFree Miniscope
 
     an instance of :class:`.sdcard.SDLayout` (typically in :mod:`.formats` )
     configures how the data is laid out on the SD card. This class makes the i/o
@@ -30,7 +37,13 @@ class WireFreeMiniscope:
 
     """
 
-    def __init__(self, drive: Union[str, Path], layout: SDLayout):
+    drive: Path
+    """The path to the SD card drive"""
+    config: WireFreeConfig
+    """Configuration """
+    # layout:
+
+    def __post_init__(self, drive: Union[str, Path], layout: SDLayout):
         self.drive = drive
         self.layout = layout
         self.logger = init_logger("WireFreeMiniscope")
