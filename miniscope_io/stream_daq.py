@@ -52,15 +52,11 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
     because truth value of numpy arrays is ambiguous.
     """
     while True:
-        try:
-            val = f()
-            if val is sentinel:
-                break
-            else:
-                yield val
-        except queue.Empty:
-            pass
-
+        val = f()
+        if val is sentinel:
+            break
+        else:
+            yield val
 
 class StreamDaq:
     """
