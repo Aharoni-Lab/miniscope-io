@@ -5,6 +5,7 @@ DAQ For use with FPGA and Uart streaming video sources.
 import logging
 import multiprocessing
 import os
+import queue
 import sys
 import time
 from pathlib import Path
@@ -163,7 +164,9 @@ class StreamDaq:
             reverse_payload_bytes=self.config.reverse_payload_bytes,
         )
 
-        header_data = StreamBufferHeader.from_format(header, self.header_fmt, construct=True)
+        header_data = StreamBufferHeader.from_format(
+            header.astype(int), self.header_fmt, construct=True
+        )
         header_data.adc_scaling = self.config.adc_scale
 
         return header_data, payload
@@ -235,11 +238,16 @@ class StreamDaq:
         log_uart_buffer = BitArray([x for x in uart_bites])
 
         try:
-            while 1:
+            while not self.terminate.is_set():
                 # read UART data until preamble and put into queue
                 uart_bites = serial_port.read_until(pre_bytes)
                 log_uart_buffer = [x for x in uart_bites]
-                serial_buffer_queue.put(log_uart_buffer)
+                try:
+                    serial_buffer_queue.put(
+                        log_uart_buffer, block=True, timeout=self.config.runtime.queue_put_timeout
+                    )
+                except queue.Full:
+                    self.logger.warning("Serial buffer queue full, skipping buffer.")
         finally:
             time.sleep(1)  # time for ending other process
             serial_port.close()
@@ -253,13 +261,13 @@ class StreamDaq:
         else:
             dev = okDev()
 
-        dev.uploadBit(str(BIT_FILE))
-        dev.setWire(0x00, 0b0010)
+        dev.upload_bit(str(BIT_FILE))
+        dev.set_wire(0x00, 0b0010)
         time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
-        dev.setWire(0x00, 0b1000)
+        dev.set_wire(0x00, 0b0)
+        dev.set_wire(0x00, 0b1000)
         time.sleep(0.01)
-        dev.setWire(0x00, 0b0)
+        dev.set_wire(0x00, 0b0)
         return dev
 
     def _fpga_recv(
@@ -322,12 +330,16 @@ class StreamDaq:
 
         locallogs.debug("Starting capture")
         try:
-            while not self.terminate.is_set():
+            while 1:
                 try:
-                    buf = dev.readData(read_length)
-                except (EndOfRecordingException, StreamReadError, KeyboardInterrupt):
+                    buf = dev.read_data(read_length)
+                except (EndOfRecordingException, KeyboardInterrupt):
                     locallogs.debug("Got end of recording exception, breaking")
                     break
+                except StreamReadError:
+                    locallogs.exception("Read failed, continuing")
+                    # It might be better to choose continue or break with a continuous flag
+                    continue
 
                 if capture_binary:
                     with open(capture_binary, "ab") as file:
@@ -342,13 +354,25 @@ class StreamDaq:
                             buf_start + len(self.preamble),
                             buf_stop + len(self.preamble),
                         )
-                    serial_buffer_queue.put(cur_buffer[buf_start:buf_stop].tobytes())
+                    try:
+                        serial_buffer_queue.put(
+                            cur_buffer[buf_start:buf_stop].tobytes(),
+                            block=True,
+                            timeout=self.config.runtime.queue_put_timeout,
+                        )
+                    except queue.Full:
+                        locallogs.warning("Serial buffer queue full, skipping buffer.")
                 if pre_pos:
                     cur_buffer = cur_buffer[pre_pos[-1] :]
 
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
-            serial_buffer_queue.put(None)
+            try:
+                serial_buffer_queue.put(
+                    None, block=True, timeout=self.config.runtime.queue_put_timeout
+                )
+            except queue.Full:
+                locallogs.error("Serial buffer queue full, Could not put sentinel.")
 
     def _buffer_to_frame(
         self,
@@ -381,7 +405,6 @@ class StreamDaq:
 
         try:
             for serial_buffer in exact_iter(serial_buffer_queue.get, None):
-
                 header_data, serial_buffer = self._parse_header(serial_buffer)
                 header_list.append(header_data)
 
@@ -401,7 +424,14 @@ class StreamDaq:
                         f"Discarding buffer."
                     )
                     if header_list:
-                        frame_buffer_queue.put((None, header_list))
+                        try:
+                            frame_buffer_queue.put(
+                                (None, header_list),
+                                block=True,
+                                timeout=self.config.runtime.queue_put_timeout,
+                            )
+                        except queue.Full:
+                            locallogs.warning("Frame buffer queue full, skipping frame.")
                     continue
 
                 # if first buffer of a frame
@@ -411,7 +441,14 @@ class StreamDaq:
                         continue
 
                     # push previous frame_buffer into frame_buffer queue
-                    frame_buffer_queue.put((frame_buffer, header_list))
+                    try:
+                        frame_buffer_queue.put(
+                            (frame_buffer, header_list),
+                            block=True,
+                            timeout=self.config.runtime.queue_put_timeout,
+                        )
+                    except queue.Full:
+                        locallogs.warning("Frame buffer queue full, skipping frame.")
 
                     # init new frame_buffer
                     frame_buffer = frame_buffer_prealloc.copy()
@@ -434,11 +471,22 @@ class StreamDaq:
                     locallogs.debug(
                         "----buffer #" + str(header_data.frame_buffer_count) + " stored"
                     )
-
         finally:
-            frame_buffer_queue.put((None, header_list))  # for getting remaining buffers.
-            locallogs.debug("Quitting, putting sentinel in queue")
-            frame_buffer_queue.put(None)
+            try:
+                # get remaining buffers.
+                frame_buffer_queue.put(
+                    (None, header_list), block=True, timeout=self.config.runtime.queue_put_timeout
+                )
+            except queue.Full:
+                locallogs.warning("Frame buffer queue full, skipping frame.")
+
+            try:
+                frame_buffer_queue.put(
+                    None, block=True, timeout=self.config.runtime.queue_put_timeout
+                )
+                locallogs.debug("Quitting, putting sentinel in queue")
+            except queue.Full:
+                locallogs.error("Frame buffer queue full, Could not put sentinel.")
 
     def _format_frame(
         self,
@@ -468,11 +516,15 @@ class StreamDaq:
         try:
             for frame_data, header_list in exact_iter(frame_buffer_queue.get, None):
 
-                if not frame_data:
-                    imagearray.put((None, header_list))
-                    continue
-                if len(frame_data) == 0:
-                    imagearray.put((None, header_list))
+                if not frame_data or len(frame_data) == 0:
+                    try:
+                        imagearray.put(
+                            (None, header_list),
+                            block=True,
+                            timeout=self.config.runtime.queue_put_timeout,
+                        )
+                    except queue.Full:
+                        locallogs.warning("Image array queue full, skipping frame.")
                     continue
                 frame_data = np.concatenate(frame_data, axis=0)
 
@@ -484,7 +536,8 @@ class StreamDaq:
                     expected_size = self.config.frame_width * self.config.frame_height
                     provided_size = frame_data.size
                     locallogs.exception(
-                        "Frame size doesn't match: %s. Expected size: %d, got size: %d elements. "
+                        "Frame size doesn't match: %s. "
+                        " Expected size: %d, got size: %d."
                         "Replacing with zeros.",
                         e,
                         expected_size,
@@ -493,10 +546,20 @@ class StreamDaq:
                     frame = np.zeros(
                         (self.config.frame_width, self.config.frame_height), dtype=np.uint8
                     )
-                imagearray.put((frame, header_list))
+                try:
+                    imagearray.put(
+                        (frame, header_list),
+                        block=True,
+                        timeout=self.config.runtime.queue_put_timeout,
+                    )
+                except queue.Full:
+                    locallogs.warning("Image array queue full, skipping frame.")
         finally:
             locallogs.debug("Quitting, putting sentinel in queue")
-            imagearray.put(None)
+            try:
+                imagearray.put(None, block=True, timeout=self.config.runtime.queue_put_timeout)
+            except queue.Full:
+                locallogs.error("Image array queue full, Could not put sentinel.")
 
     def init_video(
         self, path: Union[Path, str], fourcc: str = "Y800", **kwargs: dict
@@ -527,6 +590,19 @@ class StreamDaq:
         frame_size = (self.config.frame_width, self.config.frame_height)
         out = cv2.VideoWriter(str(path), fourcc, frame_rate, frame_size, **kwargs)
         return out
+
+    def alive_processes(self) -> List[multiprocessing.Process]:
+        """
+        Return a list of alive processes.
+
+        Returns
+        -------
+        List[multiprocessing.Process]
+            List of alive processes.
+        """
+
+        raise NotImplementedError("Not implemented yet")
+        return None
 
     def capture(
         self,
@@ -638,7 +714,9 @@ class StreamDaq:
             self._buffered_writer = BufferedCSVWriter(
                 metadata, buffer_size=self.config.runtime.csvwriter.buffer
             )
-            self._buffered_writer.append(list(StreamBufferHeader.model_fields.keys()))
+            self._buffered_writer.append(
+                list(StreamBufferHeader.model_fields.keys()) + ["unix_time"]
+            )
 
         try:
             for image, header_list in exact_iter(imagearray.get, None):
@@ -650,7 +728,6 @@ class StreamDaq:
                     show_metadata=show_metadata,
                     metadata=metadata,
                 )
-
         except KeyboardInterrupt:
             self.logger.exception(
                 "Quitting capture, processing remaining frames. Ctrl+C again to force quit"
@@ -711,12 +788,6 @@ class StreamDaq:
             Further refactor to break into smaller pieces, not have to pass 100 args every time.
 
         """
-        if show_video is True:
-            cv2.imshow("image", image)
-            cv2.waitKey(1)
-        if writer:
-            picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
-            writer.write(picture)
         if show_metadata or metadata:
             for header in header_list:
                 if show_metadata:
@@ -728,9 +799,26 @@ class StreamDaq:
                 if metadata:
                     self.logger.debug("Saving header metadata")
                     try:
-                        self._buffered_writer.append(list(header.model_dump().values()))
+                        self._buffered_writer.append(
+                            list(header.model_dump().values()) + [time.time()]
+                        )
                     except Exception as e:
                         self.logger.exception(f"Exception saving headers: \n{e}")
+        if image is None or image.size == 0:
+            self.logger.warning("Empty frame received, skipping.")
+            return
+        if show_video:
+            try:
+                cv2.imshow("image", image)
+                cv2.waitKey(1)
+            except cv2.error as e:
+                self.logger.exception(f"Error displaying frame: {e}")
+        if writer:
+            try:
+                picture = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # If your image is grayscale
+                writer.write(picture)
+            except cv2.error as e:
+                self.logger.exception(f"Exception writing frame: {e}")
 
 
 # DEPRECATION: v0.3.0

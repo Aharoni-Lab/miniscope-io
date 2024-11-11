@@ -33,7 +33,7 @@ class okDev(ok.okCFrontPanel):
         if ret == self.NoError:
             self.logger.info(f"Connected to {self.info.productName}")
 
-    def uploadBit(self, bit_file: str) -> None:
+    def upload_bit(self, bit_file: str) -> None:
         """
         Upload a configuration bitfile to the FPGA
 
@@ -51,7 +51,7 @@ class okDev(ok.okCFrontPanel):
         )
         ret = self.ResetFPGA()
 
-    def readData(self, length: int, addr: int = 0xA0, blockSize: int = 16) -> bytearray:
+    def read_data(self, length: int, addr: int = 0xA0, blockSize: int = 16) -> bytearray:
         """
         Read a buffer's worth of data
 
@@ -73,7 +73,7 @@ class okDev(ok.okCFrontPanel):
             self.logger.warning(f"Only {ret} bytes read")
         return buf
 
-    def setWire(self, addr: int, val: int) -> None:
+    def set_wire(self, addr: int, val: int) -> None:
         """
         .. todo::
 

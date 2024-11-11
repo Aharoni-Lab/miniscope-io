@@ -56,11 +56,11 @@ class okDevMock:
         with open(self.DATA_FILE, "rb") as dfile:
             self._buffer = bytearray(dfile.read())
 
-    def uploadBit(self, bit_file: str) -> None:
+    def upload_bit(self, bit_file: str) -> None:
         assert Path(bit_file).exists()
         self.bit_file = Path(bit_file)
 
-    def readData(self, length: int, addr: int = 0xA0, blockSize: int = 16) -> bytearray:
+    def read_data(self, length: int, addr: int = 0xA0, blockSize: int = 16) -> bytearray:
         if self._buffer_position >= len(self._buffer):
             # Error if called after we have returned the last data
             raise EndOfRecordingException("End of sample buffer")
@@ -70,5 +70,5 @@ class okDevMock:
         self._buffer_position = end_pos
         return data
 
-    def setWire(self, addr: int, val: int) -> None:
+    def set_wire(self, addr: int, val: int) -> None:
         self._wires[addr] = val

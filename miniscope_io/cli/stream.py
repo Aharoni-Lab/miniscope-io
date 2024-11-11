@@ -56,6 +56,7 @@ def _capture_options(fn: Callable) -> Callable:
         help="Display metadata in real time. \n"
         "**WARNING:** This is still an **EXPERIMENTAL** feature and is **UNSTABLE**.",
     )(fn)
+
     return fn
 
 

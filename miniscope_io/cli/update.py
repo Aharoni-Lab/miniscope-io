@@ -28,8 +28,8 @@ from miniscope_io.models.devupdate import DeviceCommand
     "-k",
     "--key",
     required=False,
-    type=click.Choice(["LED", "GAIN", "ROI_X", "ROI_Y"]),
-    help="key to update. Cannot be used with --restart.",
+    type=click.Choice(["LED", "GAIN", "ROI_X", "ROI_Y", "SUBSAMPLE"]),
+    help="key to update.",
 )
 @click.option(
     "-v",
@@ -52,16 +52,13 @@ def update(port: str, key: str, value: int, device_id: int, batch: str) -> None:
     """
     Update device configuration.
     """
-
     # Check mutual exclusivity
-    if (key and not value) or (value and not key):
+    if (key and value is None) or (value and not key):
         raise click.UsageError("Both --key and --value are required if one is specified.")
 
     if batch and (key or value):
-        raise click.UsageError(
-            "Options --key/--value and --restart" " and --batch are mutually exclusive."
-        )
-    if key and value:
+        raise click.UsageError("Options --key/--value and --batch are mutually exclusive.")
+    if key and value is not None:
         device_update(port=port, key=key, value=value, device_id=device_id)
     elif batch:
         with open(batch) as f:
@@ -91,7 +88,7 @@ def update(port: str, key: str, value: int, device_id: int, batch: str) -> None:
     "--reboot",
     is_flag=True,
     type=bool,
-    help="Restart the device. Cannot be used with --key or --value.",
+    help="Restart the device.",
 )
 def device(port: str, device_id: int, reboot: bool) -> None:
     """
