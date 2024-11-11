@@ -74,9 +74,9 @@ def test_init_logger_from_dotenv(tmp_path, monkeypatch, level,dotenv_direct_sett
         else:
             denvfile.write(f'MINISCOPE_IO_LOGS__LEVEL="{level}"')
 
-    dotenv_logger = init_logger(name='test_logger', log_dir=tmp_path)
-
     monkeypatch.chdir(tmp_path)
+
+    dotenv_logger = init_logger(name='test_logger', log_dir=tmp_path)
 
     # Separating them for readable summary info
     if test_target == 'logger':
