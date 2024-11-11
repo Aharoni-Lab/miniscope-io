@@ -6,6 +6,9 @@ import os
 import tempfile
 from pathlib import Path
 
+from logging.handlers import RotatingFileHandler
+from rich.logging import RichHandler
+
 from miniscope_io.logging import init_logger
 
 def test_init_logger(capsys, tmp_path):
@@ -46,7 +49,8 @@ def test_init_logger(capsys, tmp_path):
 
 @pytest.mark.parametrize('level', ['DEBUG', 'INFO', 'WARNING', 'ERROR'])
 @pytest.mark.parametrize('dotenv_direct_setting', [True, False])
-def test_init_logger_from_dotenv(tmp_path, level,dotenv_direct_setting):
+@pytest.mark.parametrize('test_target', ['logger', 'RotatingFileHandler', 'RichHandler'])
+def test_init_logger_from_dotenv(tmp_path, monkeypatch, level,dotenv_direct_setting, test_target):
     """
     Set log levels from dotenv MINISCOPE_IO_LOGS__LEVEL key
     """
@@ -69,6 +73,19 @@ def test_init_logger_from_dotenv(tmp_path, level,dotenv_direct_setting):
                 )
         else:
             denvfile.write(f'MINISCOPE_IO_LOGS__LEVEL="{level}"')
-        
+
     dotenv_logger = init_logger(name='test_logger', log_dir=tmp_path)
-    assert dotenv_logger.level == level_name_map.get(level)
+
+    monkeypatch.chdir(tmp_path)
+
+    # Separating them for readable summary info
+    if test_target == 'logger':
+        assert dotenv_logger.level == level_name_map.get(level)
+
+    for handler in dotenv_logger.handlers:
+        if isinstance(handler, RotatingFileHandler) and test_target == 'RotatingFileHandler':
+            assert handler.level == level_name_map.get(level)
+
+        elif isinstance(handler, RichHandler) and test_target == 'RichHandler':
+            # Might be better to explicitly set the level in the handler
+            assert handler.level == logging.NOTSET
