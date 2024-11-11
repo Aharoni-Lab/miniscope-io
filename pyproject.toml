@@ -1,6 +1,6 @@
 [project]
 name = "miniscope_io"
-version = "0.4.1"
+version = "0.5.0"
 description = "Generic I/O for miniscopes"
 authors = [
     {name = "sneakers-the-rat", email = "sneakers-the-rat@protonmail.com"},

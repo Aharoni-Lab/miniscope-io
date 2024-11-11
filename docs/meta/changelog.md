@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5
+
+### 0.5.0 - 24-11-11
+Enhancements and bugfixes to `StreamDaq`; adding `device_update` module; CI/CD updates.
+
+#### Features / bugfixes
+- **Over-the-air device config:** modules and commands for updating and rebooting; *e.g.,* `mio update --key LED --value 10`, `mio device --reboot`.
+- **Continuous run:** updated error handling to continuously capture even when the data stream is interrupted.
+- **UNIX timestamp:** added UNIX timestamp to metadata file export.
+- **More Opal Kelly bitfiles:** added FPGA configuration images and organized them based on Manchester encoding conventions, frequency, etc.
+#### CI/CD
+- Switched to `pdm` from `poetry`; now `pdm install --with all` for contributing.
+- Added workflow for readthedocs preview link in PRs.
+- Added snake_case enforcement (Lint).
+
+Related PRs: [#45](https://github.com/Aharoni-Lab/miniscope-io/pull/45), [#48](https://github.com/Aharoni-Lab/miniscope-io/pull/48), [#49](https://github.com/Aharoni-Lab/miniscope-io/pull/49), [#50](https://github.com/Aharoni-Lab/miniscope-io/pull/50), [#53](https://github.com/Aharoni-Lab/miniscope-io/pull/53), 
+Contributors: [@t-sasatani](https://github.com/t-sasatani), [@sneakers-the-rat](https://github.com/sneakers-the-rat), [@MarcelMB](https://github.com/MarcelMB), [@phildong](https://github.com/phildong)
+
 ## 0.4
 
 ### 0.4.1 - 24-09-01

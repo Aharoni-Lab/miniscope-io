@@ -58,6 +58,7 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
         else:
             yield val
 
+
 class StreamDaq:
     """
     A combined class for configuring and reading frames from a UART and FPGA source.
