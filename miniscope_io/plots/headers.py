@@ -14,11 +14,8 @@ from miniscope_io.models.stream import StreamBufferHeader
 
 try:
     import matplotlib.pyplot as plt
-except ImportError as e:
-    raise ImportError(
-        "matplotlib is not a required dependency of miniscope-io, "
-        "install it with the miniscope-io[plot] extra or manually in your environment :)"
-    ) from e
+except ImportError:
+    plt = None
 
 
 def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
@@ -132,6 +129,13 @@ class StreamPlotter:
             history_length (int): Number of headers to plot
             update_ms (int): milliseconds between each plot update
         """
+        global plt
+        if plt is None:
+            raise ModuleNotFoundError(
+                "matplotlib is not a required dependency of miniscope-io, to use it, "
+                "install it manually or install miniscope-io with `pip install miniscope-io[plot]`"
+            )
+
         # If a single string is provided, convert it to a list with one element
         if isinstance(header_keys, str):
             header_keys = [header_keys]
