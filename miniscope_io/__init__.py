@@ -26,4 +26,4 @@ __all__ = [
 try:
     __version__ = metadata.version("miniscope_io")
 except metadata.PackageNotFoundError:  # pragma: nocover
-    __version__ = "0.0.0"
+    __version__ = None
