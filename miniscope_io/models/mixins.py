@@ -177,9 +177,9 @@ def yaml_peek(
         str
     """
     if root:
-        pattern = re.compile(rf"^(?P<key>{key}):\s*(?P<value>\S.*)")
+        pattern = re.compile(rf"^(?P<key>{key}):\s*\"*\'*(?P<value>\S.*?)\"*\'*$")
     else:
-        pattern = re.compile(rf"^\s*(?P<key>{key}):\s*(?P<value>\S.*)")
+        pattern = re.compile(rf"^\s*(?P<key>{key}):\s*\"*\'*(?P<value>\S.*?)\"*\'*$")
 
     res = None
     if first:
@@ -196,5 +196,4 @@ def yaml_peek(
         res = [match.groupdict()["value"] for match in pattern.finditer(text)]
         if res:
             return res
-
     raise KeyError(f"Key {key} not found in {path}")

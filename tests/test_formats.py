@@ -1,8 +1,5 @@
-import pdb
-
 import pytest
 import json
-import importlib
 
 from miniscope_io.models.sdcard import SDLayout
 
