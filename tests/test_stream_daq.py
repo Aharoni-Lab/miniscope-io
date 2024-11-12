@@ -114,7 +114,7 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         # actually not sure what we should be looking for here, for now we just check for shape
         # this should be the same as long as the test data stays the same,
         # but it's a pretty weak test.
-        assert df.shape == (910, 12)  #
+        assert df.shape == (910, 12)
 
         # ensure there were no errors during capture
         for record in caplog.records:
