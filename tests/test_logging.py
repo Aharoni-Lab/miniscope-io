@@ -68,15 +68,17 @@ def test_nested_loggers(capsys, tmp_path):
     child.debug("hey")
     parent.debug("sup")
 
-    warnings.warn(f"FILES IN LOG DIR: {list(log_dir.glob('*'))}")
-
-    with open(log_dir / "miniscope_io.log") as lfile:
-        file_logs = lfile.read()
-
     root_logger = logging.getLogger("miniscope_io")
+
+    warnings.warn(f"FILES IN LOG DIR: {list(log_dir.glob('*'))}")
+    warnings.warn(f"ROOT LOGGER HANDLERS: {root_logger.handlers}")
+
     assert len(root_logger.handlers) == 2
     assert len(parent.handlers) == 0
     assert len(child.handlers) == 0
+
+    with open(log_dir / "miniscope_io.log") as lfile:
+        file_logs = lfile.read()
 
     # only one message of each!
     stdout = capsys.readouterr()
