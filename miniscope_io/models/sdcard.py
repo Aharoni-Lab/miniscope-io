@@ -8,6 +8,7 @@ from typing import Optional
 
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
+from miniscope_io.models.mixins import ConfigYAMLMixin
 
 
 class SectorConfig(MiniscopeConfig):
@@ -104,7 +105,7 @@ class SDBufferHeaderFormat(BufferHeaderFormat):
     battery_voltage: Optional[int] = None
 
 
-class SDLayout(MiniscopeConfig):
+class SDLayout(MiniscopeConfig, ConfigYAMLMixin):
     """
     Data layout of an SD Card.
 
@@ -130,12 +131,6 @@ class SDLayout(MiniscopeConfig):
     header: SDHeaderPositions = SDHeaderPositions()
     config: ConfigPositions = ConfigPositions()
     buffer: SDBufferHeaderFormat = SDBufferHeaderFormat()
-
-    version: Optional[str] = None
-    """
-    Not Implemented: version stored in the SD card header that indicates
-    when this layout should be used
-    """
 
 
 class SDConfig(MiniscopeConfig):

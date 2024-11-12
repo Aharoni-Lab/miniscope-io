@@ -104,9 +104,16 @@ class SDCard:
 
     """
 
-    def __init__(self, drive: Union[str, Path], layout: SDLayout):
+    def __init__(
+        self, drive: Union[str, Path], layout: Union[SDLayout, str] = "wirefree-sd-layout"
+    ):
         self.drive = drive
-        self.layout = layout
+        if isinstance(layout, str):
+            self.layout = SDLayout.from_id(layout)
+        elif isinstance(layout, SDLayout):
+            self.layout = layout
+        else:
+            raise TypeError("layout must be either a layout config id or a SDLayout")
         self.logger = init_logger("SDCard")
 
         # Private attributes used when the file reading context is entered

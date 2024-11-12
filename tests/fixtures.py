@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from miniscope_io import SDCard
-from miniscope_io.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
+from miniscope_io.io import SDCard
 from miniscope_io.models.data import Frames
 
 
@@ -14,14 +13,14 @@ def wirefree() -> SDCard:
 
     """
     sd_path = Path(__file__).parent.parent / "data" / "wirefree_example.img"
-    sdcard = SDCard(drive=sd_path, layout=WireFreeSDLayout)
+    sdcard = SDCard(drive=sd_path, layout="wirefree-sd-layout")
     return sdcard
 
 
 @pytest.fixture
 def wirefree_battery() -> SDCard:
     sd_path = Path(__file__).parent.parent / "data" / "wirefree_battery_sample.img"
-    sdcard = SDCard(drive=sd_path, layout=WireFreeSDLayout_Battery)
+    sdcard = SDCard(drive=sd_path, layout="wirefree-sd-layout-battery")
     return sdcard
 
 

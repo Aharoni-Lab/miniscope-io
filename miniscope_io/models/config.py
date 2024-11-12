@@ -84,7 +84,9 @@ class Config(BaseSettings):
         description="Base directory to store configuration and other temporary files, "
         "other paths are relative to this by default",
     )
+    config_dir: Path = Field(Path("config"), description="Location to store user configs")
     log_dir: Path = Field(Path("logs"), description="Location to store logs")
+
     logs: LogConfig = Field(LogConfig(), description="Additional settings for logs")
 
     @field_validator("base_dir", mode="before")
