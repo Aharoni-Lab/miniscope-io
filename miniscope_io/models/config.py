@@ -25,80 +25,6 @@ _global_config_path = Path(_dirs.user_config_path) / "mio_config.yaml"
 LOG_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
 
-def _create_default_global_config(path: Path = _global_config_path, force: bool = False) -> None:
-    """
-    Create a default global `mio_config.yaml` file to point to the user directory,
-    returning it.
-
-    Args:
-        force (bool): Override any existing global config
-    """
-    if path.exists() and not force:
-        return
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    config = {"user_dir": str(path.parent)}
-    with open(path, "w") as f:
-        yaml.safe_dump(config, f)
-
-
-class _UserYamlConfigSource(YamlConfigSettingsSource):
-    """
-    Yaml config source that gets the location of the user settings file from the prior sources
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any):
-        self._user_config = None
-        super().__init__(*args, **kwargs)
-
-    @property
-    def user_config_path(self) -> Optional[Path]:
-        """
-        Location of the user-level ``mio_config.yaml`` file,
-        given the current state of prior config sources,
-        including the global config file
-        """
-        config_file = None
-        user_dir: Optional[str] = self.current_state.get("user_dir", None)
-        if user_dir is None:
-            # try and get from global config
-            if _global_config_path.exists():
-                with open(_global_config_path) as f:
-                    data = yaml.safe_load(f)
-                user_dir = data.get("user_dir", None)
-
-                if user_dir is not None:
-                    # handle .yml or .yaml
-                    config_files = list(Path(user_dir).glob("mio_config.*"))
-                    if len(config_files) != 0:
-                        config_file = config_files[0]
-
-        else:
-            # gotten from higher priority config sources
-            config_file = Path(user_dir) / "mio_config.yaml"
-        return config_file
-
-    @property
-    def user_config(self) -> dict[str, Any]:
-        """
-        Contents of the user config file
-        """
-        if self._user_config is None:
-            if self.user_config_path is None or not self.user_config_path.exists():
-                self._user_config = {}
-            else:
-                self._user_config = self._read_files(self.user_config_path)
-
-        return self._user_config
-
-    def __call__(self) -> dict[str, Any]:
-        return (
-            TypeAdapter(dict[str, Any]).dump_python(self.user_config)
-            if self.nested_model_default_partial_update
-            else self.user_config
-        )
-
-
 class LogConfig(MiniscopeIOModel):
     """
     Configuration for logging
@@ -247,6 +173,79 @@ def set_user_dir(path: Path) -> None:
     Set the location of the user dir in the global config file
     """
     _update_value(_global_config_path, "user_dir", str(path))
+
+
+def _create_default_global_config(path: Path = _global_config_path, force: bool = False) -> None:
+    """
+    Create a default global `mio_config.yaml` file.
+
+    Args:
+        force (bool): Override any existing global config
+    """
+    if path.exists() and not force:
+        return
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    config = {"user_dir": str(path.parent)}
+    with open(path, "w") as f:
+        yaml.safe_dump(config, f)
+
+
+class _UserYamlConfigSource(YamlConfigSettingsSource):
+    """
+    Yaml config source that gets the location of the user settings file from the prior sources
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        self._user_config = None
+        super().__init__(*args, **kwargs)
+
+    @property
+    def user_config_path(self) -> Optional[Path]:
+        """
+        Location of the user-level ``mio_config.yaml`` file,
+        given the current state of prior config sources,
+        including the global config file
+        """
+        config_file = None
+        user_dir: Optional[str] = self.current_state.get("user_dir", None)
+        if user_dir is None:
+            # try and get from global config
+            if _global_config_path.exists():
+                with open(_global_config_path) as f:
+                    data = yaml.safe_load(f)
+                user_dir = data.get("user_dir", None)
+
+                if user_dir is not None:
+                    # handle .yml or .yaml
+                    config_files = list(Path(user_dir).glob("mio_config.*"))
+                    if len(config_files) != 0:
+                        config_file = config_files[0]
+
+        else:
+            # gotten from higher priority config sources
+            config_file = Path(user_dir) / "mio_config.yaml"
+        return config_file
+
+    @property
+    def user_config(self) -> dict[str, Any]:
+        """
+        Contents of the user config file
+        """
+        if self._user_config is None:
+            if self.user_config_path is None or not self.user_config_path.exists():
+                self._user_config = {}
+            else:
+                self._user_config = self._read_files(self.user_config_path)
+
+        return self._user_config
+
+    def __call__(self) -> dict[str, Any]:
+        return (
+            TypeAdapter(dict[str, Any]).dump_python(self.user_config)
+            if self.nested_model_default_partial_update
+            else self.user_config
+        )
 
 
 def _update_value(path: Path, key: str, value: Any) -> None:
