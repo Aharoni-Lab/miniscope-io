@@ -32,7 +32,7 @@ def test_init_logger(capsys, tmp_path):
 
     log_dir = Path(tmp_path) / "logs"
     log_dir.mkdir()
-    log_file = log_dir / "miniscope_io.test_logger.log"
+    log_file = log_dir / "miniscope_io.log"
     logger = init_logger(name="test_logger", log_dir=log_dir, level="INFO", file_level="WARNING")
     warn_msg = "Both loggers should show"
     logger.warning(warn_msg)
