@@ -59,8 +59,7 @@ def test_nested_loggers(capsys, tmp_path):
     """
     Nested loggers should not double-log
     """
-    log_dir = Path(tmp_path) / "logs"
-    log_dir.mkdir()
+    log_dir = Path(tmp_path)
 
     parent = init_logger("parent", log_dir=log_dir, level="DEBUG", file_level="DEBUG")
     child = init_logger("parent.child", log_dir=log_dir, level="DEBUG", file_level="DEBUG")
