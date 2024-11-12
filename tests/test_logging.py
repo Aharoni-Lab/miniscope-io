@@ -1,7 +1,11 @@
 import logging
+import pdb
+
 import pytest
 from pathlib import Path
 import re
+import multiprocessing as mp
+from time import sleep
 
 from logging.handlers import RotatingFileHandler
 from rich.logging import RichHandler
@@ -131,3 +135,46 @@ def test_init_logger_from_dotenv(tmp_path, monkeypatch, level, dotenv_direct_set
     elif test_target == "RichHandler":
         # Might be better to explicitly set the level in the handler
         assert stream_handler.level == level_name_map.get(level)
+
+
+def _mp_function(name, path):
+    logger = init_logger(name, log_dir=path, level="DEBUG", file_level="DEBUG")
+    for i in range(100):
+        sleep(0.001)
+        logger.debug(f"{name} - {i}")
+
+
+def test_multiprocess_logging(capfd, tmp_path):
+    """
+    We should be able to handle logging from multiple processes
+    """
+
+    proc_1 = mp.Process(target=_mp_function, args=("proc_1", tmp_path))
+    proc_2 = mp.Process(target=_mp_function, args=("proc_2", tmp_path))
+    proc_3 = mp.Process(target=_mp_function, args=("proc_1.proc_3", tmp_path))
+
+    proc_1.start()
+    proc_2.start()
+    proc_3.start()
+    proc_1.join()
+    proc_2.join()
+    proc_3.join()
+
+    stdout = capfd.readouterr()
+    logs = {}
+    for log_file in tmp_path.glob("*.log"):
+        with open(log_file) as lfile:
+            logs[log_file.name] = lfile.read()
+
+    assert "miniscope_io.log" in logs
+    assert len(logs) == 4
+
+    for logfile, logs in logs.items():
+
+        # main logfile does not receive messages
+        if logfile == "miniscope_io.log":
+            assert len(logs.split("\n")) == 1
+        else:
+            assert len(logs.split("\n")) == 101
+
+    assert len(re.findall("DEBUG", stdout.out)) == 300
