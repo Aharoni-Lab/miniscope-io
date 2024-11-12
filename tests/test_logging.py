@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import multiprocessing as mp
 from time import sleep
+import warnings
 
 from logging.handlers import RotatingFileHandler
 from rich.logging import RichHandler
@@ -66,6 +67,8 @@ def test_nested_loggers(capsys, tmp_path):
 
     child.debug("hey")
     parent.debug("sup")
+
+    warnings.warn(f"FILES IN LOG DIR: {list(log_dir.glob('*'))}")
 
     with open(log_dir / "miniscope_io.log") as lfile:
         file_logs = lfile.read()
