@@ -4,6 +4,7 @@ CLI entry point
 
 import click
 
+from miniscope_io.cli.config import config
 from miniscope_io.cli.stream import stream
 from miniscope_io.cli.update import device, update
 
@@ -21,3 +22,4 @@ def cli(ctx: click.Context) -> None:
 cli.add_command(stream)
 cli.add_command(update)
 cli.add_command(device)
+cli.add_command(config)
