@@ -3,6 +3,7 @@ Logging factory and handlers
 """
 
 import logging
+import multiprocessing as mp
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional, Union
@@ -73,6 +74,20 @@ def init_logger(
 
     logger = logging.getLogger(name)
     logger.setLevel(min_level)
+
+    # if run from a forked process, need to add different handlers to not collide
+    if mp.parent_process() is not None:
+        logger.addHandler(
+            _file_handler(
+                name=f"{name}_{mp.current_process().pid}",
+                file_level=file_level,
+                log_dir=log_dir,
+                log_file_n=log_file_n,
+                log_file_size=log_file_size,
+            )
+        )
+        logger.addHandler(_rich_handler(level))
+        logger.propagate = False
 
     return logger
 
