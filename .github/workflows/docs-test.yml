@@ -30,4 +30,4 @@ jobs:
         working-directory: docs
         env:
           SPHINXOPTS: "-W --keep-going"
-        run: pdm run make html
+        run: make html
