@@ -4,12 +4,11 @@ import pytest
 import json
 import importlib
 
-from miniscope_io.formats import WireFreeSDLayout
 from miniscope_io.models.sdcard import SDLayout
 
 
 # More formats can be added here as needed.
-@pytest.mark.parametrize("format", [WireFreeSDLayout])
+@pytest.mark.parametrize("format", [SDLayout.from_id("wirefree-sd-layout")])
 def test_to_from_json(format):
     """
     A format can be exported and re-imported from JSON and remain equivalent
