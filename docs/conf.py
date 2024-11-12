@@ -28,9 +28,11 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinxcontrib.autodoc_pydantic",
+    "sphinxcontrib.programoutput",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx_click",
+    "sphinx_design",
 ]
 
 templates_path = ["_templates"]
