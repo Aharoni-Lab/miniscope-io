@@ -1,0 +1,33 @@
+name: Build and test documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test_docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e .[docs] pytest-md
+
+      - name: Build docs
+        working-directory: docs
+        env:
+          SPHINXOPTS: "-W --keep-going"
+        run: pdm run make html
