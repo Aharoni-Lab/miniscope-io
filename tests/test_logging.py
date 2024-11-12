@@ -20,8 +20,7 @@ def reset_root_logger():
     Before each test, reset the root logger
     """
     root_logger = logging.getLogger("miniscope_io")
-    for handler in root_logger.handlers:
-        root_logger.removeHandler(handler)
+    root_logger.handlers.clear()
 
 
 def test_init_logger(capsys, tmp_path):
