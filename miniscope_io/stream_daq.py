@@ -20,7 +20,6 @@ from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
 from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
-from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormatFormat
 from miniscope_io.io import BufferedCSVWriter
 from miniscope_io.models.stream import (
     StreamBufferHeader,
@@ -81,7 +80,7 @@ class StreamDaq:
     def __init__(
         self,
         device_config: Union[StreamDevConfig, Path],
-        header_fmt: Union[StreamBufferHeaderFormat, str] = StreamBufferHeaderFormatFormat,
+        header_fmt: Union[StreamBufferHeaderFormat, str] = "stream-buffer-header",
     ) -> None:
         """
         Constructer for the class.
