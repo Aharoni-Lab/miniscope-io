@@ -93,7 +93,7 @@ def _file_handler(
 def _rich_handler() -> RichHandler:
     rich_handler = RichHandler(rich_tracebacks=True, markup=True)
     rich_formatter = logging.Formatter(
-        "[bold green]\[%(name)s][/bold green] %(message)s",
+        r"[bold green]\[%(name)s][/bold green] %(message)s",
         datefmt="[%y-%m-%dT%H:%M:%S]",
     )
     rich_handler.setFormatter(rich_formatter)

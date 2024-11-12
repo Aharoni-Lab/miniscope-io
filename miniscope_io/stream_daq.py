@@ -800,7 +800,7 @@ class StreamDaq:
                     self.logger.debug("Saving header metadata")
                     try:
                         self._buffered_writer.append(
-                            list(header.model_dump().values()) + [time.time()]
+                            list(header.model_dump(warnings=False).values()) + [time.time()]
                         )
                     except Exception as e:
                         self.logger.exception(f"Exception saving headers: \n{e}")
