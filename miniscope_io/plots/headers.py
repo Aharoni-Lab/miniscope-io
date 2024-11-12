@@ -18,7 +18,7 @@ except ImportError:
     plt = None
 
 
-def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def buffer_count(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot number of buffers by time
     """
@@ -32,7 +32,7 @@ def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def dropped_buffers(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def dropped_buffers(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot number of buffers by time
     """
@@ -42,7 +42,7 @@ def dropped_buffers(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def timestamps(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def timestamps(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot frame number against time
     """
@@ -57,7 +57,7 @@ def timestamps(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def battery_voltage(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def battery_voltage(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot battery voltage against time
     """
@@ -70,7 +70,7 @@ def battery_voltage(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 def plot_headers(
     headers: pd.DataFrame, size: Optional[Tuple[int, int]] = None
-) -> (plt.Figure, plt.Axes):
+) -> ("plt.Figure", "plt.Axes"):
     """
     Plot the headers (generated from :meth:`.Frame.to_df` )
 
@@ -151,7 +151,7 @@ class StreamPlotter:
 
     def _init_plot(
         self,
-    ) -> tuple[plt.Figure, dict[str, plt.Axes], dict[str, plt.Line2D]]:
+    ) -> tuple["plt.Figure", dict[str, "plt.Axes"], dict[str, "plt.Line2D"]]:
 
         # initialize matplotlib
         plt.ion()
