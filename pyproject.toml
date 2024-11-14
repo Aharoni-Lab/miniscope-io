@@ -1,12 +1,13 @@
 [project]
 name = "miniscope_io"
-version = "0.5.0"
 description = "Generic I/O for miniscopes"
 authors = [
     {name = "sneakers-the-rat", email = "sneakers-the-rat@protonmail.com"},
     {name = "t-sasatani", email = "sasatani.dev@gmail.com"},
 ]
 license = {text = "AGPL-3.0"}
+dynamic = ["version"]
+
 requires-python = "<4.0,>=3.9"
 dependencies = [
     "opencv-python>=4.7.0.72",
@@ -92,6 +93,11 @@ format.composite = [
 
 [tool.pdm.build]
 includes = ["miniscope_io"]
+
+[tool.pdm.version]
+source = "scm"
+tag_filter = "v*"
+tag_regex = 'v(?P<version>([1-9][0-9]*!)?(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*((a|b|c|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?(\.dev(0|[1-9][0-9]*))?$)$'
 
 [build-system]
 requires = ["pdm-backend"]
