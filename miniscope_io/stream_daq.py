@@ -110,7 +110,6 @@ class StreamDaq:
             raise TypeError(
                 "header_fmt should be an instance of StreamBufferHeaderFormat or a config ID."
             )
-        self.header_fmt = header_fmt
         self.preamble = self.config.preamble
         self.terminate: multiprocessing.Event = multiprocessing.Event()
 
