@@ -2,6 +2,7 @@
 I/O SDK for UCLA Miniscopes
 """
 
+from importlib import metadata
 from pathlib import Path
 
 from miniscope_io.io import SDCard
@@ -21,3 +22,8 @@ __all__ = [
     "SDCard",
     "init_logger",
 ]
+
+try:
+    __version__ = metadata.version("miniscope_io")
+except metadata.PackageNotFoundError:  # pragma: nocover
+    __version__ = None
