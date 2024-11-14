@@ -14,14 +14,11 @@ from miniscope_io.models.stream import StreamBufferHeader
 
 try:
     import matplotlib.pyplot as plt
-except ImportError as e:
-    raise ImportError(
-        "matplotlib is not a required dependency of miniscope-io, "
-        "install it with the miniscope-io[plot] extra or manually in your environment :)"
-    ) from e
+except ImportError:
+    plt = None
 
 
-def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def buffer_count(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot number of buffers by time
     """
@@ -35,7 +32,7 @@ def buffer_count(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def dropped_buffers(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def dropped_buffers(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot number of buffers by time
     """
@@ -45,7 +42,7 @@ def dropped_buffers(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def timestamps(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def timestamps(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot frame number against time
     """
@@ -60,7 +57,7 @@ def timestamps(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def battery_voltage(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def battery_voltage(headers: pd.DataFrame, ax: "plt.Axes") -> "plt.Axes":
     """
     Plot battery voltage against time
     """
@@ -73,7 +70,7 @@ def battery_voltage(headers: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 def plot_headers(
     headers: pd.DataFrame, size: Optional[Tuple[int, int]] = None
-) -> (plt.Figure, plt.Axes):
+) -> ("plt.Figure", "plt.Axes"):
     """
     Plot the headers (generated from :meth:`.Frame.to_df` )
 
@@ -132,6 +129,13 @@ class StreamPlotter:
             history_length (int): Number of headers to plot
             update_ms (int): milliseconds between each plot update
         """
+        global plt
+        if plt is None:
+            raise ModuleNotFoundError(
+                "matplotlib is not a required dependency of miniscope-io, to use it, "
+                "install it manually or install miniscope-io with `pip install miniscope-io[plot]`"
+            )
+
         # If a single string is provided, convert it to a list with one element
         if isinstance(header_keys, str):
             header_keys = [header_keys]
@@ -147,7 +151,7 @@ class StreamPlotter:
 
     def _init_plot(
         self,
-    ) -> tuple[plt.Figure, dict[str, plt.Axes], dict[str, plt.Line2D]]:
+    ) -> tuple["plt.Figure", dict[str, "plt.Axes"], dict[str, "plt.Line2D"]]:
 
         # initialize matplotlib
         plt.ion()
