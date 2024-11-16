@@ -27,6 +27,7 @@ from miniscope_io.models.stream import (
     StreamDevConfig,
 )
 from miniscope_io.plots.headers import StreamPlotter
+from miniscope_io.types import ConfigSource
 
 HAVE_OK = False
 ok_error = None
@@ -79,8 +80,8 @@ class StreamDaq:
 
     def __init__(
         self,
-        device_config: Union[StreamDevConfig, Path],
-        header_fmt: Union[StreamBufferHeaderFormat, str] = "stream-buffer-header",
+        device_config: Union[StreamDevConfig, ConfigSource],
+        header_fmt: Union[StreamBufferHeaderFormat, ConfigSource] = "stream-buffer-header",
     ) -> None:
         """
         Constructer for the class.
@@ -97,11 +98,10 @@ class StreamDaq:
             Header format used to parse information from buffer header,
             by default `MetadataHeaderFormat()`.
         """
-        if isinstance(device_config, (str, Path)):
-            device_config = StreamDevConfig.from_yaml(device_config)
 
         self.logger = init_logger("streamDaq")
-        self.config = device_config
+        self.config = StreamDevConfig.from_any(device_config)
+        self.header_fmt = StreamBufferHeaderFormat.from_any(header_fmt)
         if isinstance(header_fmt, str):
             self.header_fmt = StreamBufferHeaderFormat.from_id(header_fmt)
         elif isinstance(header_fmt, StreamBufferHeaderFormat):

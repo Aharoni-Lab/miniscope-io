@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from miniscope_io import CONFIG_DIR, Config
 from miniscope_io.logging import init_logger
-from miniscope_io.types import PythonIdentifier
+from miniscope_io.types import ConfigID, ConfigSource, PythonIdentifier, valid_config_id
 
 T = TypeVar("T")
 
@@ -82,19 +82,11 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
      at the top of the file.
     """
 
-    id: str
+    id: ConfigID
     mio_model: PythonIdentifier = Field(None, validate_default=True)
     mio_version: str = version("miniscope-io")
 
     HEADER_FIELDS: ClassVar[tuple[str]] = ("id", "mio_model", "mio_version")
-
-    @field_validator("mio_model", mode="before")
-    @classmethod
-    def fill_mio_model(cls, v: Optional[str]) -> PythonIdentifier:
-        """Get name of instantiating model, if not provided"""
-        if v is None:
-            v = cls._model_name()
-        return v
 
     @classmethod
     def from_yaml(cls: Type[T], file_path: Union[str, Path]) -> T:
@@ -117,16 +109,7 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
         return instance
 
     @classmethod
-    @property
-    def config_sources(cls: Type[T]) -> List[Path]:
-        """
-        Directories to search for config files, in order of priority
-        such that earlier sources are preferred over later sources.
-        """
-        return [Config().config_dir, CONFIG_DIR]
-
-    @classmethod
-    def from_id(cls: Type[T], id: str) -> T:
+    def from_id(cls: Type[T], id: ConfigID) -> T:
         """
         Instantiate a model from a config `id` specified in one of the .yaml configs in
         either the user :attr:`.Config.config_dir` or the packaged ``config`` dir.
@@ -148,6 +131,60 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
             except KeyError:
                 continue
         raise KeyError(f"No config with id {id} found in {Config().config_dir}")
+
+    @classmethod
+    def from_any(cls: Type[T], source: Union[ConfigSource, T]) -> T:
+        """
+        Try and instantiate a config model from any supported constructor.
+
+        Args:
+            source (:class:`.ConfigID`, :class:`.Path`, :class:`.PathLike[str]`):
+                Either
+
+                * the ``id`` of a config file in the user configs directory or builtin
+                * a relative ``Path`` to a config file, relative to the current working directory
+                * a relative ``Path`` to a config file, relative to the user config directory
+                * an absolute ``Path`` to a config file
+                * an instance of the class to be constructed (returned unchanged)
+
+        """
+        if isinstance(source, cls):
+            return source
+        elif valid_config_id(source):
+            return cls.from_id(source)
+        else:
+            source = Path(source)
+            if source.suffix in (".yaml", ".yml"):
+                if source.exists():
+                    # either relative to cwd or absolute
+                    return cls.from_yaml(source)
+                elif (
+                    not source.is_absolute()
+                    and (user_source := Config().config_dir / source).exists()
+                ):
+                    return cls.from_yaml(user_source)
+
+        raise ValueError(
+            f"Instance of config model {cls.__name__} could not be instantiated from "
+            f"{source} - id or file not found, or type not supported"
+        )
+
+    @field_validator("mio_model", mode="before")
+    @classmethod
+    def fill_mio_model(cls, v: Optional[str]) -> PythonIdentifier:
+        """Get name of instantiating model, if not provided"""
+        if v is None:
+            v = cls._model_name()
+        return v
+
+    @classmethod
+    @property
+    def config_sources(cls: Type[T]) -> List[Path]:
+        """
+        Directories to search for config files, in order of priority
+        such that earlier sources are preferred over later sources.
+        """
+        return [Config().config_dir, CONFIG_DIR]
 
     def _dump_data(self, **kwargs: Any) -> dict:
         """Ensure that header is prepended to model data"""

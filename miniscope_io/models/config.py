@@ -102,7 +102,7 @@ class Config(BaseSettings):
     @model_validator(mode="after")
     def paths_relative_to_basedir(self) -> "Config":
         """If relative paths are given, make them absolute relative to ``base_dir``"""
-        paths = ("log_dir",)
+        paths = ("log_dir", "config_dir")
         for path_name in paths:
             path = getattr(self, path_name)  # type: Path
             if not path.is_absolute():

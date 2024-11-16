@@ -3,6 +3,7 @@ from typing import Callable, Optional
 
 import pytest
 import yaml
+from _pytest.monkeypatch import MonkeyPatch
 
 from miniscope_io.io import SDCard
 from miniscope_io.models.data import Frames
@@ -87,3 +88,13 @@ def yaml_config(
         return path
 
     return _yaml_config
+
+
+@pytest.fixture(scope="session")
+def monkeypatch_session() -> MonkeyPatch:
+    """
+    Monkeypatch you can use at the session scope!
+    """
+    mpatch = MonkeyPatch()
+    yield mpatch
+    mpatch.undo()
