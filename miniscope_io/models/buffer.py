@@ -6,10 +6,12 @@ containers, etc.
 from collections.abc import Sequence
 from typing import Type, TypeVar
 
+from miniscope_io.logging import init_logger
 from miniscope_io.models import Container, MiniscopeConfig
+from miniscope_io.models.mixins import ConfigYAMLMixin
 
 
-class BufferHeaderFormat(MiniscopeConfig):
+class BufferHeaderFormat(MiniscopeConfig, ConfigYAMLMixin):
     """
     Format model used to parse header at the beginning of every buffer.
 
@@ -86,9 +88,13 @@ class BufferHeader(Container):
         """
 
         header_data = dict()
-        for hd, header_index in format.model_dump().items():
+        for hd, header_index in format.model_dump(exclude=set(format.HEADER_FIELDS)).items():
             if header_index is not None:
-                header_data[hd] = vals[header_index]
+                try:
+                    header_data[hd] = vals[header_index]
+                except IndexError:
+                    init_logger("BufferHeader").exception(f"{header_index}")
+                    raise
 
         if construct:
             return cls.model_construct(**header_data)

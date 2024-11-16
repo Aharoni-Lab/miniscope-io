@@ -1,5 +1,5 @@
-id: wirefree-sd-layout-battery
-model: miniscope_io.models.sdcard.SDLayout
+id: wirefree-sd-layout
+mio_model: miniscope_io.models.sdcard.SDLayout
 mio_version: v5.0.0
 sectors:
   header: 1022
@@ -34,8 +34,7 @@ buffer:
   write_buffer_count: 5
   dropped_buffer_count: 6
   timestamp: 7
-  write_timestamp: 9
+  write_timestamp: null
   length: 0
   data_length: 8
-  battery_voltage: 10
-version: 0.1.1
+  battery_voltage: null

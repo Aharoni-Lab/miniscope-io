@@ -92,6 +92,8 @@ class SDBufferHeaderFormat(BufferHeaderFormat):
     Positions in the header for each frame
     """
 
+    id: str = "sd-buffer-header"
+
     length: int = 0
     linked_list: int = 1
     frame_num: int = 2

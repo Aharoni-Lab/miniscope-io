@@ -1,5 +1,5 @@
-id: "stream-buffer-header"
-model: "miniscope_io.models.stream.StreamBufferHeaderFormat"
+id: stream-buffer-header
+mio_model: miniscope_io.models.stream.StreamBufferHeaderFormat
 mio_version: "v5.0.0"
 linked_list: 0
 frame_num: 1

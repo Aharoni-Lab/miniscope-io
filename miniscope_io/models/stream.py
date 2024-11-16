@@ -10,7 +10,7 @@ from pydantic import Field, computed_field, field_validator
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
-from miniscope_io.models.mixins import ConfigYAMLMixin, YAMLMixin
+from miniscope_io.models.mixins import YAMLMixin
 from miniscope_io.models.sinks import CSVWriterConfig, StreamPlotterConfig
 
 
@@ -61,7 +61,7 @@ class ADCScaling(MiniscopeConfig):
         return voltage_raw / 2**self.bitdepth * self.ref_voltage * self.vin_div_factor
 
 
-class StreamBufferHeaderFormat(BufferHeaderFormat, ConfigYAMLMixin):
+class StreamBufferHeaderFormat(BufferHeaderFormat):
     """
     Refinements of :class:`.BufferHeaderFormat` for
     :class:`~miniscope_io.stream_daq.StreamDaq`
