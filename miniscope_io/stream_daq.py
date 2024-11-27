@@ -792,10 +792,10 @@ class StreamDaq:
                     if self._buffered_writer is None:
                         self._buffered_writer = BufferedCSVWriter(
                             metadata, buffer_size=self.config.runtime.csvwriter.buffer
-                            )
+                        )
                         self._buffered_writer.append(
                             list(header.model_dump(warnings=False).keys()) + ["unix_time"]
-                            )
+                        )
                     self.logger.debug("Saving header metadata")
                     try:
                         self._buffered_writer.append(

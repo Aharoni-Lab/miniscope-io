@@ -58,9 +58,9 @@ class BufferedCSVWriter:
             The data to be appended.
         """
         data = [
-            float(value) if isinstance(value, (np.integer, np.floating)) else value 
+            float(value) if isinstance(value, (np.integer, np.floating)) else value
             for value in data
-            ]
+        ]
         self.buffer.append(data)
         if len(self.buffer) >= self.buffer_size:
             self.flush_buffer()

@@ -112,6 +112,9 @@ def test_csv_output(tmp_path, default_streamdaq, write_metadata, caplog):
         # but it's a pretty weak test.
         assert df.shape == (3214, 14)
 
+        df_reference = pd.read_csv(DATA_DIR / "stream_daq_test_output_200px.csv")
+        pd.testing.assert_frame_equal(df, df_reference, check_dtype=False)
+        
         # ensure there were no errors during capture
         for record in caplog.records:
             assert "Exception saving headers" not in record.msg
