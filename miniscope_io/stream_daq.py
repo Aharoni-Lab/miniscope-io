@@ -710,14 +710,6 @@ class StreamDaq:
                 update_ms=self.config.runtime.plot.update_ms,
             )
 
-        if metadata:
-            self._buffered_writer = BufferedCSVWriter(
-                metadata, buffer_size=self.config.runtime.csvwriter.buffer
-            )
-            self._buffered_writer.append(
-                list(StreamBufferHeader.model_fields.keys()) + ["unix_time"]
-            )
-
         try:
             for image, header_list in exact_iter(imagearray.get, None):
                 self._handle_frame(
@@ -797,6 +789,13 @@ class StreamDaq:
                     except Exception as e:
                         self.logger.exception(f"Exception plotting headers: \n{e}")
                 if metadata:
+                    if self._buffered_writer is None:
+                        self._buffered_writer = BufferedCSVWriter(
+                            metadata, buffer_size=self.config.runtime.csvwriter.buffer
+                            )
+                        self._buffered_writer.append(
+                            list(header.model_dump(warnings=False).keys()) + ["unix_time"]
+                            )
                     self.logger.debug("Saving header metadata")
                     try:
                         self._buffered_writer.append(
