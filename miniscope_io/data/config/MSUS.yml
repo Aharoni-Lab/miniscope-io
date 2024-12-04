@@ -10,6 +10,8 @@ baudrate: null
 
 # Preamble for each data buffer.
 preamble: 0x12345678
+#preamble: 0x78563412
+
 
 # Image format. StreamDaq will calculate buffer size, etc. based on these parameters
 frame_width: 320
@@ -18,10 +20,10 @@ pix_depth: 10
 
 # Buffer data format. These have to match the firmware value
 header_len: 384 # 12 * 32 (in bits)
-buffer_block_length: 10
-block_size: 512
-num_buffers: 32
-dummy_words: 10
+buffer_block_length: 12 #
+block_size: 3988
+num_buffers: 10
+dummy_words: 0
 
 # Flags to flip bit/byte order when recovering headers and data. See model document for details.
 reverse_header_bits: True
