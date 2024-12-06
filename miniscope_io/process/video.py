@@ -11,6 +11,7 @@ import numpy as np
 from miniscope_io import init_logger
 from miniscope_io.io import VideoReader
 from miniscope_io.models.frames import NamedFrame
+from miniscope_io.models.process import DenoiseConfig
 from miniscope_io.plots.video import VideoPlotter
 
 logger = init_logger("video")
@@ -33,8 +34,6 @@ class FrameProcessor:
         """
         self.height = height
         self.width = width
-        self.buffer_size = buffer_size
-        self.buffer_split = buffer_split
 
     def split_by_length(self, array: np.ndarray, segment_length: int) -> list[np.ndarray]:
         """
@@ -61,7 +60,12 @@ class FrameProcessor:
         return split_arrays
 
     def patch_noisy_buffer(
-        self, current_frame: np.ndarray, previous_frame: np.ndarray, noise_threshold: float
+        self,
+        current_frame: np.ndarray,
+        previous_frame: np.ndarray,
+        buffer_size: int,
+        buffer_split: int,
+        noise_threshold: float
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Process the frame, replacing noisy blocks with those from the previous frame.
@@ -78,10 +82,10 @@ class FrameProcessor:
         serialized_previous = previous_frame.flatten().astype(np.int16)
 
         split_current = self.split_by_length(
-            serialized_current, self.buffer_size // self.buffer_split
+            serialized_current, buffer_size // buffer_split
         )
         split_previous = self.split_by_length(
-            serialized_previous, self.buffer_size // self.buffer_split
+            serialized_previous, buffer_size // buffer_split
         )
 
         split_output = split_current.copy()
@@ -180,14 +184,7 @@ class VideoProcessor:
     @staticmethod
     def denoise(
         video_path: str,
-        slider_plot: bool = True,
-        end_frame: int = 100,
-        noise_threshold: float = 20,
-        spatial_LPF: int = 10,
-        vertical_BEF: int = 2,
-        horizontal_BEF: int = 0,
-        diff_mag: int = 10,
-        buffer_split: int = 1,
+        config: DenoiseConfig,
     ) -> None:
         """
         Process a video file and display the results.
@@ -207,21 +204,21 @@ class VideoProcessor:
         processor = FrameProcessor(
             height=reader.height,
             width=reader.width,
-            buffer_split=buffer_split,
         )
 
-        freq_mask = processor.gen_freq_mask(
-            center_LPF=spatial_LPF,
-            vertical_BEF=vertical_BEF,
-            horizontal_BEF=horizontal_BEF,
-            show_mask=False,
-        )
+        if config.noise_patch.enable:
+            freq_mask = processor.gen_freq_mask(
+                center_LPF=config.frequency_masking.spatial_LPF_cutoff_radius,
+                vertical_BEF=config.frequency_masking.vertical_BEF_cutoff,
+                horizontal_BEF=config.frequency_masking.horizontal_BEF_cutoff,
+                show_mask=config.frequency_masking.display_mask,
+            )
 
         try:
             for frame in reader.read_frames():
                 raw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                if index > end_frame:
+                if config.end_frame and index > config.end_frame:
                     break
 
                 logger.debug(f"Processing frame {index}")
@@ -230,7 +227,11 @@ class VideoProcessor:
                     previous_frame = raw_frame
 
                 patched_frame, noise_patch = processor.patch_noisy_buffer(
-                    raw_frame, previous_frame, noise_threshold=noise_threshold
+                    raw_frame,
+                    previous_frame,
+                    buffer_size=config.noise_patch.buffer_size,
+                    buffer_split=config.noise_patch.buffer_split,
+                    noise_threshold=config.noise_patch.threshold
                 )
                 freq_filtered_frame, frame_freq_domain = processor.remove_stripes(
                     img=patched_frame, mask=freq_mask
@@ -242,7 +243,7 @@ class VideoProcessor:
                 freq_domain_frames.append(frame_freq_domain)
                 noise_patchs.append(noise_patch * np.iinfo(np.uint8).max)
                 freq_filtered_frames.append(freq_filtered_frame)
-                diff_frames.append(diff_frame * diff_mag)
+                diff_frames.append(diff_frame * config.noise_patch.diff_multiply)
 
                 index += 1
         finally:
@@ -258,7 +259,9 @@ class VideoProcessor:
 
             raw_video = NamedFrame(name="RAW", video_frame=raw_frames)
             patched_video = NamedFrame(name="Patched", video_frame=patched_frames)
-            diff_video = NamedFrame(name=f"Diff {diff_mag}x", video_frame=diff_frames)
+            diff_video = NamedFrame(
+                name=f"Diff {config.noise_patch.diff_multiply}x",
+                video_frame=diff_frames)
             noise_patch = NamedFrame(name="Noisy area", video_frame=noise_patchs)
             freq_mask_frame = NamedFrame(
                 name="Freq mask", static_frame=freq_mask * np.iinfo(np.uint8).max
@@ -269,7 +272,7 @@ class VideoProcessor:
             min_proj_frame = NamedFrame(name="Min Proj", static_frame=minimum_projection)
             subtract_video = NamedFrame(name="Subtracted", video_frame=subtract_minimum)
 
-            if slider_plot:
+            if config.interactive_display.enable:
                 videos = [
                     raw_video,
                     patched_video,
