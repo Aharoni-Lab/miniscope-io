@@ -4,6 +4,7 @@ Command line interface for offline video pre-processing.
 
 import click
 
+from miniscope_io.models.process import DenoiseConfig
 from miniscope_io.process.video import VideoProcessor
 
 
@@ -23,10 +24,20 @@ def process() -> None:
     type=click.Path(exists=True, dir_okay=False),
     help="Path to the video file to process.",
 )
+@click.option(
+    "-c",
+    "--denoise_config",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Path to the YAML processing configuration file.",
+)
 def denoise(
     input: str,
+    denoise_config: str,
 ) -> None:
     """
     Denoise a video file.
     """
-    VideoProcessor.denoise(input)
+    denoise_config_parsed = DenoiseConfig.from_yaml(denoise_config)
+    VideoProcessor.denoise(input, denoise_config_parsed)
+
