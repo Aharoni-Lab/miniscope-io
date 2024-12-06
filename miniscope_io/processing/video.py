@@ -3,49 +3,98 @@ This module contains functions for pre-processing video data.
 """
 
 import copy
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Tuple
 
 import cv2
+import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.widgets import Button, Slider
 from pydantic import BaseModel, Field
 
 from miniscope_io import init_logger
 
 logger = init_logger("video")
 
-def serialize_image(image: np.ndarray) -> np.ndarray:
-    """
-    Serializes a 2D image into a 1D array.
-    """
-    return image.flatten()
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button
+from matplotlib import animation
 
-def deserialize_image(
-        serialized_image: np.ndarray,
-        height: int,
-        width: int)-> np.ndarray:
+def plot_video_streams_with_controls(
+        video_frames: list[list[np.ndarray] or np.ndarray],
+        titles: list[str] = None,
+        fps: int = 20
+        ) -> None:
     """
-    Deserializes a 1D array back into a 2D image.
+    Plot multiple video streams or static images side-by-side with controls to play/pause and navigate frames.
     """
-    return serialized_image.reshape((height, width))
+    # Wrap static images in lists to handle them uniformly
+    video_frames = [frame if isinstance(frame, list) else [frame] for frame in video_frames]
 
-def detect_noisy_parts(
-        current_frame: np.ndarray,
-        previous_frame: np.ndarray,
-        noise_threshold: float,
-        buffer_size: int,
-        block_size: int = 32
-        ) -> np.ndarray:
-    """
-    Detect noisy parts in the current frame by comparing it with the previous frame.
-    """
-    current_frame_serialized = serialize_image(current_frame)
-    previous_frame_serialized = serialize_image(previous_frame)
+    num_streams = len(video_frames)
+    num_frames = max(len(stream) for stream in video_frames)  # Use max to account for static images with 1 frame
 
+    # Initialize plots
+    fig, axes = plt.subplots(1, num_streams, figsize=(20, 5))
 
+    # Initial display of the first frame from each stream
+    frame_displays = []
+    for idx, ax in enumerate(axes):
+        # Adjust static images to display them consistently
+        initial_frame = video_frames[idx][0]
+        frame_display = ax.imshow(initial_frame, cmap='gray', vmin=0, vmax=255)
+        frame_displays.append(frame_display)
+        if titles:
+            ax.set_title(titles[idx])
+        ax.axis('off')
 
-    noisy_parts = np.zeros_like(current_frame_serialized)
-    noize_mask = deserialize_image(noisy_parts, current_frame.shape[0], current_frame.shape[1])
+    # Define the slider
+    ax_slider = plt.axes([0.1, 0.1, 0.65, 0.05], facecolor='lightgoldenrodyellow')
+    slider = Slider(ax=ax_slider, label='Frame', valmin=0, valmax=num_frames - 1, valinit=0, valstep=1)
+
+    # Define the play/pause button
+    playing = [False]  # Use a mutable object to track play state
+    ax_button = plt.axes([0.8, 0.1, 0.1, 0.05])
+    button = Button(ax_button, 'Play/Pause')
+    
+    # Callback to toggle play/pause
+    def toggle_play(event):
+        playing[0] = not playing[0]
+
+    button.on_clicked(toggle_play)
+
+    # Update function for the slider and frame displays
+    def update_frame(index):
+        for idx, frame_display in enumerate(frame_displays):
+            # Repeat last frame for static images or when the index is larger than stream length
+            if index < len(video_frames[idx]):
+                frame = video_frames[idx][index]
+            else:
+                frame = video_frames[idx][-1]  # Keep showing last frame for shorter streams
+            frame_display.set_data(frame)
+        fig.canvas.draw_idle()
+
+    # Slider update callback
+    def on_slider_change(val):
+        index = int(slider.val)
+        update_frame(index)
+
+    # Connect the slider update function
+    slider.on_changed(on_slider_change)
+
+    # Animation function
+    def animate(i):
+        if playing[0]:
+            current_frame = int(slider.val)
+            next_frame = (current_frame + 1) % num_frames
+            slider.set_val(next_frame) # This will also trigger on_slider_change
+
+    # Use FuncAnimation to update the figure at the specified FPS
+    ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=1000//fps, blit=False)
+
+    plt.show()
 
 def plot_frames_side_by_side(
         fig: plt.Figure,
@@ -54,9 +103,6 @@ def plot_frames_side_by_side(
         ) -> None:
     """
     Plot a list of frames side by side using matplotlib.
-
-    :param frames: List of frames (images) to be plotted
-    :param titles: Optional list of titles for each subplot
     """
     num_frames = len(frames)
     plt.clf()  # Clear current figure
@@ -71,39 +117,7 @@ def plot_frames_side_by_side(
 
     plt.tight_layout()
     fig.canvas.draw()
-class AnnotatedFrameModel(BaseModel):
-    """
-    A class to represent video data.
-    """
-    data: np.ndarray = Field(
-        ...,
-        description="The video data as a NumPy array."
-    )
-    status_tag: Optional[str] = Field(
-        None,
-        description="A tag indicating the status of the video data."
-    )
-    index: Optional[int] = Field(
-        None,
-        description="The index of the video data."
-    )
-    fps: Optional[float] = Field(
-        None,
-        description="The frames per second of the video."
-    )
 
-    # Might be a numpydantic situation? Need to look later but will skip.
-    class Config:
-        arbitrary_types_allowed = True
-class AnnotatedFrameListModel(BaseModel):
-    """
-    A class to represent a list of annotated video frames.
-    Not used yet
-    """
-    frames: list[AnnotatedFrameModel] = Field(
-        ...,
-        description="A list of annotated video frames."
-    )
 class VideoReader:
     """
     A class to read video files.
@@ -140,10 +154,21 @@ class VideoReader:
     def __del__(self):
         self.release()
 
+def show_frame(frame: np.ndarray) -> None:
+    """
+    Display a single frame using OpenCV.
+    """
+    cv2.imshow('Mask', frame * 255)
+    while True:
+        if cv2.waitKey(1) == 27:  # Press 'Esc' key to exit visualization
+            break
+
+    cv2.destroyAllWindows()
+
 def gen_freq_mask(
         width: int = 200,
         height: int = 200,
-        center_radius: int = 6,
+        center_radius: int = 15,
         show_mask: bool = True
         ) -> np.ndarray:
     """
@@ -180,7 +205,6 @@ def gen_freq_mask(
             if cv2.waitKey(1) == 27:  # Press 'Esc' key to exit visualization
                 break
         cv2.destroyAllWindows()
-
     return mask
     
 class FrameProcessor:
@@ -228,31 +252,28 @@ class FrameProcessor:
             current_frame: np.ndarray,
             previous_frame: np.ndarray,
             noise_threshold: float
-            ) -> np.ndarray:
+            ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Process the frame, replacing noisy blocks with those from the previous frame.
         """
-
-        serialized_current = current_frame.flatten()
-        serialized_previous = previous_frame.flatten()
+        serialized_current = current_frame.flatten().astype(np.int16)
+        serialized_previous = previous_frame.flatten().astype(np.int16)
 
         split_current = self.split_by_length(serialized_current, self.buffer_size)
         split_previous = self.split_by_length(serialized_previous, self.buffer_size)
 
-        # Not best to deepcopy this. Just doing for now to take care of
-        # inhomogeneous array sizes.
-        split_output = copy.deepcopy(split_current)
-        noisy_parts = copy.deepcopy(split_current)
+        split_output = split_current.copy()
+        noisy_parts = split_current.copy()
 
         for i in range(len(split_current)):
             mean_error = abs(split_current[i] - split_previous[i]).mean()
             if mean_error > noise_threshold:
-                logger.debug(f"Replacing buffer {i} with mean error {mean_error}")
+                logger.info(f"Replacing buffer {i} with mean error {mean_error}")
                 split_output[i] = split_previous[i]
-                noisy_parts[i] = np.ones_like(split_current[i]) * 255
+                noisy_parts[i] = np.ones_like(split_current[i], np.uint8)
             else:
                 split_output[i] = split_current[i]
-                noisy_parts[i] = np.zeros_like(split_current[i])
+                noisy_parts[i] = np.zeros_like(split_current[i], np.uint8)
 
         serialized_output = np.concatenate(split_output)[:self.height * self.width]
         noise_output = np.concatenate(noisy_parts)[:self.height * self.width]
@@ -265,14 +286,16 @@ class FrameProcessor:
             self.width,
             self.height)
 
-        return processed_frame, noise_patch
+        return np.uint8(processed_frame), np.uint8(noise_patch)
     
     def remove_stripes(
             self,
             img: np.ndarray,
             mask: np.ndarray
             )-> np.ndarray:
-        """Perform FFT/IFFT to remove horizontal stripes from a single frame."""
+        """
+        Perform FFT/IFFT to remove horizontal stripes from a single frame.
+        """
         f = np.fft.fft2(img)
         fshift = np.fft.fftshift(f)
         magnitude_spectrum = np.log(np.abs(fshift) + 1)  # Use log for better visualization
@@ -280,25 +303,18 @@ class FrameProcessor:
         # Normalize the magnitude spectrum for visualization
         magnitude_spectrum = cv2.normalize(magnitude_spectrum, None, 0, 255, cv2.NORM_MINMAX)
 
-        if False:
-            # Display the magnitude spectrum
-            cv2.imshow('Magnitude Spectrum', np.uint8(magnitude_spectrum))
-            while True:
-                if cv2.waitKey(1) == 27:  # Press 'Esc' key to exit visualization
-                    break
-            cv2.destroyAllWindows()
-        logger.debug(f"FFT shape: {fshift.shape}")
-
         # Apply mask and inverse FFT
         fshift *= mask
         f_ishift = np.fft.ifftshift(fshift)
         img_back = np.fft.ifft2(f_ishift)
         img_back = np.abs(img_back)
 
-        # Normalize the result:
-        img_back = cv2.normalize(img_back, None, 0, 255, cv2.NORM_MINMAX)
-
-        return np.uint8(img_back)  # Convert to 8-bit image for display and storage 
+        return np.uint8(img_back), np.uint8(magnitude_spectrum)
+    
+def get_minimum_projection(image_list):
+    stacked_images = np.stack(image_list, axis=0)
+    min_projection = np.min(stacked_images, axis=0)
+    return min_projection
 
 if __name__ == "__main__":
     """
@@ -307,10 +323,19 @@ if __name__ == "__main__":
     """
     video_path = 'output_001_test.avi'
     reader = VideoReader(video_path)
+    streaming_plot = False
+    slider_plot = True
+    freq_masks = []
+    gray_frames = []
+    processed_frames = []
+    freq_domain_frames = []
+    noise_patchs = []
+    filtered_frames = []
+    diff_frames = []
 
-    frames = []
     index = 0
-    fig = plt.figure(figsize=(12, 4))
+
+    fig = plt.figure(figsize=(16, 4))
 
     processor = FrameProcessor(
         height=200,
@@ -322,46 +347,65 @@ if __name__ == "__main__":
         height=200,
         show_mask=False
         )
+    
     try:
         for frame in reader.read_frames():
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             index += 1
             if index > 100:
                 break
-            logger.info(f"Processing frame {index}")
+            logger.debug(f"Processing frame {index}")
             if index == 1:
                 previous_frame = gray_frame
             processed_frame, noise_patch = processor.patch_noisy_buffer(
                 gray_frame,
                 previous_frame,
-                noise_threshold=250
+                noise_threshold=20
                 )
-            filtered_frame = processor.remove_stripes(
+            filtered_frame, freq_domain_frame = processor.remove_stripes(
                 img=processed_frame,
                 mask=freq_mask
                 )
-            frames.append(filtered_frame)
-
-            frames_to_plot = [
-                freq_mask,
-                gray_frame,
-                processed_frame,
-                noise_patch,
-                filtered_frame,
-                ]
-            plot_frames_side_by_side(
-                fig,
-                frames_to_plot,
-                titles=[
-                    'Frequency Mask',
-                    'Original Frame',
-                    'Processed Frame',
-                    'Noisy Patch',
-                    'Filtered Frame',
-                    ]
-                )
-            plt.pause(0.01)
-
+            
+            diff_frame = cv2.absdiff(gray_frame, filtered_frame)
+            gray_frames.append(gray_frame)
+            processed_frames.append(processed_frame)
+            freq_domain_frames.append(freq_domain_frame)
+            noise_patchs.append(noise_patch*255)
+            filtered_frames.append(filtered_frame)
+            diff_frames.append(diff_frame*10)
     finally:
         reader.release()
         plt.close(fig)
+
+        minimum_projection = get_minimum_projection(filtered_frames)
+        show_frame(minimum_projection)
+
+        subtract_minimum = [(frame - minimum_projection) for frame in filtered_frames]
+
+        if slider_plot:
+            video_frames = [
+                gray_frames,
+                processed_frames,
+                diff_frames,
+                noise_patchs,
+                freq_mask * 255,
+                freq_domain_frames,
+                filtered_frames,
+                minimum_projection,
+                subtract_minimum,
+            ]
+            plot_video_streams_with_controls(
+                video_frames,
+                titles=[
+                    'Original',
+                    'Patched',
+                    'Diff',
+                    'Noisy area',
+                    'Freq mask',
+                    'Freq domain',
+                    'Freq filtered',
+                    'Min Proj',
+                    'Subtracted',
+                ]
+            )
