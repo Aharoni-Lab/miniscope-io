@@ -565,36 +565,6 @@ class StreamDaq:
             except queue.Full:
                 locallogs.error("Image array queue full, Could not put sentinel.")
 
-    def init_video(
-        self, path: Union[Path, str], fourcc: str = "Y800", **kwargs: dict
-    ) -> cv2.VideoWriter:
-        """
-        Create a parameterized video writer
-
-        Parameters
-        ----------
-        frame_buffer_queue : multiprocessing.Queue[list[bytes]]
-            Input buffer queue.
-        path : Union[Path, str]
-            Video file to write to
-        fourcc : str
-            Fourcc code to use
-        kwargs : dict
-            passed to :class:`cv2.VideoWriter`
-
-        Returns:
-        ---------
-            :class:`cv2.VideoWriter`
-        """
-        if isinstance(path, str):
-            path = Path(path)
-
-        fourcc = cv2.VideoWriter_fourcc(*fourcc)
-        frame_rate = self.config.fs
-        frame_size = (self.config.frame_width, self.config.frame_height)
-        out = cv2.VideoWriter(str(path), fourcc, frame_rate, frame_size, **kwargs)
-        return out
-
     def alive_processes(self) -> List[multiprocessing.Process]:
         """
         Return a list of alive processes.
@@ -684,7 +654,12 @@ class StreamDaq:
         if video:
             if video_kwargs is None:
                 video_kwargs = {}
-            writer = self.init_video(video, **video_kwargs)
+            writer = VideoWriter.init_video(
+                path=video,
+                width=self.config.frame_width,
+                height=self.config.frame_height,
+                fps=self.config.fs,
+                **video_kwargs)
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
