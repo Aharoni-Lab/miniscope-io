@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from miniscope_io import init_logger
+from miniscope_io.models.frames import NamedFrame
 from miniscope_io.plots.video import VideoPlotter
 
 logger = init_logger("video")
@@ -42,6 +43,9 @@ class VideoReader:
     def read_frames(self) -> Iterator[np.ndarray]:
         """
         Read frames from the video file.
+
+        Yields:
+        np.ndarray: The next frame in the video.
         """
         while self.cap.isOpened():
             ret, frame = self.cap.read()
@@ -58,18 +62,6 @@ class VideoReader:
 
     def __del__(self):
         self.release()
-
-
-def show_frame(frame: np.ndarray) -> None:
-    """
-    Display a single frame using OpenCV.
-    """
-    cv2.imshow("Mask", frame * np.iinfo(np.uint8).max)
-    while True:
-        if cv2.waitKey(1) == 27:  # Press 'Esc' key to exit visualization
-            break
-
-    cv2.destroyAllWindows()
 
 
 def gen_freq_mask(
@@ -96,14 +88,13 @@ def gen_freq_mask(
     mask[crow - horizontal_BEF : crow + horizontal_BEF, :] = 0
 
     # Define spacial low pass filter
-    radius = center_LPF
     y, x = np.ogrid[:height, :width]
-    center_mask = (x - ccol) ** 2 + (y - crow) ** 2 <= radius**2
+    center_mask = (x - ccol) ** 2 + (y - crow) ** 2 <= center_LPF**2
 
     # Restore the center circular area to allow low frequencies to pass
     mask[center_mask] = 1
 
-    # Visualize the mask if needed
+    # Visualize the mask if needed. Might delete later.
     if show_mask:
         cv2.imshow("Mask", mask * np.iinfo(np.uint8).max)
         while True:
@@ -118,7 +109,7 @@ class FrameProcessor:
     A class to process video frames.
     """
 
-    def __init__(self, height: int, width: int, buffer_size: int = 5032, block_size: int = 32):
+    def __init__(self, height: int, width: int, buffer_size: int = 5032, buffer_split: int = 1):
         """
         Initialize the FrameProcessor object.
         Block size/buffer size will be set by dev config later.
@@ -133,7 +124,7 @@ class FrameProcessor:
         self.height = height
         self.width = width
         self.buffer_size = buffer_size
-        self.buffer_split = 1
+        self.buffer_split = buffer_split
 
     def split_by_length(self, array: np.ndarray, segment_length: int) -> list[np.ndarray]:
         """
@@ -176,8 +167,12 @@ class FrameProcessor:
         serialized_current = current_frame.flatten().astype(np.int16)
         serialized_previous = previous_frame.flatten().astype(np.int16)
 
-        split_current = self.split_by_length(serialized_current, self.buffer_size // 5)
-        split_previous = self.split_by_length(serialized_previous, self.buffer_size // 5)
+        split_current = self.split_by_length(
+            serialized_current, self.buffer_size // self.buffer_split
+        )
+        split_previous = self.split_by_length(
+            serialized_previous, self.buffer_size // self.buffer_split
+        )
 
         split_output = split_current.copy()
         noisy_parts = split_current.copy()
@@ -301,10 +296,12 @@ class VideoProcessor:
         video_path: str,
         slider_plot: bool = True,
         end_frame: int = 100,
-        noise_threshold: float = 10,
-        spatial_LPF: int = 5,
+        noise_threshold: float = 20,
+        spatial_LPF: int = 10,
         vertical_BEF: int = 2,
         horizontal_BEF: int = 0,
+        diff_mag: int = 10,
+        buffer_split: int = 1,
     ) -> None:
         """
         Process a video file and display the results.
@@ -324,6 +321,7 @@ class VideoProcessor:
         processor = FrameProcessor(
             height=reader.height,
             width=reader.width,
+            buffer_split=buffer_split,
         )
 
         freq_mask = gen_freq_mask(
@@ -360,7 +358,7 @@ class VideoProcessor:
                 freq_domain_frames.append(frame_freq_domain)
                 noise_patchs.append(noise_patch * np.iinfo(np.uint8).max)
                 freq_filtered_frames.append(freq_filtered_frame)
-                diff_frames.append(diff_frame * 10)
+                diff_frames.append(diff_frame * diff_mag)
 
                 index += 1
         finally:
@@ -374,31 +372,32 @@ class VideoProcessor:
 
             subtract_minimum = FrameListProcessor.normalize_video_stack(subtract_minimum)
 
+            raw_video = NamedFrame(name="RAW", video_frame=raw_frames)
+            patched_video = NamedFrame(name="Patched", video_frame=patched_frames)
+            diff_video = NamedFrame(name=f"Diff {diff_mag}x", video_frame=diff_frames)
+            noise_patch = NamedFrame(name="Noisy area", video_frame=noise_patchs)
+            freq_mask_frame = NamedFrame(
+                name="Freq mask", static_frame=freq_mask * np.iinfo(np.uint8).max
+            )
+            freq_domain_video = NamedFrame(name="Freq domain", video_frame=freq_domain_frames)
+            freq_filtered_video = NamedFrame(name="Freq filtered", video_frame=freq_filtered_frames)
+            normalized_video = NamedFrame(name="Normalized", video_frame=normalized_frames)
+            min_proj_frame = NamedFrame(name="Min Proj", static_frame=minimum_projection)
+            subtract_video = NamedFrame(name="Subtracted", video_frame=subtract_minimum)
+
             if slider_plot:
-                video_frames = [
-                    raw_frames,
-                    patched_frames,
-                    diff_frames,
-                    noise_patchs,
-                    freq_mask * np.iinfo(np.uint8).max,
-                    freq_domain_frames,
-                    freq_filtered_frames,
-                    normalized_frames,
-                    minimum_projection,
-                    subtract_minimum,
+                videos = [
+                    raw_video,
+                    patched_video,
+                    diff_video,
+                    noise_patch,
+                    freq_mask_frame,
+                    freq_domain_video,
+                    freq_filtered_video,
+                    normalized_video,
+                    min_proj_frame,
+                    subtract_video,
                 ]
                 VideoPlotter.show_video_with_controls(
-                    video_frames,
-                    titles=[
-                        "RAW",
-                        "Patched",
-                        "Diff",
-                        "Noisy area",
-                        "Freq mask",
-                        "Freq domain",
-                        "Freq filtered",
-                        "Normalized",
-                        "Min Proj",
-                        "Subtracted",
-                    ],
+                    videos,
                 )

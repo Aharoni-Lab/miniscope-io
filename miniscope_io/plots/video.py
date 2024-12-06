@@ -2,13 +2,15 @@
 Plotting functions for video streams and frames.
 """
 
-from typing import Union
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
 from matplotlib.backend_bases import KeyEvent
 from matplotlib.widgets import Button, Slider
+
+from miniscope_io.models.frames import NamedFrame
 
 
 class VideoPlotter:
@@ -17,25 +19,28 @@ class VideoPlotter:
     """
 
     @staticmethod
-    def show_video_with_controls(
-        video_frames: Union[list[np.ndarray], np.ndarray], titles: list[str] = None, fps: int = 20
-    ) -> None:
+    def show_video_with_controls(videos: List[NamedFrame], fps: int = 20) -> None:
         """
         Plot multiple video streams or static images side-by-side.
         Can play/pause and navigate frames.
 
         Parameters
         ----------
-        video_frames : list[np.ndarray] or np.ndarray
-            List of video streams or static images to display.
-            Each element of the list should be a list of frames or a single frame.
-        titles : list[str], optional
-            List of titles for each stream, by default None
+        videos : NamedFrame
+            NamedFrame object containing video data and names.
         fps : int, optional
-            Frames per second for playback, by default 20
+            Frames per second for the video, by default 20
         """
+
+        if any(frame.frame_type == "video_list_frame" for frame in videos):
+            raise NotImplementedError("Only single videos or frames are supported for now.")
+
         # Wrap static images in lists to handle them uniformly
-        video_frames = [frame if isinstance(frame, list) else [frame] for frame in video_frames]
+        video_frames = [
+            frame.data if frame.frame_type == "video_frame" else [frame.data] for frame in videos
+        ]
+
+        titles = [video.name for video in videos]
 
         num_streams = len(video_frames)
         num_frames = max(len(stream) for stream in video_frames)
