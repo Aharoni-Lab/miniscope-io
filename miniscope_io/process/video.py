@@ -2,67 +2,18 @@
 This module contains functions for pre-processing video data.
 """
 
-from typing import Iterator, Tuple
+from typing import Tuple
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
 from miniscope_io import init_logger
+from miniscope_io.io import VideoReader
 from miniscope_io.models.frames import NamedFrame
 from miniscope_io.plots.video import VideoPlotter
 
 logger = init_logger("video")
-
-
-class VideoReader:
-    """
-    A class to read video files.
-    """
-
-    def __init__(self, video_path: str):
-        """
-        Initialize the VideoReader object.
-
-        Parameters:
-        video_path (str): The path to the video file.
-
-        Raises:
-        ValueError: If the video file cannot be opened.
-        """
-        self.video_path = video_path
-        self.cap = cv2.VideoCapture(str(video_path))
-        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-
-        if not self.cap.isOpened():
-            raise ValueError(f"Could not open video at {video_path}")
-
-        logger.info(f"Opened video at {video_path}")
-
-    def read_frames(self) -> Iterator[np.ndarray]:
-        """
-        Read frames from the video file.
-
-        Yields:
-        np.ndarray: The next frame in the video.
-        """
-        while self.cap.isOpened():
-            ret, frame = self.cap.read()
-            logger.debug(f"Reading frame {self.cap.get(cv2.CAP_PROP_POS_FRAMES)}")
-            if not ret:
-                break
-            yield frame
-
-    def release(self) -> None:
-        """
-        Release the video capture object.
-        """
-        self.cap.release()
-
-    def __del__(self):
-        self.release()
-
 
 def gen_freq_mask(
     width: int,
