@@ -1,13 +1,21 @@
 """
-Command line interface for 
+Command line interface for offline video pre-processing.
 """
 
 import click
 
-from miniscope_io.processing.video import VideoProcessor
+from miniscope_io.process.video import VideoProcessor
 
 
-@click.command()
+@click.group()
+def process() -> None:
+    """
+    Command group for video processing.
+    """
+    pass
+
+
+@process.command()
 @click.option(
     "-i",
     "--input",
