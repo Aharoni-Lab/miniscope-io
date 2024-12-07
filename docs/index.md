@@ -7,7 +7,6 @@ Generic I/O interfaces for miniscopes :)
 :maxdepth: 2
 
 guide/installation
-cli/main
 ```
 
 ```{toctree}
@@ -24,6 +23,7 @@ history/config
 :caption: API:
 
 api/devices
+api/formats/index
 api/io
 api/logging
 api/models/index
