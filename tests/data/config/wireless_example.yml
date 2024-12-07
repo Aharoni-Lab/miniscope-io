@@ -1,3 +1,7 @@
+id: test-wireless-example
+mio_model: miniscope_io.models.stream.StreamDevConfig
+mio_version: "v5.0.0"
+
 # capture device. "OK" (Opal Kelly) or "UART"
 device: "OK"
 

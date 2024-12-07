@@ -19,6 +19,12 @@ device/update_controller
 ```
 
 ```{toctree}
+:caption: History:
+:maxdepth: 1
+history/config
+```
+
+```{toctree}
 :maxdepth: 1
 :caption: API:
 
