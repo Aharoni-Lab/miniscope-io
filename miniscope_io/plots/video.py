@@ -4,13 +4,19 @@ Plotting functions for video streams and frames.
 
 from typing import List
 
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import animation
-from matplotlib.backend_bases import KeyEvent
-from matplotlib.widgets import Button, Slider
-
 from miniscope_io.models.frames import NamedFrame
+
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib import animation
+    from matplotlib.backend_bases import KeyEvent
+    from matplotlib.widgets import Button, Slider
+except ImportError:
+    plt = None
+    animation = None
+    Button = None
+    Slider = None
+    KeyEvent = None
 
 
 class VideoPlotter:
@@ -31,6 +37,11 @@ class VideoPlotter:
         fps : int, optional
             Frames per second for the video, by default 20
         """
+        if plt is None:
+            raise ModuleNotFoundError(
+                "matplotlib is not a required dependency of miniscope-io, to use it, "
+                "install it manually or install miniscope-io with `pip install miniscope-io[plot]`"
+            )
 
         if any(frame.frame_type == "video_list_frame" for frame in videos):
             raise NotImplementedError("Only single videos or frames are supported for now.")
@@ -105,38 +116,3 @@ class VideoPlotter:
         )
 
         plt.show()
-
-    @staticmethod
-    def show_video_side_by_side(
-        fig: plt.Figure, frames: list[np.ndarray], titles: str = None
-    ) -> None:
-        """
-        Plot a list of frames side by side using matplotlib.
-
-        Parameters
-        ----------
-        fig : plt.Figure
-            Figure to plot on
-        frames : list[np.ndarray]
-            List of frames to plot
-        titles : str, optional
-            List of titles for each frame, by default None
-
-        Raises
-        ------
-        ValueError
-            If the number of frames and titles do not match
-        """
-        num_frames = len(frames)
-        plt.clf()  # Clear current figure
-
-        for i, frame in enumerate(frames):
-            plt.subplot(1, num_frames, i + 1)
-            plt.imshow(frame, cmap="gray")
-            if titles:
-                plt.title(titles[i])
-
-            plt.axis("off")  # Turn off axis labels
-
-        plt.tight_layout()
-        fig.canvas.draw()

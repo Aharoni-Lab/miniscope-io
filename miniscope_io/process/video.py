@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Tuple
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 
 from miniscope_io import init_logger
@@ -16,6 +15,11 @@ from miniscope_io.models.process import DenoiseConfig
 from miniscope_io.plots.video import VideoPlotter
 
 logger = init_logger("video")
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
 
 
 class FrameProcessor:
@@ -190,6 +194,13 @@ class VideoProcessor:
         Process a video file and display the results.
         Might be useful to define some using environment variables.
         """
+        if plt is None:
+            raise ModuleNotFoundError(
+                "matplotlib is not a required dependency of miniscope-io, to use it, "
+                "install it manually or install miniscope-io with `pip install miniscope-io[plot]`"
+            )
+        fig = plt.figure()
+
         reader = VideoReader(video_path)
         pathstem = Path(video_path).stem
         output_dir = Path.cwd() / config.output_dir
@@ -207,7 +218,6 @@ class VideoProcessor:
             freq_filtered_frames = []
 
         index = 0
-        fig = plt.figure()
 
         processor = FrameProcessor(
             height=reader.height,
