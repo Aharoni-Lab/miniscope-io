@@ -57,7 +57,10 @@ class BufferedCSVWriter:
         data : List[Any]
             The data to be appended.
         """
-        data = [int(value) if isinstance(value, np.generic) else value for value in data]
+        data = [
+            float(value) if isinstance(value, (np.integer, np.floating)) else value
+            for value in data
+        ]
         self.buffer.append(data)
         if len(self.buffer) >= self.buffer_size:
             self.flush_buffer()
