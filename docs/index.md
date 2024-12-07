@@ -7,6 +7,7 @@ Generic I/O interfaces for miniscopes :)
 :maxdepth: 2
 
 guide/installation
+cli/main
 ```
 
 ```{toctree}
@@ -15,6 +16,11 @@ guide/installation
 
 device/test_device
 device/update_controller
+```
+
+```{toctree}
+:caption: History:
+:maxdepth: 1
 history/config
 ```
 
