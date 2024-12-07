@@ -2,6 +2,7 @@
 This module contains functions for pre-processing video data.
 """
 
+from pathlib import Path
 from typing import Tuple
 
 import cv2
@@ -15,12 +16,14 @@ from miniscope_io.models.process import DenoiseConfig
 from miniscope_io.plots.video import VideoPlotter
 
 logger = init_logger("video")
+
+
 class FrameProcessor:
     """
     A class to process video frames.
     """
 
-    def __init__(self, height: int, width: int, buffer_size: int = 5032, buffer_split: int = 1):
+    def __init__(self, height: int, width: int):
         """
         Initialize the FrameProcessor object.
         Block size/buffer size will be set by dev config later.
@@ -65,7 +68,7 @@ class FrameProcessor:
         previous_frame: np.ndarray,
         buffer_size: int,
         buffer_split: int,
-        noise_threshold: float
+        noise_threshold: float,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Process the frame, replacing noisy blocks with those from the previous frame.
@@ -81,12 +84,8 @@ class FrameProcessor:
         serialized_current = current_frame.flatten().astype(np.int16)
         serialized_previous = previous_frame.flatten().astype(np.int16)
 
-        split_current = self.split_by_length(
-            serialized_current, buffer_size // buffer_split
-        )
-        split_previous = self.split_by_length(
-            serialized_previous, buffer_size // buffer_split
-        )
+        split_current = self.split_by_length(serialized_current, buffer_size // buffer_split)
+        split_previous = self.split_by_length(serialized_previous, buffer_size // buffer_split)
 
         split_output = split_current.copy()
         noisy_parts = split_current.copy()
@@ -137,7 +136,7 @@ class FrameProcessor:
         img_back = np.abs(img_back)
 
         return np.uint8(img_back), np.uint8(magnitude_spectrum)
-    
+
     def gen_freq_mask(
         self,
         center_LPF: int,
@@ -161,7 +160,7 @@ class FrameProcessor:
         mask[crow - horizontal_BEF : crow + horizontal_BEF, :] = 0
 
         # Define spacial low pass filter
-        y, x = np.ogrid[:self.height, :self.width]
+        y, x = np.ogrid[: self.height, : self.width]
         center_mask = (x - ccol) ** 2 + (y - crow) ** 2 <= center_LPF**2
 
         # Restore the center circular area to allow low frequencies to pass
@@ -181,6 +180,7 @@ class VideoProcessor:
     """
     A class to process video files.
     """
+
     @staticmethod
     def denoise(
         video_path: str,
@@ -191,12 +191,20 @@ class VideoProcessor:
         Might be useful to define some using environment variables.
         """
         reader = VideoReader(video_path)
+        pathstem = Path(video_path).stem
+        output_dir = Path.cwd() / config.output_dir
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
         raw_frames = []
-        patched_frames = []
-        freq_domain_frames = []
-        noise_patchs = []
-        freq_filtered_frames = []
-        diff_frames = []
+        output_frames = []
+
+        if config.noise_patch.enable:
+            patched_frames = []
+            noise_patchs = []
+            diff_frames = []
+        if config.frequency_masking.enable:
+            freq_domain_frames = []
+            freq_filtered_frames = []
 
         index = 0
         fig = plt.figure()
@@ -216,59 +224,80 @@ class VideoProcessor:
 
         try:
             for frame in reader.read_frames():
-                raw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
                 if config.end_frame and index > config.end_frame:
                     break
-
                 logger.debug(f"Processing frame {index}")
+
+                raw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                raw_frames.append(raw_frame)
 
                 if index == 0:
                     previous_frame = raw_frame
 
-                patched_frame, noise_patch = processor.patch_noisy_buffer(
-                    raw_frame,
-                    previous_frame,
-                    buffer_size=config.noise_patch.buffer_size,
-                    buffer_split=config.noise_patch.buffer_split,
-                    noise_threshold=config.noise_patch.threshold
-                )
-                freq_filtered_frame, frame_freq_domain = processor.remove_stripes(
-                    img=patched_frame, mask=freq_mask
-                )
-                diff_frame = cv2.absdiff(raw_frame, freq_filtered_frame)
+                output_frame = raw_frame.copy()
 
-                raw_frames.append(raw_frame)
-                patched_frames.append(patched_frame)
-                freq_domain_frames.append(frame_freq_domain)
-                noise_patchs.append(noise_patch * np.iinfo(np.uint8).max)
-                freq_filtered_frames.append(freq_filtered_frame)
-                diff_frames.append(diff_frame * config.noise_patch.diff_multiply)
+                if config.noise_patch.enable:
+                    patched_frame, noise_patch = processor.patch_noisy_buffer(
+                        output_frame,
+                        previous_frame,
+                        buffer_size=config.noise_patch.buffer_size,
+                        buffer_split=config.noise_patch.buffer_split,
+                        noise_threshold=config.noise_patch.threshold,
+                    )
+                    diff_frame = cv2.absdiff(raw_frame, previous_frame)
+                    patched_frames.append(patched_frame)
+                    noise_patchs.append(noise_patch * np.iinfo(np.uint8).max)
+                    diff_frames.append(diff_frame * config.noise_patch.diff_multiply)
+                    output_frame = patched_frame
 
+                if config.frequency_masking.enable:
+                    freq_filtered_frame, frame_freq_domain = processor.remove_stripes(
+                        img=patched_frame, mask=freq_mask
+                    )
+                    freq_domain_frames.append(frame_freq_domain)
+                    freq_filtered_frames.append(freq_filtered_frame)
+                    output_frame = freq_filtered_frame
+                output_frames.append(output_frame)
                 index += 1
         finally:
             reader.release()
             plt.close(fig)
 
-            normalized_frames = VideoProcessor.normalize_video_stack(freq_filtered_frames)
-            minimum_projection = VideoProcessor.get_minimum_projection(normalized_frames)
+            minimum_projection = VideoProcessor.get_minimum_projection(output_frames)
 
-            subtract_minimum = [(frame - minimum_projection) for frame in normalized_frames]
+            subtract_minimum = [(frame - minimum_projection) for frame in output_frames]
 
             subtract_minimum = VideoProcessor.normalize_video_stack(subtract_minimum)
 
             raw_video = NamedFrame(name="RAW", video_frame=raw_frames)
             patched_video = NamedFrame(name="Patched", video_frame=patched_frames)
             diff_video = NamedFrame(
-                name=f"Diff {config.noise_patch.diff_multiply}x",
-                video_frame=diff_frames)
+                name=f"Diff {config.noise_patch.diff_multiply}x", video_frame=diff_frames
+            )
             noise_patch = NamedFrame(name="Noisy area", video_frame=noise_patchs)
             freq_mask_frame = NamedFrame(
                 name="Freq mask", static_frame=freq_mask * np.iinfo(np.uint8).max
             )
-            freq_domain_video = NamedFrame(name="Freq domain", video_frame=freq_domain_frames)
-            freq_filtered_video = NamedFrame(name="Freq filtered", video_frame=freq_filtered_frames)
-            normalized_video = NamedFrame(name="Normalized", video_frame=normalized_frames)
+
+            if config.frequency_masking.enable:
+                freq_domain_video = NamedFrame(name="freq_domain", video_frame=freq_domain_frames)
+                freq_filtered_video = NamedFrame(
+                    name="freq_filtered", video_frame=freq_filtered_frames
+                )
+                if config.frequency_masking.output_freq_domain:
+                    freq_domain_video.export(
+                        output_dir / f"{pathstem}",
+                        suffix=True,
+                        fps=20,
+                    )
+                if config.frequency_masking.output_result:
+                    freq_filtered_video.export(
+                        (output_dir / f"{pathstem}"),
+                        suffix=True,
+                        fps=20,
+                    )
+
+            normalized_video = NamedFrame(name="Normalized", video_frame=output_frames)
             min_proj_frame = NamedFrame(name="Min Proj", static_frame=minimum_projection)
             subtract_video = NamedFrame(name="Subtracted", video_frame=subtract_minimum)
 
@@ -288,6 +317,7 @@ class VideoProcessor:
                 VideoPlotter.show_video_with_controls(
                     videos,
                 )
+
     @staticmethod
     def get_minimum_projection(image_list: list[np.ndarray]) -> np.ndarray:
         """

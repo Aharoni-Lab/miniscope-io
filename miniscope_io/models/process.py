@@ -1,6 +1,6 @@
 """
 Module for preprocessing data.
-"""	
+"""
 
 from typing import Optional
 
@@ -10,9 +10,10 @@ from miniscope_io.models.mixins import YAMLMixin
 
 
 class InteractiveDisplayConfig(BaseModel):
-    """	
-    Configuration for displaying a video.	
     """
+    Configuration for displaying a video.
+    """
+
     enable: bool = Field(
         default=False,
         description="Whether to plot the output .",
@@ -22,10 +23,12 @@ class InteractiveDisplayConfig(BaseModel):
         description="Frame to end processing at.",
     )
 
+
 class NoisePatchConfig(BaseModel):
     """
     Configuration for patch based noise handling.
     """
+
     enable: bool = Field(
         default=True,
         description="Whether to use patch based noise handling.",
@@ -51,11 +54,25 @@ class NoisePatchConfig(BaseModel):
         default=1,
         description="Multiplier for the difference between the mean and the pixel value.",
     )
+    output_result: bool = Field(
+        default=False,
+        description="Whether to output the result.",
+    )
+    output_noise_patch: bool = Field(
+        default=False,
+        description="Whether to output the noise patch.",
+    )
+    output_diff: bool = Field(
+        default=False,
+        description="Whether to output the difference.",
+    )
+
 
 class FreqencyMaskingConfig(BaseModel):
     """
     Configuration for frequency filtering.
     """
+
     enable: bool = Field(
         default=True,
         description="Whether to use frequency filtering.",
@@ -76,11 +93,25 @@ class FreqencyMaskingConfig(BaseModel):
         default=False,
         description="Whether to display the mask.",
     )
+    output_result: bool = Field(
+        default=False,
+        description="Whether to output the result.",
+    )
+    output_mask: bool = Field(
+        default=False,
+        description="Whether to output the mask.",
+    )
+    output_freq_domain: bool = Field(
+        default=False,
+        description="Whether to output the frequency domain.",
+    )
+
 
 class DenoiseConfig(BaseModel, YAMLMixin):
-    """	
-    Configuration for denoising a video.	
     """
+    Configuration for denoising a video.
+    """
+
     interactive_display: Optional[InteractiveDisplayConfig] = Field(
         default=None,
         description="Configuration for displaying the video.",
@@ -96,4 +127,12 @@ class DenoiseConfig(BaseModel, YAMLMixin):
     end_frame: Optional[int] = Field(
         default=None,
         description="Frame to end processing at.",
+    )
+    output_result: bool = Field(
+        default=True,
+        description="Whether to output the result.",
+    )
+    output_dir: Optional[str] = Field(
+        default=None,
+        description="Directory to save the output in.",
     )

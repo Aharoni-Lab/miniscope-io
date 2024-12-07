@@ -40,4 +40,3 @@ def denoise(
     """
     denoise_config_parsed = DenoiseConfig.from_yaml(denoise_config)
     VideoProcessor.denoise(input, denoise_config_parsed)
-

@@ -22,6 +22,7 @@ class VideoWriter:
     """
     Write data to a video file using OpenCV.
     """
+
     @staticmethod
     def init_video(
         path: Union[Path, str],
@@ -29,7 +30,7 @@ class VideoWriter:
         height: int,
         fps: int,
         fourcc: str = "Y800",
-        **kwargs: dict
+        **kwargs: dict,
     ) -> cv2.VideoWriter:
         """
         Create a parameterized video writer
@@ -63,6 +64,7 @@ class VideoWriter:
         frame_size = (width, height)
         out = cv2.VideoWriter(str(path), fourcc, frame_rate, frame_size, **kwargs)
         return out
+
 
 class VideoReader:
     """
@@ -112,6 +114,8 @@ class VideoReader:
 
     def __del__(self):
         self.release()
+
+
 class BufferedCSVWriter:
     """
     Write data to a CSV file in buffered mode.
