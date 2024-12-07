@@ -16,6 +16,7 @@ cli/main
 
 device/test_device
 device/update_controller
+history/config
 ```
 
 ```{toctree}
