@@ -7,11 +7,19 @@ noise_patch:
   threshold: 20
   buffer_size: 5032
   buffer_split: 1
-  diff_multiply: 10
+  diff_multiply: 1
+  output_result: True
+  output_noise_patch: True
+  output_diff: True
 frequency_masking:
   enable: True
   spacial_LPF_cutoff_radius: 10
-  vertical_BEF_cutoff: 5
+  vertical_BEF_cutoff: 1
   horizontal_BEF_cutoff: 0
   display_mask: False
-end_frame: 1000
+  output_mask: True
+  output_result: True
+  output_freq_domain: True
+end_frame: 100
+output_result: True
+output_dir: 'user_dir/output'

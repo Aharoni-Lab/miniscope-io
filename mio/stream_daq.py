@@ -659,7 +659,8 @@ class StreamDaq:
                 width=self.config.frame_width,
                 height=self.config.frame_height,
                 fps=self.config.fs,
-                **video_kwargs)
+                **video_kwargs,
+            )
 
         p_buffer_to_frame = multiprocessing.Process(
             target=self._buffer_to_frame,
