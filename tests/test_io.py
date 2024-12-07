@@ -7,9 +7,7 @@ import csv
 import numpy as np
 import warnings
 
-from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader
-from miniscope_io.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
 from miniscope_io.io import SDCard
 from miniscope_io.io import BufferedCSVWriter
 from miniscope_io.exceptions import EndOfRecordingException
@@ -18,12 +16,14 @@ from miniscope_io.utils import hash_file, hash_video
 
 from .fixtures import wirefree, wirefree_battery
 
+
 @pytest.fixture
 def tmp_csvfile(tmp_path):
     """
     Creates a temporary file for testing.
     """
     return tmp_path / "test.csv"
+
 
 def test_csvwriter_initialization(tmp_csvfile):
     """
@@ -34,6 +34,7 @@ def test_csvwriter_initialization(tmp_csvfile):
     assert writer.buffer_size == 10
     assert writer.buffer == []
 
+
 def test_csvwriter_append_and_flush(tmp_csvfile):
     """
     Test that the BufferedCSVWriter appends to the buffer and flushes it when full.
@@ -41,16 +42,17 @@ def test_csvwriter_append_and_flush(tmp_csvfile):
     writer = BufferedCSVWriter(tmp_csvfile, buffer_size=2)
     writer.append([1, 2, 3])
     assert len(writer.buffer) == 1
-    
+
     writer.append([4, 5, 6])
     assert len(writer.buffer) == 0
     assert tmp_csvfile.exists()
-    
-    with tmp_csvfile.open('r', newline='') as f:
+
+    with tmp_csvfile.open("r", newline="") as f:
         reader = csv.reader(f)
         rows = list(reader)
         assert len(rows) == 2
-        assert rows == [['1', '2', '3'], ['4', '5', '6']]
+        assert rows == [["1", "2", "3"], ["4", "5", "6"]]
+
 
 def test_csvwriter_flush_buffer(tmp_csvfile):
     """
@@ -59,15 +61,16 @@ def test_csvwriter_flush_buffer(tmp_csvfile):
     writer = BufferedCSVWriter(tmp_csvfile, buffer_size=2)
     writer.append([1, 2, 3])
     writer.flush_buffer()
-    
+
     assert len(writer.buffer) == 0
     assert tmp_csvfile.exists()
-    
-    with tmp_csvfile.open('r', newline='') as f:
+
+    with tmp_csvfile.open("r", newline="") as f:
         reader = csv.reader(f)
         rows = list(reader)
         assert len(rows) == 1
-        assert rows == [['1', '2', '3']]
+        assert rows == [["1", "2", "3"]]
+
 
 def test_csvwriter_close(tmp_csvfile):
     """
@@ -76,15 +79,16 @@ def test_csvwriter_close(tmp_csvfile):
     writer = BufferedCSVWriter(tmp_csvfile, buffer_size=2)
     writer.append([1, 2, 3])
     writer.close()
-    
+
     assert len(writer.buffer) == 0
     assert tmp_csvfile.exists()
-    
-    with tmp_csvfile.open('r', newline='') as f:
+
+    with tmp_csvfile.open("r", newline="") as f:
         reader = csv.reader(f)
         rows = list(reader)
         assert len(rows) == 1
-        assert rows == [['1', '2', '3']]
+        assert rows == [["1", "2", "3"]]
+
 
 def test_read(wirefree):
     """
@@ -169,7 +173,7 @@ def test_relative_path():
     rel_path = abs_child.relative_to(abs_cwd)
 
     assert not rel_path.is_absolute()
-    sdcard = SDCard(drive=rel_path, layout=WireFreeSDLayout)
+    sdcard = SDCard(drive=rel_path, layout="wirefree-sd-layout")
 
     # check we can do something basic like read config
     assert sdcard.config is not None
@@ -180,7 +184,7 @@ def test_relative_path():
     # now try with an absolute path
     abs_path = rel_path.resolve()
     assert abs_path.is_absolute()
-    sdcard_abs = SDCard(drive=abs_path, layout=WireFreeSDLayout)
+    sdcard_abs = SDCard(drive=abs_path, layout="wirefree-sd-layout")
     assert sdcard_abs.config is not None
     assert sdcard_abs.drive.is_absolute()
 
@@ -212,7 +216,7 @@ def test_to_img(wirefree_battery, n_frames, hash, tmp_path):
 
     assert out_hash == hash
 
-    sd = SDCard(out_file, WireFreeSDLayout_Battery)
+    sd = SDCard(out_file, "wirefree-sd-layout-battery")
 
     # we should be able to read all the frames!
     frames = []

@@ -84,7 +84,9 @@ class Config(BaseSettings):
         description="Base directory to store configuration and other temporary files, "
         "other paths are relative to this by default",
     )
+    config_dir: Path = Field(Path("config"), description="Location to store user configs")
     log_dir: Path = Field(Path("logs"), description="Location to store logs")
+
     logs: LogConfig = Field(LogConfig(), description="Additional settings for logs")
 
     @field_validator("base_dir", mode="before")
@@ -100,7 +102,7 @@ class Config(BaseSettings):
     @model_validator(mode="after")
     def paths_relative_to_basedir(self) -> "Config":
         """If relative paths are given, make them absolute relative to ``base_dir``"""
-        paths = ("log_dir",)
+        paths = ("log_dir", "config_dir")
         for path_name in paths:
             path = getattr(self, path_name)  # type: Path
             if not path.is_absolute():
