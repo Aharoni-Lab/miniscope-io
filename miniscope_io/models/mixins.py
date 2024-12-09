@@ -13,8 +13,6 @@ from typing import Any, ClassVar, List, Literal, Optional, Type, TypeVar, Union,
 import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from miniscope_io import CONFIG_DIR, Config
-from miniscope_io.logging import init_logger
 from miniscope_io.types import ConfigID, ConfigSource, PythonIdentifier, valid_config_id
 
 T = TypeVar("T")
@@ -100,6 +98,8 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
             instance = cls(**config_data)
         except ValidationError:
             if (backup_path := file_path.with_suffix(".yaml.bak")).exists():
+                from miniscope_io.logging import init_logger
+
                 init_logger("config").debug(
                     f"Model instantiation failed, restoring modified backup from {backup_path}..."
                 )
@@ -124,12 +124,17 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
             try:
                 file_id = yaml_peek("id", config_file)
                 if file_id == id:
+                    from miniscope_io.logging import init_logger
+
                     init_logger("config").debug(
                         "Model for %s found at %s", cls._model_name(), config_file
                     )
                     return cls.from_yaml(config_file)
             except KeyError:
                 continue
+
+        from miniscope_io import Config
+
         raise KeyError(f"No config with id {id} found in {Config().config_dir}")
 
     @classmethod
@@ -153,6 +158,8 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
         elif valid_config_id(source):
             return cls.from_id(source)
         else:
+            from miniscope_io import Config
+
             source = Path(source)
             if source.suffix in (".yaml", ".yml"):
                 if source.exists():
@@ -184,6 +191,8 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
         Directories to search for config files, in order of priority
         such that earlier sources are preferred over later sources.
         """
+        from miniscope_io import CONFIG_DIR, Config
+
         return [Config().config_dir, CONFIG_DIR]
 
     def _dump_data(self, **kwargs: Any) -> dict:
@@ -233,6 +242,9 @@ class ConfigYAMLMixin(BaseModel, YAMLMixin):
             else:
                 msg = f"Header keys were present, but either not at the start of {str(file_path)} "
                 "or in out of order. Updating file (preserving backup)..."
+            from miniscope_io import CONFIG_DIR
+            from miniscope_io.logging import init_logger
+
             logger = init_logger(cls.__name__)
             logger.warning(msg)
             logger.debug(data)

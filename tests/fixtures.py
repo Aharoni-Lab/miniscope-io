@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, MutableMapping
 
 import pytest
 import yaml
@@ -11,7 +11,6 @@ from miniscope_io.io import SDCard
 from miniscope_io.models.config import _global_config_path, set_user_dir
 from miniscope_io.models.data import Frames
 from miniscope_io.models.mixins import ConfigYAMLMixin, YamlDumper
-from tests.test_config import _flatten
 
 
 @pytest.fixture
@@ -104,7 +103,7 @@ def monkeypatch_session() -> MonkeyPatch:
     mpatch.undo()
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def dodge_existing_configs(tmp_path_factory):
     """
     Suspend any existing global config file during config tests
@@ -262,3 +261,15 @@ def set_global_yaml() -> Callable[[dict[str, Any]], Path]:
 )
 def set_config(request) -> Callable[[dict[str, Any]], Path]:
     return request.getfixturevalue(request.param)
+
+
+def _flatten(d, parent_key="", separator="__") -> dict:
+    """https://stackoverflow.com/a/6027615/13113166"""
+    items = []
+    for key, value in d.items():
+        new_key = parent_key + separator + key if parent_key else key
+        if isinstance(value, MutableMapping):
+            items.extend(_flatten(value, new_key, separator=separator).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)

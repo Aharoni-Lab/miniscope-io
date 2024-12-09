@@ -1,5 +1,4 @@
 import os
-from collections.abc import MutableMapping
 from pathlib import Path
 
 import yaml
@@ -115,15 +114,3 @@ def test_config_sources_overrides(
     set_env({"logs": {"file_n": 5}})
     assert Config().logs.file_n == 5
     assert Config(**{"logs": {"file_n": 6}}).logs.file_n == 6
-
-
-def _flatten(d, parent_key="", separator="__") -> dict:
-    """https://stackoverflow.com/a/6027615/13113166"""
-    items = []
-    for key, value in d.items():
-        new_key = parent_key + separator + key if parent_key else key
-        if isinstance(value, MutableMapping):
-            items.extend(_flatten(value, new_key, separator=separator).items())
-        else:
-            items.append((new_key, value))
-    return dict(items)
