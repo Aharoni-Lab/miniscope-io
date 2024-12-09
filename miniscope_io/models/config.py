@@ -95,7 +95,6 @@ class Config(BaseSettings, YAMLMixin):
     )
     config_dir: Path = Field(Path("config"), description="Location to store user configs")
     log_dir: Path = Field(Path("logs"), description="Location to store logs")
-    devices_dir: Path = Field(Path("devices"), description="Location to store device configs")
 
     logs: LogConfig = Field(LogConfig(), description="Additional settings for logs")
 
@@ -112,7 +111,7 @@ class Config(BaseSettings, YAMLMixin):
     @model_validator(mode="after")
     def paths_relative_to_basedir(self) -> "Config":
         """If relative paths are given, make them absolute relative to ``user_dir``"""
-        paths = ("log_dir", "config_dir", "devices_dir")
+        paths = ("log_dir", "config_dir")
         for path_name in paths:
             path = getattr(self, path_name)  # type: Path
             if not path.is_absolute():
