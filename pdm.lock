@@ -5,7 +5,7 @@
 groups = ["default", "all", "dev", "docs", "plot", "tests"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:67864847cd8a643b80e97f7722bef09d8eeb010e38ac6db0e0de325e909380b7"
+content_hash = "sha256:cde2e6f75c9429dc0ca35f0c2cf766718ae038c3572e8e4a97ae528235287e8a"
 
 [[metadata.targets]]
 requires_python = "~=3.9"
@@ -1361,7 +1361,7 @@ name = "platformdirs"
 version = "4.3.6"
 requires_python = ">=3.8"
 summary = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
-groups = ["all", "dev"]
+groups = ["default", "all", "dev"]
 files = [
     {file = "platformdirs-4.3.6-py3-none-any.whl", hash = "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb"},
     {file = "platformdirs-4.3.6.tar.gz", hash = "sha256:357fb2acbc885b0419afd3ce3ed34564c13c9b95c89360cd9563f73aa5e2b907"},
@@ -1841,6 +1841,20 @@ files = [
 ]
 
 [[package]]
+name = "sphinx-design"
+version = "0.6.1"
+requires_python = ">=3.9"
+summary = "A sphinx extension for designing beautiful, view size responsive web components."
+groups = ["all", "docs"]
+dependencies = [
+    "sphinx<9,>=6",
+]
+files = [
+    {file = "sphinx_design-0.6.1-py3-none-any.whl", hash = "sha256:b11f37db1a802a183d61b159d9a202314d4d2fe29c163437001324fe2f19549c"},
+    {file = "sphinx_design-0.6.1.tar.gz", hash = "sha256:b44eea3719386d04d765c1a8257caca2b3e6f8421d7b3a5e742c0fd45f84e632"},
+]
+
+[[package]]
 name = "sphinxcontrib-applehelp"
 version = "2.0.0"
 requires_python = ">=3.9"
@@ -1885,6 +1899,20 @@ files = [
 ]
 
 [[package]]
+name = "sphinxcontrib-programoutput"
+version = "0.18"
+requires_python = ">=3.8"
+summary = "Sphinx extension to include program output"
+groups = ["all", "docs"]
+dependencies = [
+    "Sphinx>=5.0.0",
+]
+files = [
+    {file = "sphinxcontrib_programoutput-0.18-py3-none-any.whl", hash = "sha256:8a651bc85de69a808a064ff0e48d06c12b9347da4fe5fdb1e94914b01e1b0c36"},
+    {file = "sphinxcontrib_programoutput-0.18.tar.gz", hash = "sha256:09e68b6411d937a80b6085f4fdeaa42e0dc5555480385938465f410589d2eed8"},
+]
+
+[[package]]
 name = "sphinxcontrib-qthelp"
 version = "2.0.0"
 requires_python = ">=3.9"
@@ -1916,6 +1944,17 @@ marker = "python_version < \"3.11\""
 files = [
     {file = "tomli-2.0.2-py3-none-any.whl", hash = "sha256:2ebe24485c53d303f690b0ec092806a085f07af5a5aa1464f3931eec36caaa38"},
     {file = "tomli-2.0.2.tar.gz", hash = "sha256:d46d457a85337051c36524bc5349dd91b1877838e2979ac5ced3e710ed8a60ed"},
+]
+
+[[package]]
+name = "tomli-w"
+version = "1.1.0"
+requires_python = ">=3.9"
+summary = "A lil' TOML writer"
+groups = ["all", "tests"]
+files = [
+    {file = "tomli_w-1.1.0-py3-none-any.whl", hash = "sha256:1403179c78193e3184bfaade390ddbd071cba48a32a2e62ba11aae47490c63f7"},
+    {file = "tomli_w-1.1.0.tar.gz", hash = "sha256:49e847a3a304d516a169a601184932ef0f6b61623fe680f836a2aa7128ed0d33"},
 ]
 
 [[package]]
