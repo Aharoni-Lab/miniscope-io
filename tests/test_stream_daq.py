@@ -19,8 +19,7 @@ from .conftest import DATA_DIR, CONFIG_DIR
 @pytest.fixture(params=[pytest.param(5, id="buffer-size-5"), pytest.param(10, id="buffer-size-10")])
 def default_streamdaq(set_okdev_input, request) -> StreamDaq:
 
-    test_config_path = CONFIG_DIR / "stream_daq_test_200px.yml"
-    daqConfig = StreamDevConfig.from_yaml(test_config_path)
+    daqConfig = StreamDevConfig.from_id("test-wireless-200px")
     daqConfig.runtime.frame_buffer_queue_size = request.param
     daqConfig.runtime.image_buffer_queue_size = request.param
     daqConfig.runtime.serial_buffer_queue_size = request.param
@@ -37,7 +36,7 @@ def default_streamdaq(set_okdev_input, request) -> StreamDaq:
     "config,data,video_hash_list,show_video",
     [
         (
-            "stream_daq_test_200px.yml",
+            "test-wireless-200px",
             "stream_daq_test_fpga_raw_input_200px.bin",
             [
                 "f878f9c55de28a9ae6128631c09953214044f5b86504d6e5b0906084c64c644c",
@@ -55,8 +54,7 @@ def test_video_output(
 ):
     output_video = tmp_path / "output.avi"
 
-    test_config_path = CONFIG_DIR / config
-    daqConfig = StreamDevConfig.from_yaml(test_config_path)
+    daqConfig = StreamDevConfig.from_id(config)
     daqConfig.runtime.frame_buffer_queue_size = buffer_size
     daqConfig.runtime.image_buffer_queue_size = buffer_size
     daqConfig.runtime.serial_buffer_queue_size = buffer_size
@@ -78,14 +76,13 @@ def test_video_output(
     "config,data",
     [
         (
-            "stream_daq_test_200px.yml",
+            "test-wireless-200px",
             "stream_daq_test_fpga_raw_input_200px.bin",
         )
     ],
 )
 def test_binary_output(config, data, set_okdev_input, tmp_path):
-    test_config_path = CONFIG_DIR / config
-    daqConfig = StreamDevConfig.from_yaml(test_config_path)
+    daqConfig = StreamDevConfig.from_id(config)
 
     data_file = DATA_DIR / data
     set_okdev_input(data_file)
