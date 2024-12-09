@@ -31,7 +31,7 @@ def _common_options(fn: Callable) -> Callable:
             "relative to the current directory, and then if no matching file is found, "
             "relative to the user `config_dir` (see `mio config --help`)."
         ),
-        type=ConfigIDOrPath,
+        type=ConfigIDOrPath(),
     )(fn)
     return fn
 
