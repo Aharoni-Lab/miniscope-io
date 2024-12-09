@@ -87,11 +87,13 @@ def test_nested_loggers(capsys, tmp_path):
 
 
 @pytest.mark.parametrize("level", ["DEBUG", "INFO", "WARNING", "ERROR"])
-@pytest.mark.parametrize("dotenv_direct_setting", [True, False])
+@pytest.mark.parametrize("direct_setting", [True, False])
 @pytest.mark.parametrize("test_target", ["logger", "RotatingFileHandler", "RichHandler"])
-def test_init_logger_from_dotenv(tmp_path, monkeypatch, level, dotenv_direct_setting, test_target):
+def test_init_logger_from_config(
+    tmp_path, monkeypatch, level, direct_setting, test_target, set_config
+):
     """
-    Set log levels from dotenv MINISCOPE_IO_LOGS__LEVEL key
+    Set log levels from all kinds of config
     """
     # Feels kind of fragile to hardcode this but I couldn't think of a better way so for now
     level_name_map = {
@@ -101,19 +103,10 @@ def test_init_logger_from_dotenv(tmp_path, monkeypatch, level, dotenv_direct_set
         "ERROR": logging.ERROR,
     }
 
-    tmp_path.mkdir(exist_ok=True, parents=True)
-    dotenv = tmp_path / ".env"
-    with open(dotenv, "w") as denvfile:
-        if dotenv_direct_setting:
-            denvfile.write(
-                f'MINISCOPE_IO_LOGS__LEVEL="{level}"\n'
-                f"MINISCOPE_IO_LOGS__LEVEL_FILE={level}\n"
-                f"MINISCOPE_IO_LOGS__LEVEL_STDOUT={level}"
-            )
-        else:
-            denvfile.write(f'MINISCOPE_IO_LOGS__LEVEL="{level}"')
-
-    monkeypatch.chdir(tmp_path)
+    if direct_setting:
+        set_config({"logs": {"level_file": level, "level_stdout": level}})
+    else:
+        set_config({"logs": {"level": level}})
 
     dotenv_logger = init_logger(name="test_logger", log_dir=tmp_path)
     root_logger = logging.getLogger("mio")

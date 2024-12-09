@@ -49,9 +49,13 @@ def init_logger(
     if log_dir is None:
         log_dir = config.log_dir
     if level is None:
-        level: LOG_LEVELS = config.logs.level_stdout
+        level: LOG_LEVELS = (
+            config.logs.level_stdout if config.logs.level_stdout is not None else config.logs.level
+        )
     if file_level is None:
-        file_level: LOG_LEVELS = config.logs.level_file
+        file_level: LOG_LEVELS = (
+            config.logs.level_file if config.logs.level_file is not None else config.logs.level
+        )
     if log_file_n is None:
         log_file_n = config.logs.file_n
     if log_file_size is None:
