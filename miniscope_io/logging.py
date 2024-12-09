@@ -61,8 +61,8 @@ def init_logger(
     # even if one or the other handlers might not.
     min_level = min([getattr(logging, level), getattr(logging, file_level)])
 
-    if not name.startswith("miniscope_io"):
-        name = "miniscope_io." + name
+    if not name.startswith("mio"):
+        name = "mio." + name
 
     _init_root(
         stdout_level=level,
@@ -99,7 +99,7 @@ def _init_root(
     log_file_n: int = 5,
     log_file_size: int = 2**22,
 ) -> None:
-    root_logger = logging.getLogger("miniscope_io")
+    root_logger = logging.getLogger("mio")
     file_handlers = [
         handler for handler in root_logger.handlers if isinstance(handler, RotatingFileHandler)
     ]
@@ -110,7 +110,7 @@ def _init_root(
     if log_dir is not False and not file_handlers:
         root_logger.addHandler(
             _file_handler(
-                "miniscope_io",
+                "mio",
                 file_level,
                 log_dir,
                 log_file_n,
