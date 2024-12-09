@@ -10,6 +10,7 @@ def test_buffer_from_format(construct):
     Instantiate a BufferHeader from a sequence and a format
     """
     format = BufferHeaderFormat(
+        id="buffer-header",
         linked_list=0,
         frame_num=1,
         buffer_count=2,
@@ -25,7 +26,7 @@ def test_buffer_from_format(construct):
 
     # correct vals should work in both cases
     instance = BufferHeader.from_format(vals, format, construct)
-    assert list(instance.model_dump().values()) == vals
+    assert list(instance.model_dump(exclude={"id"}).values()) == vals
 
     # bad vals should only work if we're constructing
     if construct:

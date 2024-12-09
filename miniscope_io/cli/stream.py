@@ -8,6 +8,7 @@ from typing import Any, Callable, Optional
 
 import click
 
+from miniscope_io.cli.common import ConfigIDOrPath
 from miniscope_io.stream_daq import StreamDaq
 
 
@@ -24,8 +25,13 @@ def _common_options(fn: Callable) -> Callable:
         "-c",
         "--device_config",
         required=True,
-        help="Path to device config YAML file for streamDaq (see models.stream.StreamDevConfig)",
-        type=click.Path(exists=True),
+        help=(
+            "Either a config `id` or a path to device config YAML file for streamDaq "
+            "(see models.stream.StreamDevConfig). If path is relative, treated as "
+            "relative to the current directory, and then if no matching file is found, "
+            "relative to the user `config_dir` (see `mio config --help`)."
+        ),
+        type=ConfigIDOrPath(),
     )(fn)
     return fn
 

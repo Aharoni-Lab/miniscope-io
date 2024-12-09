@@ -23,7 +23,6 @@ device/update_controller
 :caption: API:
 
 api/devices
-api/formats/index
 api/io
 api/logging
 api/models/index

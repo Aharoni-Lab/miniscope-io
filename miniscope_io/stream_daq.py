@@ -20,16 +20,14 @@ from miniscope_io import init_logger
 from miniscope_io.bit_operation import BufferFormatter
 from miniscope_io.devices.mocks import okDevMock
 from miniscope_io.exceptions import EndOfRecordingException, StreamReadError
-from miniscope_io.formats.stream import StreamBufferHeader as StreamBufferHeaderFormat
 from miniscope_io.io import BufferedCSVWriter
 from miniscope_io.models.stream import (
     StreamBufferHeader,
+    StreamBufferHeaderFormat,
     StreamDevConfig,
 )
-from miniscope_io.models.stream import (
-    StreamBufferHeaderFormat as StreamBufferHeaderFormatType,
-)
 from miniscope_io.plots.headers import StreamPlotter
+from miniscope_io.types import ConfigSource
 
 HAVE_OK = False
 ok_error = None
@@ -82,8 +80,8 @@ class StreamDaq:
 
     def __init__(
         self,
-        device_config: Union[StreamDevConfig, Path],
-        header_fmt: StreamBufferHeaderFormatType = StreamBufferHeaderFormat,
+        device_config: Union[StreamDevConfig, ConfigSource],
+        header_fmt: Union[StreamBufferHeaderFormat, ConfigSource] = "stream-buffer-header",
     ) -> None:
         """
         Constructer for the class.
@@ -100,12 +98,18 @@ class StreamDaq:
             Header format used to parse information from buffer header,
             by default `MetadataHeaderFormat()`.
         """
-        if isinstance(device_config, (str, Path)):
-            device_config = StreamDevConfig.from_yaml(device_config)
 
         self.logger = init_logger("streamDaq")
-        self.config = device_config
-        self.header_fmt = header_fmt
+        self.config = StreamDevConfig.from_any(device_config)
+        self.header_fmt = StreamBufferHeaderFormat.from_any(header_fmt)
+        if isinstance(header_fmt, str):
+            self.header_fmt = StreamBufferHeaderFormat.from_id(header_fmt)
+        elif isinstance(header_fmt, StreamBufferHeaderFormat):
+            self.header_fmt = header_fmt
+        else:
+            raise TypeError(
+                "header_fmt should be an instance of StreamBufferHeaderFormat or a config ID."
+            )
         self.preamble = self.config.preamble
         self.terminate: multiprocessing.Event = multiprocessing.Event()
 
@@ -800,7 +804,7 @@ class StreamDaq:
                     self.logger.debug("Saving header metadata")
                     try:
                         self._buffered_writer.append(
-                            list(header.model_dump().values()) + [time.time()]
+                            list(header.model_dump(warnings=False).values()) + [time.time()]
                         )
                     except Exception as e:
                         self.logger.exception(f"Exception saving headers: \n{e}")

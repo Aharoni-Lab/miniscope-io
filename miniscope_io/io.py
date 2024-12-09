@@ -16,6 +16,7 @@ from miniscope_io.exceptions import EndOfRecordingException, ReadHeaderException
 from miniscope_io.logging import init_logger
 from miniscope_io.models.data import Frame
 from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
+from miniscope_io.types import ConfigSource
 
 
 class BufferedCSVWriter:
@@ -104,9 +105,11 @@ class SDCard:
 
     """
 
-    def __init__(self, drive: Union[str, Path], layout: SDLayout):
+    def __init__(
+        self, drive: Union[str, Path], layout: Union[SDLayout, ConfigSource] = "wirefree-sd-layout"
+    ):
         self.drive = drive
-        self.layout = layout
+        self.layout = SDLayout.from_any(layout)
         self.logger = init_logger("SDCard")
 
         # Private attributes used when the file reading context is entered
