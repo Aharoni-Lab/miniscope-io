@@ -3,6 +3,7 @@ Logging factory and handlers
 """
 
 import logging
+import multiprocessing as mp
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional, Union
@@ -48,27 +49,86 @@ def init_logger(
     if log_dir is None:
         log_dir = config.log_dir
     if level is None:
-        level = config.logs.level_stdout
+        level: LOG_LEVELS = config.logs.level_stdout
     if file_level is None:
-        file_level = config.logs.level_file
+        file_level: LOG_LEVELS = config.logs.level_file
     if log_file_n is None:
         log_file_n = config.logs.file_n
     if log_file_size is None:
         log_file_size = config.logs.file_size
 
-    if not name.startswith("miniscope_io"):
-        name = "miniscope_io." + name
+    # set our logger to the minimum of the levels so that it always handles at least that severity
+    # even if one or the other handlers might not.
+    min_level = min([getattr(logging, level), getattr(logging, file_level)])
+
+    if not name.startswith("mio"):
+        name = "mio." + name
+
+    _init_root(
+        stdout_level=level,
+        file_level=file_level,
+        log_dir=log_dir,
+        log_file_n=log_file_n,
+        log_file_size=log_file_size,
+    )
 
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(min_level)
 
-    # Add handlers for stdout and file
-    if log_dir is not False:
-        logger.addHandler(_file_handler(name, file_level, log_dir, log_file_n, log_file_size))
-
-    logger.addHandler(_rich_handler())
+    # if run from a forked process, need to add different handlers to not collide
+    if mp.parent_process() is not None:
+        logger.addHandler(
+            _file_handler(
+                name=f"{name}_{mp.current_process().pid}",
+                file_level=file_level,
+                log_dir=log_dir,
+                log_file_n=log_file_n,
+                log_file_size=log_file_size,
+            )
+        )
+        logger.addHandler(_rich_handler(level))
+        logger.propagate = False
 
     return logger
+
+
+def _init_root(
+    stdout_level: LOG_LEVELS,
+    file_level: LOG_LEVELS,
+    log_dir: Path,
+    log_file_n: int = 5,
+    log_file_size: int = 2**22,
+) -> None:
+    root_logger = logging.getLogger("mio")
+    file_handlers = [
+        handler for handler in root_logger.handlers if isinstance(handler, RotatingFileHandler)
+    ]
+    stream_handlers = [
+        handler for handler in root_logger.handlers if isinstance(handler, RichHandler)
+    ]
+
+    if log_dir is not False and not file_handlers:
+        root_logger.addHandler(
+            _file_handler(
+                "mio",
+                file_level,
+                log_dir,
+                log_file_n,
+                log_file_size,
+            )
+        )
+    else:
+        for file_handler in file_handlers:
+            file_handler.setLevel(file_level)
+
+    if not stream_handlers:
+        root_logger.addHandler(_rich_handler(stdout_level))
+    else:
+        for stream_handler in stream_handlers:
+            stream_handler.setLevel(stdout_level)
+
+    # prevent propagation to the default root
+    root_logger.propagate = False
 
 
 def _file_handler(
@@ -90,11 +150,12 @@ def _file_handler(
     return file_handler
 
 
-def _rich_handler() -> RichHandler:
+def _rich_handler(level: LOG_LEVELS) -> RichHandler:
     rich_handler = RichHandler(rich_tracebacks=True, markup=True)
     rich_formatter = logging.Formatter(
         r"[bold green]\[%(name)s][/bold green] %(message)s",
         datefmt="[%y-%m-%dT%H:%M:%S]",
     )
     rich_handler.setFormatter(rich_formatter)
+    rich_handler.setLevel(level)
     return rich_handler
