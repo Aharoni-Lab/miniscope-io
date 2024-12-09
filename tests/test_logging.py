@@ -66,7 +66,7 @@ def test_nested_loggers(capsys, tmp_path):
     child.debug("hey")
     parent.debug("sup")
 
-    root_logger = logging.getLogger("miniscope_io")
+    root_logger = logging.getLogger("mio")
 
     warnings.warn(f"FILES IN LOG DIR: {list(log_dir.glob('*'))}")
     warnings.warn(f"ROOT LOGGER HANDLERS: {root_logger.handlers}")
@@ -116,7 +116,7 @@ def test_init_logger_from_dotenv(tmp_path, monkeypatch, level, dotenv_direct_set
     monkeypatch.chdir(tmp_path)
 
     dotenv_logger = init_logger(name="test_logger", log_dir=tmp_path)
-    root_logger = logging.getLogger("miniscope_io")
+    root_logger = logging.getLogger("mio")
 
     # Separating them for readable summary info
     if test_target == "logger":
@@ -168,13 +168,13 @@ def test_multiprocess_logging(capfd, tmp_path):
         with open(log_file) as lfile:
             logs[log_file.name] = lfile.read()
 
-    assert "miniscope_io.log" in logs
+    assert "mio.log" in logs
     assert len(logs) == 4
 
     for logfile, logs in logs.items():
 
         # main logfile does not receive messages
-        if logfile == "miniscope_io.log":
+        if logfile == "mio.log":
             assert len(logs.split("\n")) == 1
         else:
             assert len(logs.split("\n")) == 101
