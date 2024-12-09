@@ -75,7 +75,7 @@ def test_nested_loggers(capsys, tmp_path):
     assert len(parent.handlers) == 0
     assert len(child.handlers) == 0
 
-    with open(log_dir / "miniscope_io.log") as lfile:
+    with open(log_dir / "mio.log") as lfile:
         file_logs = lfile.read()
 
     # only one message of each!
