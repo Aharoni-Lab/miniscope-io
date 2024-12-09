@@ -10,7 +10,7 @@ from pydantic import Field, computed_field, field_validator
 from miniscope_io import DEVICE_DIR
 from miniscope_io.models import MiniscopeConfig
 from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
-from miniscope_io.models.mixins import YAMLMixin
+from miniscope_io.models.mixins import ConfigYAMLMixin
 from miniscope_io.models.sinks import CSVWriterConfig, StreamPlotterConfig
 
 
@@ -168,7 +168,7 @@ class StreamDevRuntime(MiniscopeConfig):
     )
 
 
-class StreamDevConfig(MiniscopeConfig, YAMLMixin):
+class StreamDevConfig(MiniscopeConfig, ConfigYAMLMixin):
     """
     Format model used to parse DAQ configuration yaml file (examples are in ./config)
     The model attributes are key-value pairs needed for reconstructing frames from data streams.

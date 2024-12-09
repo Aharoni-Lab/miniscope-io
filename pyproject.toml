@@ -21,6 +21,7 @@ dependencies = [
     "rich>=13.6.0",
     "pyyaml>=6.0.1",
     "click>=8.1.7",
+    'typing-extensions>=4.10.0; python_version<"3.13"'
 ]
 
 readme = "README.md"
@@ -124,7 +125,7 @@ omit = [
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py39"
 include = ["miniscope_io/**/*.py", "pyproject.toml"]
 exclude = ["docs", "tests", "miniscope_io/vendor", "noxfile.py"]
 line-length = 100
