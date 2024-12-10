@@ -1,5 +1,5 @@
 # `stream`
 
-```{click} miniscope_io.cli.stream:stream
+```{click} mio.cli.stream:stream
 :prog: mio stream
 ```

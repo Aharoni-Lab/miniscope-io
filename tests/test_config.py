@@ -4,8 +4,8 @@ from pathlib import Path
 import yaml
 import numpy as np
 
-from miniscope_io import Config
-from miniscope_io.models.config import _global_config_path, set_user_dir
+from mio import Config
+from mio.models.config import _global_config_path, set_user_dir
 from tests.fixtures import (
     set_env,
     set_dotenv,

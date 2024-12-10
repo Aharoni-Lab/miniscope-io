@@ -1,15 +1,15 @@
 # Configuration
 
 ```{tip}
-See also the API docs in {mod}`miniscope_io.models.config`
+See also the API docs in {mod}`mio.models.config`
 ```
 
-Config in `miniscope-io` uses a combination of pydantic models and
+Config in `mio` uses a combination of pydantic models and
 [`pydantic-settings`](https://docs.pydantic.dev/latest/concepts/pydantic_settings/).
 
 Configuration takes a few forms:
 
-- **Global config:** control over basic operation of `miniscope-io` like logging,
+- **Global config:** control over basic operation of `mio` like logging,
   location of user directories, plugins, etc.
 - **Device config:** control over the operation of specific devices and miniscopes like
   firmware versions, ports, capture parameters, etc.
@@ -18,7 +18,7 @@ Configuration takes a few forms:
 
 ## Global Config
 
-Global config uses the {class}`~miniscope_io.models.config.Config` class
+Global config uses the {class}`~mio.models.config.Config` class
 
 Config values can be set (in order of priority from high to low, where higher
 priorities override lower priorities)
@@ -27,11 +27,11 @@ priorities override lower priorities)
 * in environment variables like `export MINISCOPE_IO_LOG_DIR=~/`
 * in a `.env` file in the working directory
 * in a `mio_config.yaml` file in the working directory
-* in the `tool.miniscope_io.config` table in a `pyproject.toml` file in the working directory
+* in the `tool.mio.config` table in a `pyproject.toml` file in the working directory
 * in a user `mio_config.yaml` file in the user directory (see [below](user-directory))
 * in the global `mio_config.yaml` file in the platform-specific data directory
   (use `mio config global path` to find its location)
-* the default values in the {class}`~miniscope_io.models.config.Config` model
+* the default values in the {class}`~mio.models.config.Config` model
 
 Parent directories are _not_ checked - `.env` files, `mio_config.yaml`, and `pyproject.toml`
 files need to be in the current working directory to be discovered.
@@ -45,11 +45,11 @@ The configuration system allows project-specific configs per-directory with
 `mio_config.yaml` files in the working directory, as well as global configuration
 via `mio_config.yaml` in the system-specific config directory 
 (via [platformdirs](https://pypi.org/project/platformdirs/)). 
-By default, `miniscope-io` does not create new directories in the user's home directory
+By default, `mio` does not create new directories in the user's home directory
 to be polite, but the site config directory might be inconvenient or hard to reach,
 so it's possible to create a user directory in a custom location.
 
-`miniscope_io` discovers this directory from the `user_dir` setting from 
+`mio` discovers this directory from the `user_dir` setting from 
 any of the available sources, though the global `mio_config.yaml` file is the most reliable.
 
 To create a user directory, use the `mio config user create` command.
@@ -59,12 +59,12 @@ overwriting configs while rendering the docs ;)
 ```{command-output} mio config user create ~/my_new_directory --dry-run
 ```   
 
-You can confirm that this will be where miniscope_io discovers the user directory like
+You can confirm that this will be where mio discovers the user directory like
 
 ```{command-output} mio config user path
 ```
 
-If a directory is not supplied, the default `~/.config/miniscope_io` is used:
+If a directory is not supplied, the default `~/.config/mio` is used:
 
 ```{command-output} mio config user create --dry-run
 ```
@@ -100,15 +100,15 @@ When setting values from the cli, keys for nested models are separated with a `.
 Keys are case-insensitive, i.e. these are equivalent::
 
     export MINISCOPE_IO_LOGS__LEVEL=INFO
-    export miniscope_io_logs__level=INFO
+    export mio_logs__level=INFO
 
 ### Examples
 
 `````{tab-set}
 ````{tab-item} mio_config.yaml
 ```{code-block} yaml
-user_dir: ~/.config/miniscope_io
-log_dir: ~/.config/miniscope_io/logs
+user_dir: ~/.config/mio
+log_dir: ~/.config/mio/logs
 logs:
   level_file: INFO
   level_stream: WARNING
@@ -117,8 +117,8 @@ logs:
 ````
 ````{tab-item} env vars
 ```{code-block} bash
-export MINISCOPE_IO_USER_DIR='~/.config/miniscope_io'
-export MINISCOPE_IO_LOG_DIR='~/config/miniscope_io/logs'
+export MINISCOPE_IO_USER_DIR='~/.config/mio'
+export MINISCOPE_IO_LOG_DIR='~/config/mio/logs'
 export MINISCOPE_IO_LOGS__LEVEL_FILE='INFO'
 export MINISCOPE_IO_LOGS__LEVEL_STREAM='WARNING'
 export MINISCOPE_IO_LOGS__FILE_N=5
@@ -126,8 +126,8 @@ export MINISCOPE_IO_LOGS__FILE_N=5
 ````
 ````{tab-item} .env file
 ```{code-block} python
-MINISCOPE_IO_USER_DIR='~/.config/miniscope_io'
-MINISCOPE_IO_LOG_DIR='~/config/miniscope_io/logs'
+MINISCOPE_IO_USER_DIR='~/.config/mio'
+MINISCOPE_IO_LOG_DIR='~/config/mio/logs'
 MINISCOPE_IO_LOG__LEVEL_FILE='INFO'
 MINISCOPE_IO_LOG__LEVEL_STREAM='WARNING'
 MINISCOPE_IO_LOG__FILE_N=5
@@ -135,11 +135,11 @@ MINISCOPE_IO_LOG__FILE_N=5
 ````
 ````{tab-item} pyproject.toml
 ```{code-block} toml
-[tool.miniscope_io.config]
-user_dir = "~/.config/miniscope_io"
+[tool.mio.config]
+user_dir = "~/.config/mio"
 
 [tool.linkml.config.log]
-dir = "~/config/miniscope_io/logs"
+dir = "~/config/mio/logs"
 level_file = "INFO"
 level_stream = "WARNING"
 file_n = 5

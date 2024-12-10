@@ -15,7 +15,7 @@ Enhancements and bugfixes to `StreamDaq`; adding `device_update` module; CI/CD u
 - Added workflow for readthedocs preview link in PRs.
 - Added snake_case enforcement (Lint).
 
-Related PRs: [#45](https://github.com/Aharoni-Lab/miniscope-io/pull/45), [#48](https://github.com/Aharoni-Lab/miniscope-io/pull/48), [#49](https://github.com/Aharoni-Lab/miniscope-io/pull/49), [#50](https://github.com/Aharoni-Lab/miniscope-io/pull/50), [#53](https://github.com/Aharoni-Lab/miniscope-io/pull/53), 
+Related PRs: [#45](https://github.com/Aharoni-Lab/mio/pull/45), [#48](https://github.com/Aharoni-Lab/mio/pull/48), [#49](https://github.com/Aharoni-Lab/mio/pull/49), [#50](https://github.com/Aharoni-Lab/miniscope-io/pull/50), [#53](https://github.com/Aharoni-Lab/miniscope-io/pull/53), 
 Contributors: [@t-sasatani](https://github.com/t-sasatani), [@sneakers-the-rat](https://github.com/sneakers-the-rat), [@MarcelMB](https://github.com/MarcelMB), [@phildong](https://github.com/phildong)
 
 ## 0.4
@@ -94,35 +94,35 @@ StreamDaq enhancements and testing
 
 Testing:
 
-- [@t-sasatani](https://github.com/t-sasatani) - add end-to-end test for {class}`~miniscope_io.stream_daq.streamDaq`
-- Add a mock class for {class}`~miniscope_io.devices.opalkelly.okDev`
+- [@t-sasatani](https://github.com/t-sasatani) - add end-to-end test for {class}`~mio.stream_daq.streamDaq`
+- Add a mock class for {class}`~mio.devices.opalkelly.okDev`
 - replace `tmpdir` fixture and `tempfile` module with `tmp_path`
 
 New:
 
 - [@t-sasatani](https://github.com/t-sasatani) - allow use of okDev on Windows
-- {meth}`~miniscope_io.stream_daq.StreamDaq.capture` can export video :)
+- {meth}`~mio.stream_daq.StreamDaq.capture` can export video :)
 - More specific exceptions:
-  - {class}`~miniscope_io.exceptions.StreamError`
-  - {class}`~miniscope_io.exceptions.StreamReadError`
-  - {class}`~miniscope_io.exceptions.DeviceError`
-  - {class}`~miniscope_io.exceptions.DeviceOpenError`
-  - {class}`~miniscope_io.exceptions.DeviceConfigurationError`
-- {func}`~miniscope_io.utils.hash_video` - hash decoded video frames, rather than encoded video file
+  - {class}`~mio.exceptions.StreamError`
+  - {class}`~mio.exceptions.StreamReadError`
+  - {class}`~mio.exceptions.DeviceError`
+  - {class}`~mio.exceptions.DeviceOpenError`
+  - {class}`~mio.exceptions.DeviceConfigurationError`
+- {func}`~mio.utils.hash_video` - hash decoded video frames, rather than encoded video file
 
 
 Fixed:
 
-- Removed `print` statements in {class}`~miniscope_io.devices.opalkelly.okDev`
-- {meth}`~miniscope_io.stream_daq.StreamDaq.capture`
+- Removed `print` statements in {class}`~mio.devices.opalkelly.okDev`
+- {meth}`~mio.stream_daq.StreamDaq.capture`
   - Don't require `config`
-  - Replace logging with {func}`~miniscope_io.logging.init_logger`
-  - Use of {attr}`~miniscope_io.stream_daq.StreamDaq.terminate` to control inner loops
+  - Replace logging with {func}`~mio.logging.init_logger`
+  - Use of {attr}`~mio.stream_daq.StreamDaq.terminate` to control inner loops
 
 
 Models:
 
-- added `fs` and `show_video` to {class}`~miniscope_io.models.stream.StreamDaqConfig`
+- added `fs` and `show_video` to {class}`~mio.models.stream.StreamDaqConfig`
 
 CI:
 
@@ -139,7 +139,7 @@ CI:
 
 New features:
 
-- **Support for Various Image Formats**: `streamDaq` now supports multiple image formats, including different image sizes, frame rates (FPS), and bit-depths. These configurations can be provided via a YAML file. Examples of these configurations can be found in `miniscope_io.data.config`.
+- **Support for Various Image Formats**: `streamDaq` now supports multiple image formats, including different image sizes, frame rates (FPS), and bit-depths. These configurations can be provided via a YAML file. Examples of these configurations can be found in `mio.data.config`.
 - **Pydantic Model for Configuration**: Added a Pydantic model to validate the configuration of `streamDaq`.
 - **Bitstream Loader**: Added a bitstream loader to automatically configure the Opal Kelly FPGA when running `streamDaq`.
 - **Updated Command Line Script**: The command line script for running `streamDaq` has been updated. Use `streamDaq -c path/to/config/yaml/file.yml` to run the process with your YAML configuration file.
@@ -166,12 +166,12 @@ Bugfixes:
 - Handle absolute paths correctly on windows, which can't deal with {meth}`pathlib.Path.resolve()`, apparently
 
 New features:
-- Added {meth}`~miniscope_io.io.SDCard.to_video` to export videos
-  - Added notebook demonstrating {meth}`~miniscope_io.io.SDCard.to_video`
-- Added {mod}`miniscope_io.utils` module with {func}`~.utils.hash_file` function for hashing files (used in testing)
+- Added {meth}`~mio.io.SDCard.to_video` to export videos
+  - Added notebook demonstrating {meth}`~mio.io.SDCard.to_video`
+- Added {mod}`mio.utils` module with {func}`~.utils.hash_file` function for hashing files (used in testing)
 
 Code structure:
-- (Minor) moved {meth}`~miniscope_io.io.SDCard.skip` to general methods block (no change)
+- (Minor) moved {meth}`~mio.io.SDCard.skip` to general methods block (no change)
 
 Tests:
 - Run tests on macos and windows
@@ -198,10 +198,10 @@ Reverted:
 
 #### Additions
 
-- Added {class}`~miniscope_io.exceptions.EndOfRecordingException` when attempting to read past last frame
-- Added {attr}`~miniscope_io.io.SDCard.frame_count` property inferred from the number of buffers and buffers per frame
+- Added {class}`~mio.exceptions.EndOfRecordingException` when attempting to read past last frame
+- Added {attr}`~mio.io.SDCard.frame_count` property inferred from the number of buffers and buffers per frame
 - Return `self` when entering {class}`~.SDCard` context
-- Optionally return {class}`~miniscope_io.sd.DataHeader`s from frame when reading
+- Optionally return {class}`~mio.sd.DataHeader`s from frame when reading
 
 #### Bugfixes
 

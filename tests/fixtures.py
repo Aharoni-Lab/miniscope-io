@@ -6,11 +6,11 @@ import yaml
 import tomli_w
 from _pytest.monkeypatch import MonkeyPatch
 
-from miniscope_io import Config
-from miniscope_io.io import SDCard
-from miniscope_io.models.config import _global_config_path, set_user_dir
-from miniscope_io.models.data import Frames
-from miniscope_io.models.mixins import ConfigYAMLMixin, YamlDumper
+from mio import Config
+from mio.io import SDCard
+from mio.models.config import _global_config_path, set_user_dir
+from mio.models.data import Frames
+from mio.models.mixins import ConfigYAMLMixin, YamlDumper
 
 
 @pytest.fixture
@@ -189,7 +189,7 @@ def set_pyproject(tmp_cwd) -> Callable[[dict[str, Any]], Path]:
     toml_path = tmp_cwd / "pyproject.toml"
 
     def _set_pyproject(config: dict[str, Any]) -> Path:
-        config = {"tool": {"miniscope_io": {"config": config}}}
+        config = {"tool": {"mio": {"config": config}}}
 
         with open(toml_path, "wb") as tfile:
             tomli_w.dump(config, tfile)

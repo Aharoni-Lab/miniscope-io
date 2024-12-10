@@ -10,9 +10,9 @@ import signal
 import time
 from contextlib import contextmanager
 
-from miniscope_io import BASE_DIR
-from miniscope_io.stream_daq import StreamDevConfig, StreamDaq
-from miniscope_io.utils import hash_video, hash_file
+from mio import BASE_DIR
+from mio.stream_daq import StreamDevConfig, StreamDaq
+from mio.utils import hash_video, hash_file
 from .conftest import DATA_DIR, CONFIG_DIR
 
 

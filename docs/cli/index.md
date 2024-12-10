@@ -10,6 +10,6 @@ Refer to the following page for details regarding ``stream_daq`` device config f
 
 - `stream_daq <../api/stream_daq.html>`_
 
-.. click:: miniscope_io.cli.main:cli
+.. click:: mio.cli.main:cli
    :prog: mio
    :nested: full

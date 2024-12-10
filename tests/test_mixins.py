@@ -5,8 +5,8 @@ import pytest
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from miniscope_io import CONFIG_DIR
-from miniscope_io.models.mixins import yaml_peek, ConfigYAMLMixin
+from mio import CONFIG_DIR
+from mio.models.mixins import yaml_peek, ConfigYAMLMixin
 from tests.fixtures import tmp_config_source, yaml_config
 
 
@@ -78,13 +78,13 @@ b: "10\"""",
 a: 9
 id: "my-config"
 mio_model: "tests.test_mixins.MyModel"
-mio_version: "{version('miniscope_io')}"
+mio_version: "{version('mio')}"
 b: "10\"""",
             id="not-at-start",
         ),
         pytest.param(
             f"""
-mio_version: "{version('miniscope_io')}"
+mio_version: "{version('mio')}"
 mio_model: "tests.test_mixins.MyModel"
 id: "my-config"
 a: 9
@@ -110,7 +110,7 @@ def test_complete_header(tmp_config_source, src: str):
 
     loaded_str = yaml_file.read_text()
 
-    assert loaded["mio_version"] == version("miniscope_io")
+    assert loaded["mio_version"] == version("mio")
     assert loaded["id"] == "my-config"
     assert loaded["mio_model"] == MyModel._model_name()
 

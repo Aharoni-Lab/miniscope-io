@@ -7,12 +7,12 @@ import csv
 import numpy as np
 import warnings
 
-from miniscope_io.models.sdcard import SDBufferHeader
-from miniscope_io.io import SDCard
-from miniscope_io.io import BufferedCSVWriter
-from miniscope_io.exceptions import EndOfRecordingException
-from miniscope_io.models.data import Frame
-from miniscope_io.utils import hash_file, hash_video
+from mio.models.sdcard import SDBufferHeader
+from mio.io import SDCard
+from mio.io import BufferedCSVWriter
+from mio.exceptions import EndOfRecordingException
+from mio.models.data import Frame
+from mio.utils import hash_file, hash_video
 
 from .fixtures import wirefree, wirefree_battery
 

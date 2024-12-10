@@ -1,5 +1,5 @@
 import pytest
-from miniscope_io.models.buffer import BufferHeader, BufferHeaderFormat
+from mio.models.buffer import BufferHeader, BufferHeaderFormat
 from pydantic import ValidationError
 
 

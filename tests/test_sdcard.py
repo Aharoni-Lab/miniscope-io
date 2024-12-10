@@ -1,15 +1,16 @@
 import pytest
 
-from miniscope_io.models.sdcard import SectorConfig
+from mio.models.sdcard import SectorConfig
 import numpy as np
+
 
 @pytest.fixture
 def random_sectorconfig():
     return SectorConfig(
         header=np.random.randint(0, 2048),
         config=np.random.randint(0, 2048),
-        data=np.random.randint(0,2048),
-        size=np.random.randint(0,2048)
+        data=np.random.randint(0, 2048),
+        size=np.random.randint(0, 2048),
     )
 
 

@@ -1,7 +1,7 @@
 # config
 
 ```{eval-rst}
-.. automodule:: miniscope_io.models.config
+.. automodule:: mio.models.config
     :members:
     :undoc-members:
 ```

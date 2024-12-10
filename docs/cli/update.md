@@ -1,5 +1,5 @@
 # `update`
 
-```{click} miniscope_io.cli.update:update
+```{click} mio.cli.update:update
 :prog: mio update
 ```
