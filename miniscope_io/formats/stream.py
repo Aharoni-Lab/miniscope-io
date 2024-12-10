@@ -6,20 +6,20 @@ We plan to re-define this soon so documentation will come after that.
 from miniscope_io.models.stream import StreamBufferHeaderFormat
 
 StreamBufferHeader = StreamBufferHeaderFormat(
-    linked_list=0,
-    frame_num=2,
-    buffer_count=3,
+    linked_list=3,
+    frame_num=4,
+    buffer_count=6,
     frame_buffer_count=7,
-    write_buffer_count=4,
-    dropped_buffer_count=10,
-    timestamp=7,
+    write_buffer_count=6,
+    dropped_buffer_count=9,
+    timestamp=9,
     pixel_count=1,
-    write_timestamp=8,
+    write_timestamp=9,
     battery_voltage_raw=9,
     input_voltage_raw=10,
 )
+'''
 
-"""
 StreamBufferHeader = StreamBufferHeaderFormat(
     linked_list=0,
     frame_num=1,
@@ -33,6 +33,5 @@ StreamBufferHeader = StreamBufferHeaderFormat(
     battery_voltage_raw=9,
     input_voltage_raw=10,
 )
+'''
 
-
-"""
