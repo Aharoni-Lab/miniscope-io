@@ -6,7 +6,7 @@ import atexit
 import contextlib
 import csv
 from pathlib import Path
-from typing import Any, BinaryIO, Iterator, List, Literal, Optional, Union, overload
+from typing import Any, BinaryIO, Iterator, List, Literal, Optional, Tuple, Union, overload
 
 import cv2
 import numpy as np
@@ -93,19 +93,22 @@ class VideoReader:
 
         self.logger.info(f"Opened video at {video_path}")
 
-    def read_frames(self) -> Iterator[np.ndarray]:
+    def read_frames(self) -> Iterator[Tuple[int, np.ndarray]]:
         """
-        Read frames from the video file.
+        Read frames from the video file along with their index.
 
         Yields:
-        np.ndarray: The next frame in the video.
+        Tuple[int, np.ndarray]: The index and the next frame in the video.
         """
         while self.cap.isOpened():
             ret, frame = self.cap.read()
-            self.logger.debug(f"Reading frame {self.cap.get(cv2.CAP_PROP_POS_FRAMES)}")
+            index = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+            self.logger.debug(f"Reading frame {index}")
+
             if not ret:
                 break
-            yield frame
+
+            yield index, frame
 
     def release(self) -> None:
         """

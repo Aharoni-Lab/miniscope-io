@@ -1,11 +1,11 @@
 interactive_display:
   enable: True
   start_frame: 40
-  end_frame: 90
+  end_frame: 140
 noise_patch:
   enable: True
   method: "mean_error"
-  threshold: 30
+  threshold: 10
   buffer_size: 5032
   buffer_split: 10
   diff_multiply: 1
@@ -14,7 +14,7 @@ noise_patch:
   output_diff: True
 frequency_masking:
   enable: True
-  spatial_LPF_cutoff_radius: 15
+  spatial_LPF_cutoff_radius: 20
   vertical_BEF_cutoff: 2
   horizontal_BEF_cutoff: 0
   display_mask: False

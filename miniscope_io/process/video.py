@@ -11,7 +11,7 @@ import numpy as np
 from miniscope_io import init_logger
 from miniscope_io.io import VideoReader
 from miniscope_io.models.frames import NamedFrame
-from miniscope_io.models.process import DenoiseConfig
+from miniscope_io.models.process import DenoiseConfig, FreqencyMaskingConfig, NoisePatchConfig
 from miniscope_io.plots.video import VideoPlotter
 
 logger = init_logger("video")
@@ -35,9 +35,9 @@ class FrameProcessor:
         Parameters:
         height (int): Height of the video frame.
         width (int): Width of the video frame.
-        buffer_size (int): Size of the buffer to process.
-        block_size (int): Size of the blocks to process. Not used now.
 
+        Returns:
+        FrameProcessor: A FrameProcessor object.
         """
         self.height = height
         self.width = width
@@ -45,6 +45,7 @@ class FrameProcessor:
     def split_by_length(self, array: np.ndarray, segment_length: int) -> list[np.ndarray]:
         """
         Split an array into sub-arrays of a specified length.
+        Last sub-array may be shorter if the array length is not a multiple of the segment length.
 
         Parameters:
         array (np.ndarray): The array to split.
@@ -55,27 +56,28 @@ class FrameProcessor:
         """
         num_segments = len(array) // segment_length
 
-        # Create sub-arrays of the specified segment length
-        split_arrays = [
+        # Split the array into segments of the specified length
+        sub_arrays = [
             array[i * segment_length : (i + 1) * segment_length] for i in range(num_segments)
         ]
 
         # Add the remaining elements as a final shorter segment, if any
         if len(array) % segment_length != 0:
-            split_arrays.append(array[num_segments * segment_length :])
+            sub_arrays.append(array[num_segments * segment_length :])
 
-        return split_arrays
+        return sub_arrays
 
     def patch_noisy_buffer(
         self,
         current_frame: np.ndarray,
         previous_frame: np.ndarray,
-        buffer_size: int,
-        buffer_split: int,
-        noise_threshold: float,
+        noise_patch_config: NoisePatchConfig,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Process the frame, replacing noisy blocks with those from the previous frame.
+        Compare current frame with the previous frame to find noisy frames.
+        Replace noisy blocks with those from the previous frame.
+        The comparison is done in blocks of a specified size,
+        defined by the buffer_size divided by buffer_split.
 
         Parameters:
         current_frame (np.ndarray): The current frame to process.
@@ -83,40 +85,31 @@ class FrameProcessor:
         noise_threshold (float): The threshold for mean error to consider a block noisy.
 
         Returns:
-        Tuple[np.ndarray, np.ndarray]: The processed frame and the noise patch
+        Tuple[np.ndarray, np.ndarray]: The processed frame and the noise patch.
         """
         serialized_current = current_frame.flatten().astype(np.int16)
         serialized_previous = previous_frame.flatten().astype(np.int16)
 
-        buffer_per_frame = len(serialized_current) // buffer_size + 1
+        buffer_per_frame = len(serialized_current) // noise_patch_config.buffer_size + 1
 
         split_current = self.split_by_length(
             serialized_current,
-            buffer_size // buffer_split)
+            noise_patch_config.buffer_size // noise_patch_config.buffer_split + 1,
+        )
         split_previous = self.split_by_length(
             serialized_previous,
-            buffer_size // buffer_split)
+            noise_patch_config.buffer_size // noise_patch_config.buffer_split + 1,
+        )
 
         split_output = split_current.copy()
         noisy_parts = split_current.copy()
 
-        '''
-        for i in range(len(split_current)):
-            mean_error = abs(split_current[i] - split_previous[i]).mean()
-            if mean_error > noise_threshold:
-                logger.info(f"Replacing buffer {i} with mean error {mean_error}")
-                split_output[i] = split_previous[i]
-                noisy_parts[i] = np.ones_like(split_current[i], np.uint8)
-            else:
-                split_output[i] = split_current[i]
-                noisy_parts[i] = np.zeros_like(split_current[i], np.uint8)
-        '''
         buffer_has_noise = False
         for buffer_index in range(buffer_per_frame):
-            for split_index in range(buffer_split):
-                i = buffer_index * buffer_split + split_index
+            for split_index in range(noise_patch_config.buffer_split):
+                i = buffer_index * noise_patch_config.buffer_split + split_index
                 mean_error = abs(split_current[i] - split_previous[i]).mean()
-                if mean_error > noise_threshold:
+                if mean_error > noise_patch_config.threshold:
                     logger.info(f"Replacing buffer {i} with mean error {mean_error}")
                     buffer_has_noise = True
                     break
@@ -124,8 +117,8 @@ class FrameProcessor:
                     split_output[i] = split_current[i]
                     noisy_parts[i] = np.zeros_like(split_current[i], np.uint8)
             if buffer_has_noise:
-                for split_index in range(buffer_split):
-                    i = buffer_index * buffer_split + split_index
+                for split_index in range(noise_patch_config.buffer_split):
+                    i = buffer_index * noise_patch_config.buffer_split + split_index
                     split_output[i] = split_previous[i]
                     noisy_parts[i] = np.ones_like(split_current[i], np.uint8)
                 buffer_has_noise = False
@@ -139,7 +132,7 @@ class FrameProcessor:
 
         return np.uint8(processed_frame), np.uint8(noise_patch)
 
-    def remove_stripes(self, img: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    def apply_freq_mask(self, img: np.ndarray, mask: np.ndarray) -> np.ndarray:
         """
         Perform FFT/IFFT to remove horizontal stripes from a single frame.
 
@@ -169,10 +162,7 @@ class FrameProcessor:
 
     def gen_freq_mask(
         self,
-        center_LPF: int,
-        vertical_BEF: int,
-        horizontal_BEF: int,
-        show_mask: bool = False,
+        freq_mask_config: FreqencyMaskingConfig,
     ) -> np.ndarray:
         """
         Generate a mask to filter out horizontal and vertical frequencies.
@@ -184,20 +174,32 @@ class FrameProcessor:
         mask = np.ones((self.height, self.width), np.uint8)
 
         # Zero out a vertical stripe at the frequency center
-        mask[:, ccol - vertical_BEF : ccol + vertical_BEF] = 0
+        mask[
+            :,
+            ccol
+            - freq_mask_config.vertical_BEF_cutoff : ccol
+            + freq_mask_config.vertical_BEF_cutoff,
+        ] = 0
 
         # Zero out a horizontal stripe at the frequency center
-        mask[crow - horizontal_BEF : crow + horizontal_BEF, :] = 0
+        mask[
+            crow
+            - freq_mask_config.horizontal_BEF_cutoff : crow
+            + freq_mask_config.horizontal_BEF_cutoff,
+            :,
+        ] = 0
 
         # Define spacial low pass filter
         y, x = np.ogrid[: self.height, : self.width]
-        center_mask = (x - ccol) ** 2 + (y - crow) ** 2 <= center_LPF**2
+        center_mask = (x - ccol) ** 2 + (
+            y - crow
+        ) ** 2 <= freq_mask_config.spatial_LPF_cutoff_radius**2
 
         # Restore the center circular area to allow low frequencies to pass
         mask[center_mask] = 1
 
         # Visualize the mask if needed. Might delete later.
-        if show_mask:
+        if freq_mask_config.display_mask:
             cv2.imshow("Mask", mask * np.iinfo(np.uint8).max)
             while True:
                 if cv2.waitKey(1) == 27:  # Press 'Esc' key to exit visualization
@@ -217,24 +219,24 @@ class VideoProcessor:
         config: DenoiseConfig,
     ) -> None:
         """
-        Process a video file and display the results.
-        Might be useful to define some using environment variables.
+        Preprocess a video file and display the results.
         """
         if plt is None:
             raise ModuleNotFoundError(
                 "matplotlib is not a required dependency of miniscope-io, to use it, "
                 "install it manually or install miniscope-io with `pip install miniscope-io[plot]`"
             )
-        fig = plt.figure()
 
         reader = VideoReader(video_path)
+
         pathstem = Path(video_path).stem
         output_dir = Path.cwd() / config.output_dir
         if not output_dir.exists():
             output_dir.mkdir(parents=True)
+
+        # Initialize lists to store frames
         raw_frames = []
         output_frames = []
-
         if config.noise_patch.enable:
             patched_frames = []
             noise_patchs = []
@@ -243,8 +245,7 @@ class VideoProcessor:
             freq_domain_frames = []
             freq_filtered_frames = []
 
-        index = 0
-
+        # Initiate the frame processor
         processor = FrameProcessor(
             height=reader.height,
             width=reader.width,
@@ -252,53 +253,52 @@ class VideoProcessor:
 
         if config.noise_patch.enable:
             freq_mask = processor.gen_freq_mask(
-                center_LPF=config.frequency_masking.spatial_LPF_cutoff_radius,
-                vertical_BEF=config.frequency_masking.vertical_BEF_cutoff,
-                horizontal_BEF=config.frequency_masking.horizontal_BEF_cutoff,
-                show_mask=config.frequency_masking.display_mask,
+                freq_mask_config=config.frequency_masking,
             )
 
+        # index for frame number in original video
         try:
-            for frame in reader.read_frames():
+            for index, frame in reader.read_frames():
                 if config.end_frame and index > config.end_frame:
                     break
-                logger.debug(f"Processing frame {index}")
+                logger.info(f"Processing frame {index}")
 
                 raw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 raw_frames.append(raw_frame)
 
-                if index == 0:
-                    previous_frame = raw_frame
-
+                previous_frame = raw_frame.copy()
                 output_frame = raw_frame.copy()
 
                 if config.noise_patch.enable:
+                    if index == 1:
+                        previous_frame = raw_frame
+
                     patched_frame, noise_patch = processor.patch_noisy_buffer(
-                        output_frame,
+                        raw_frame,
                         previous_frame,
-                        buffer_size=config.noise_patch.buffer_size,
-                        buffer_split=config.noise_patch.buffer_split,
-                        noise_threshold=config.noise_patch.threshold,
+                        config.noise_patch,
                     )
-                    diff_frame = cv2.absdiff(raw_frame, previous_frame)
                     patched_frames.append(patched_frame)
                     noise_patchs.append(noise_patch * np.iinfo(np.uint8).max)
-                    diff_frames.append(diff_frame * config.noise_patch.diff_multiply)
+
+                    if config.noise_patch.output_diff:
+                        diff_frame = cv2.absdiff(raw_frame, previous_frame)
+                        diff_frames.append(diff_frame * config.noise_patch.diff_multiply)
+
                     output_frame = patched_frame
 
                 if config.frequency_masking.enable:
-                    freq_filtered_frame, frame_freq_domain = processor.remove_stripes(
-                        img=patched_frame, mask=freq_mask
+                    freq_filtered_frame, frame_freq_domain = processor.apply_freq_mask(
+                        img=patched_frame,
+                        mask=freq_mask,
                     )
                     freq_domain_frames.append(frame_freq_domain)
                     freq_filtered_frames.append(freq_filtered_frame)
                     output_frame = freq_filtered_frame
                 output_frames.append(output_frame)
-                index += 1
         finally:
             reader.release()
-            plt.close(fig)
-
+            logger.info(f"shape of output_frames: {output_frames[0].shape}")
             minimum_projection = VideoProcessor.get_minimum_projection(output_frames)
 
             subtract_minimum = [(frame - minimum_projection) for frame in output_frames]
@@ -346,9 +346,9 @@ class VideoProcessor:
                     freq_domain_video,
                     min_proj_frame,
                     freq_mask_frame,
-                    #diff_video,
-                    #normalized_video,
-                    #subtract_video,
+                    # diff_video,
+                    # normalized_video,
+                    # subtract_video,
                 ]
                 VideoPlotter.show_video_with_controls(
                     videos,

@@ -21,6 +21,7 @@ except ImportError:
 
 logger = init_logger("videoplot")
 
+
 class VideoPlotter:
     """
     Class to display video streams and static images.
@@ -32,7 +33,7 @@ class VideoPlotter:
         start_frame: int,
         end_frame: int,
         fps: int = 20,
-        ) -> None:
+    ) -> None:
         """
         Plot multiple video streams or static images side-by-side.
         Can play/pause and navigate frames.
@@ -64,7 +65,7 @@ class VideoPlotter:
         titles = [video.name for video in videos]
 
         num_streams = len(video_frames)
-        
+
         logger.info(f"Displaying {num_streams} video streams.")
         if end_frame > start_frame:
             logger.info(f"Displaying frames {start_frame} to {end_frame}.")
@@ -73,7 +74,7 @@ class VideoPlotter:
                 if len(video_frames[stream_index]) > 1:
                     video_frames[stream_index] = video_frames[stream_index][start_frame:end_frame]
                     logger.info(f"Trimmed stream length: {len(video_frames[stream_index])}")
-                
+
         num_frames = max(len(stream) for stream in video_frames)
         logger.info(f"Max stream length: {num_frames}")
 
