@@ -18,8 +18,12 @@ class InteractiveDisplayConfig(BaseModel):
         default=False,
         description="Whether to plot the output .",
     )
+    start_frame: Optional[int] = Field(
+        default=...,
+        description="Frame to start processing at.",
+    )
     end_frame: Optional[int] = Field(
-        default=100,
+        default=...,
         description="Frame to end processing at.",
     )
 
@@ -78,7 +82,7 @@ class FreqencyMaskingConfig(BaseModel):
         description="Whether to use frequency filtering.",
     )
     spatial_LPF_cutoff_radius: int = Field(
-        default=5,
+        default=...,
         description="Radius for the spatial cutoff.",
     )
     vertical_BEF_cutoff: int = Field(
