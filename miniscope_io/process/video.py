@@ -88,12 +88,19 @@ class FrameProcessor:
         serialized_current = current_frame.flatten().astype(np.int16)
         serialized_previous = previous_frame.flatten().astype(np.int16)
 
-        split_current = self.split_by_length(serialized_current, buffer_size // buffer_split)
-        split_previous = self.split_by_length(serialized_previous, buffer_size // buffer_split)
+        buffer_per_frame = len(serialized_current) // buffer_size + 1
+
+        split_current = self.split_by_length(
+            serialized_current,
+            buffer_size // buffer_split)
+        split_previous = self.split_by_length(
+            serialized_previous,
+            buffer_size // buffer_split)
 
         split_output = split_current.copy()
         noisy_parts = split_current.copy()
 
+        '''
         for i in range(len(split_current)):
             mean_error = abs(split_current[i] - split_previous[i]).mean()
             if mean_error > noise_threshold:
@@ -103,6 +110,25 @@ class FrameProcessor:
             else:
                 split_output[i] = split_current[i]
                 noisy_parts[i] = np.zeros_like(split_current[i], np.uint8)
+        '''
+        buffer_has_noise = False
+        for buffer_index in range(buffer_per_frame):
+            for split_index in range(buffer_split):
+                i = buffer_index * buffer_split + split_index
+                mean_error = abs(split_current[i] - split_previous[i]).mean()
+                if mean_error > noise_threshold:
+                    logger.info(f"Replacing buffer {i} with mean error {mean_error}")
+                    buffer_has_noise = True
+                    break
+                else:
+                    split_output[i] = split_current[i]
+                    noisy_parts[i] = np.zeros_like(split_current[i], np.uint8)
+            if buffer_has_noise:
+                for split_index in range(buffer_split):
+                    i = buffer_index * buffer_split + split_index
+                    split_output[i] = split_previous[i]
+                    noisy_parts[i] = np.ones_like(split_current[i], np.uint8)
+                buffer_has_noise = False
 
         serialized_output = np.concatenate(split_output)[: self.height * self.width]
         noise_output = np.concatenate(noisy_parts)[: self.height * self.width]
@@ -314,18 +340,20 @@ class VideoProcessor:
             if config.interactive_display.enable:
                 videos = [
                     raw_video,
-                    patched_video,
-                    diff_video,
                     noise_patch,
-                    freq_mask_frame,
-                    freq_domain_video,
+                    patched_video,
                     freq_filtered_video,
-                    normalized_video,
+                    freq_domain_video,
                     min_proj_frame,
-                    subtract_video,
+                    freq_mask_frame,
+                    #diff_video,
+                    #normalized_video,
+                    #subtract_video,
                 ]
                 VideoPlotter.show_video_with_controls(
                     videos,
+                    start_frame=config.interactive_display.start_frame,
+                    end_frame=config.interactive_display.end_frame,
                 )
 
     @staticmethod

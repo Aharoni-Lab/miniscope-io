@@ -5,6 +5,7 @@ Plotting functions for video streams and frames.
 from typing import List
 
 from miniscope_io.models.frames import NamedFrame
+from miniscope_io import init_logger
 
 try:
     import matplotlib.pyplot as plt
@@ -18,6 +19,7 @@ except ImportError:
     Slider = None
     KeyEvent = None
 
+logger = init_logger("videoplot")
 
 class VideoPlotter:
     """
@@ -25,7 +27,12 @@ class VideoPlotter:
     """
 
     @staticmethod
-    def show_video_with_controls(videos: List[NamedFrame], fps: int = 20) -> None:
+    def show_video_with_controls(
+        videos: List[NamedFrame],
+        start_frame: int,
+        end_frame: int,
+        fps: int = 20,
+        ) -> None:
         """
         Plot multiple video streams or static images side-by-side.
         Can play/pause and navigate frames.
@@ -34,6 +41,10 @@ class VideoPlotter:
         ----------
         videos : NamedFrame
             NamedFrame object containing video data and names.
+        start_frame : int
+            Starting frame index for the video display.
+        end_frame : int
+            Ending frame index for the video display.
         fps : int, optional
             Frames per second for the video, by default 20
         """
@@ -45,7 +56,6 @@ class VideoPlotter:
 
         if any(frame.frame_type == "video_list_frame" for frame in videos):
             raise NotImplementedError("Only single videos or frames are supported for now.")
-
         # Wrap static images in lists to handle them uniformly
         video_frames = [
             frame.data if frame.frame_type == "video_frame" else [frame.data] for frame in videos
@@ -54,7 +64,18 @@ class VideoPlotter:
         titles = [video.name for video in videos]
 
         num_streams = len(video_frames)
+        
+        logger.info(f"Displaying {num_streams} video streams.")
+        if end_frame > start_frame:
+            logger.info(f"Displaying frames {start_frame} to {end_frame}.")
+            for stream_index in range(len(video_frames)):
+                logger.info(f"Stream length: {len(video_frames[stream_index])}")
+                if len(video_frames[stream_index]) > 1:
+                    video_frames[stream_index] = video_frames[stream_index][start_frame:end_frame]
+                    logger.info(f"Trimmed stream length: {len(video_frames[stream_index])}")
+                
         num_frames = max(len(stream) for stream in video_frames)
+        logger.info(f"Max stream length: {num_frames}")
 
         fig, axes = plt.subplots(1, num_streams, figsize=(20, 5))
 
