@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.6 - Becoming `mio`
+
+### 0.6.0 - 24-12-10
+
+#### Breaking Changes
+
+- `miniscope-io` is now known as `mio`! Big thanks to [`@heuer`](https://github.com/Aharoni-Lab/mio/issues/77)
+  for graciously giving us the name. This gives us a nice, short name that is uniform
+  across pypi, the repository, and the cli.
+- The {meth}`mio.models.config.LogConfig.level_file` and {meth}`mio.models.config.LogConfig.level_stdout`
+  fields are no longer automatically populated from the `level` field. 
+  This was because of the way the multi-source config system propagates values between
+  sources with different priorities. Now downstream consumers should check if these values
+  are `None` and use the `level` field if so. 
+
+#### Config
+
+Two big changes to config:
+
+- [`#72`](https://github.com/Aharoni-Lab/mio/pull/72) - `@sneakers-the-rat` - Global config, user config
+  from multiple sources: see the [config](../guide/config.md) documentation for more
+- [`#76`](https://github.com/Aharoni-Lab/mio/pull/76) - `@sneakers-the-rat` - Convert `formats` to `yaml`.
+  We finally got rid of the godforsaken self-inflicted wound of having instantiated models
+  serve as config, and instead are using `yaml` everywhere for static config. This includes
+  every yaml-able config having a header that indicates which model the config corresponds to,
+  a (locally) unique id, which can be used anywhere a path can be, and a version stamp in anticipation
+  of being able to handle model migrations.
+
+#### CI
+
+- [`#75`](https://github.com/Aharoni-Lab/mio/pull/75) - `@sneakers-the-rat` - Test docs builds on PRs
+  to avoid broken links and references
+
 ## 0.5
 
 ### 0.5.0 - 24-11-11
