@@ -69,8 +69,8 @@ class Config(BaseSettings, YAMLMixin):
     See https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
     Set values either in an ``.env`` file or using environment variables
-    prefixed with ``MINISCOPE_IO_*``. Values in nested models are separated with ``__`` ,
-    eg. ``MINISCOPE_IO_LOGS__LEVEL``
+    prefixed with ``MIO_*``. Values in nested models are separated with ``__`` ,
+    eg. ``MIO_LOGS__LEVEL``
 
     See ``.env.example`` in repository root
 
@@ -133,7 +133,7 @@ class Config(BaseSettings, YAMLMixin):
         Read config settings from, in order of priority from high to low, where
         high priorities override lower priorities:
         * in the arguments passed to the class constructor (not user configurable)
-        * in environment variables like ``export MINISCOPE_IO_LOG_DIR=~/``
+        * in environment variables like ``export MIO_LOG_DIR=~/``
         * in a ``.env`` file in the working directory
         * in a ``mio_config.yaml`` file in the working directory
         * in the ``tool.mio.config`` table in a ``pyproject.toml`` file

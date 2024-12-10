@@ -24,7 +24,7 @@ Config values can be set (in order of priority from high to low, where higher
 priorities override lower priorities)
 
 * in the arguments passed to the class constructor (not user configurable)
-* in environment variables like `export MINISCOPE_IO_LOG_DIR=~/`
+* in environment variables like `export MIO_LOG_DIR=~/`
 * in a `.env` file in the working directory
 * in a `mio_config.yaml` file in the working directory
 * in the `tool.mio.config` table in a `pyproject.toml` file in the working directory
@@ -82,13 +82,13 @@ For now, please edit the configuration files directly.
 #### Prefix
 
 Keys for environment variables (i.e. set in a shell with e.g. `export` or in a `.env` file)
-are prefixed with `MINISCOPE_IO_` to not shadow other environment variables.
-Keys in `toml` or `yaml` files are not prefixed with `MINISCOPE_IO_` .
+are prefixed with `MIO_` to not shadow other environment variables.
+Keys in `toml` or `yaml` files are not prefixed with `MIO_` .
 
 #### Nesting
 
 Keys for nested models are separated by a `__` double underscore in `.env`
-files or environment variables (eg. `MINISCOPE_IO_LOGS__LEVEL`)
+files or environment variables (eg. `MIO_LOGS__LEVEL`)
 
 Keys in `toml` or `yaml` files do not have a dunder separator because
 they can represent the nesting directly (see examples below)
@@ -99,7 +99,7 @@ When setting values from the cli, keys for nested models are separated with a `.
 
 Keys are case-insensitive, i.e. these are equivalent::
 
-    export MINISCOPE_IO_LOGS__LEVEL=INFO
+    export MIO_LOGS__LEVEL=INFO
     export mio_logs__level=INFO
 
 ### Examples
@@ -117,20 +117,20 @@ logs:
 ````
 ````{tab-item} env vars
 ```{code-block} bash
-export MINISCOPE_IO_USER_DIR='~/.config/mio'
-export MINISCOPE_IO_LOG_DIR='~/config/mio/logs'
-export MINISCOPE_IO_LOGS__LEVEL_FILE='INFO'
-export MINISCOPE_IO_LOGS__LEVEL_STREAM='WARNING'
-export MINISCOPE_IO_LOGS__FILE_N=5
+export MIO_USER_DIR='~/.config/mio'
+export MIO_LOG_DIR='~/config/mio/logs'
+export MIO_LOGS__LEVEL_FILE='INFO'
+export MIO_LOGS__LEVEL_STREAM='WARNING'
+export MIO_LOGS__FILE_N=5
 ```
 ````
 ````{tab-item} .env file
 ```{code-block} python
-MINISCOPE_IO_USER_DIR='~/.config/mio'
-MINISCOPE_IO_LOG_DIR='~/config/mio/logs'
-MINISCOPE_IO_LOG__LEVEL_FILE='INFO'
-MINISCOPE_IO_LOG__LEVEL_STREAM='WARNING'
-MINISCOPE_IO_LOG__FILE_N=5
+MIO_USER_DIR='~/.config/mio'
+MIO_LOG_DIR='~/config/mio/logs'
+MIO_LOG__LEVEL_FILE='INFO'
+MIO_LOG__LEVEL_STREAM='WARNING'
+MIO_LOG__FILE_N=5
 ```
 ````
 ````{tab-item} pyproject.toml

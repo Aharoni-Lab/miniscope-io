@@ -158,7 +158,7 @@ def set_env(monkeypatch) -> Callable[[dict[str, Any]], None]:
 
     def _set_env(config: dict[str, Any]) -> None:
         for key, value in _flatten(config).items():
-            key = "MINISCOPE_IO_" + key.upper()
+            key = "MIO_" + key.upper()
             monkeypatch.setenv(key, str(value))
 
     return _set_env
@@ -174,7 +174,7 @@ def set_dotenv(tmp_cwd) -> Callable[[dict[str, Any]], Path]:
     def _set_dotenv(config: dict[str, Any]) -> Path:
         with open(dotenv_path, "w") as dfile:
             for key, value in _flatten(config).items():
-                key = "MINISCOPE_IO_" + key.upper()
+                key = "MIO_" + key.upper()
                 dfile.write(f"{key}={value}\n")
         return dotenv_path
 

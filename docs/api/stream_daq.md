@@ -8,7 +8,7 @@ One example of this command is the following:
 ```bash
 $ mio stream capture -c .path/to/device/config.yml -o output_filename.avi -m
 ```
-A window displaying the image transferred from the Miniscope and a graph plotting metadata (`-m` option) should pop up. Additionally, the indexes of captured frames and their statuses will be logged in the terminal. The `MINISCOPE_IO_STREAM_HEADER_PLOT_KEY` defines plotted header fields (see `.env.sample`).
+A window displaying the image transferred from the Miniscope and a graph plotting metadata (`-m` option) should pop up. Additionally, the indexes of captured frames and their statuses will be logged in the terminal. The `MIO_STREAM_HEADER_PLOT_KEY` defines plotted header fields (see `.env.sample`).
 
 ## Prerequisites
 - **Data capture hardware:** Opal Kelly XEM7310-A75 FPGA board (connected via USB)
