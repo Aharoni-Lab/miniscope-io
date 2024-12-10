@@ -1,7 +1,7 @@
 # buffer
 
 ```{eval-rst}
-.. automodule:: miniscope_io.models.buffer
+.. automodule:: mio.models.buffer
     :members:
     :undoc-members:
 ```

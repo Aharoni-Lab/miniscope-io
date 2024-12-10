@@ -1,7 +1,7 @@
 # mixins
 
 ```{eval-rst}
-.. automodule:: miniscope_io.models.mixins
+.. automodule:: mio.models.mixins
     :members:
     :undoc-members:
 ```

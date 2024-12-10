@@ -1,7 +1,7 @@
 import pytest
 
-from miniscope_io import DEVICE_DIR
-from miniscope_io.models.stream import ADCScaling, StreamDevConfig, StreamBufferHeader
+from mio import DEVICE_DIR
+from mio.models.stream import ADCScaling, StreamDevConfig, StreamBufferHeader
 
 from ..conftest import CONFIG_DIR
 

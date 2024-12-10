@@ -3,9 +3,9 @@ import pdb
 import pytest
 from click.testing import CliRunner
 
-from miniscope_io.cli.config import config
-from miniscope_io import Config
-from miniscope_io.models import config as _config_mod
+from mio.cli.config import config
+from mio import Config
+from mio.models import config as _config_mod
 
 
 @pytest.mark.skip("Needs to be implemented")

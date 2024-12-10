@@ -1,4 +1,4 @@
-# miniscope-io
+# mio
 
 Generic I/O interfaces for miniscopes :)
 

@@ -1,7 +1,7 @@
 # utils
 
 ```{eval-rst}
-.. automodule:: miniscope_io.utils
+.. automodule:: mio.utils
     :members:
     :undoc-members:
 ```

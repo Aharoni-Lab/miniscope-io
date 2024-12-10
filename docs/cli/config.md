@@ -1,5 +1,5 @@
 # `config`
 
-```{click} miniscope_io.cli.config:config
+```{click} mio.cli.config:config
 :prog: mio config
 ```

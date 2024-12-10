@@ -16,8 +16,8 @@ sys.modules["_ok"] = Mock()
 project = "miniscope-io"
 copyright = "2023, Jonny"
 author = "Jonny, Takuya"
-release = _version("miniscope-io")
-html_title = "miniscope-io"
+release = _version("mio")
+html_title = "mio"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

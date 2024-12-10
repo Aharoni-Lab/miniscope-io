@@ -10,7 +10,7 @@ import warnings
 from logging.handlers import RotatingFileHandler
 from rich.logging import RichHandler
 
-from miniscope_io.logging import init_logger
+from mio.logging import init_logger
 
 
 @pytest.fixture(autouse=True)
