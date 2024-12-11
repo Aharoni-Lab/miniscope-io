@@ -1,26 +1,29 @@
+id: denoise_example
+mio_model: tests.test_mixins.LoaderModel
+mio_version: 0.6.1.dev16+g6436633.d20241211
 interactive_display:
-  enable: False
+  enable: false
   start_frame: 40
   end_frame: 140
 noise_patch:
-  enable: True
-  method: "mean_error"
+  enable: true
+  method: mean_error
   threshold: 30
   buffer_size: 5032
   buffer_split: 10
   diff_multiply: 1
-  output_result: True
-  output_noise_patch: True
-  output_diff: False
+  output_result: true
+  output_noise_patch: true
+  output_diff: false
 frequency_masking:
-  enable: True
+  enable: true
   spatial_LPF_cutoff_radius: 20
   vertical_BEF_cutoff: 2
   horizontal_BEF_cutoff: 0
-  display_mask: False
-  output_mask: True
-  output_result: True
-  output_freq_domain: False
+  display_mask: false
+  output_mask: true
+  output_result: true
+  output_freq_domain: false
 end_frame: 140
-output_result: True
-output_dir: 'user_dir/output'
+output_result: true
+output_dir: user_dir/output

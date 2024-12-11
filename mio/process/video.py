@@ -213,6 +213,7 @@ class VideoProcessor:
     """
     A class to process video files.
     """
+
     @staticmethod
     def denoise(
         video_path: str,
@@ -315,9 +316,11 @@ class VideoProcessor:
                         fps=20,
                     )
             if config.noise_patch.output_diff:
+                """
                 diff_video = NamedFrame(
                     name=f"diff_{config.noise_patch.diff_multiply}x", video_frame=diff_frames
                 )
+                """
             if config.noise_patch.output_noise_patch:
                 noise_patch = NamedFrame(name="noise_patch", video_frame=noise_patchs)
             if config.frequency_masking.output_mask:
