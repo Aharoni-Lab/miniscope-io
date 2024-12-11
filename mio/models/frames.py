@@ -9,8 +9,8 @@ import cv2
 import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
-from miniscope_io.io import VideoWriter
-from miniscope_io.logging import init_logger
+from mio.io import VideoWriter
+from mio.logging import init_logger
 
 T = TypeVar("T", np.ndarray, List[np.ndarray], List[List[np.ndarray]])
 

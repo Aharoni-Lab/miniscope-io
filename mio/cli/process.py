@@ -4,8 +4,8 @@ Command line interface for offline video pre-processing.
 
 import click
 
-from miniscope_io.models.process import DenoiseConfig
-from miniscope_io.process.video import VideoProcessor
+from mio.models.process import DenoiseConfig
+from mio.process.video import VideoProcessor
 
 
 @click.group()

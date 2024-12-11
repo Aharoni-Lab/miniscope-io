@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from miniscope_io.models.mixins import YAMLMixin
+from mio.models.mixins import YAMLMixin
 
 
 class InteractiveDisplayConfig(BaseModel):
