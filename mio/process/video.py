@@ -260,7 +260,7 @@ class VideoProcessor:
         # index for frame number in original video
         try:
             for index, frame in reader.read_frames():
-                if config.end_frame and index > config.end_frame:
+                if config.end_frame and config.end_frame != -1 and index > config.end_frame:
                     break
 
                 raw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -316,16 +316,24 @@ class VideoProcessor:
                         fps=20,
                     )
             if config.noise_patch.output_diff:
-                """
                 diff_video = NamedFrame(
                     name=f"diff_{config.noise_patch.diff_multiply}x", video_frame=diff_frames
                 )
-                """
+                diff_video.export(
+                    output_dir / f"{pathstem}",
+                    suffix=True,
+                    fps=20,
+                )
             if config.noise_patch.output_noise_patch:
                 noise_patch = NamedFrame(name="noise_patch", video_frame=noise_patchs)
             if config.frequency_masking.output_mask:
                 freq_mask_frame = NamedFrame(
                     name="freq_mask", static_frame=freq_mask * np.iinfo(np.uint8).max
+                )
+                freq_mask_frame.export(
+                    output_dir / f"{pathstem}",
+                    suffix=True,
+                    fps=20,
                 )
 
             if config.frequency_masking.enable:
