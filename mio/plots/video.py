@@ -4,8 +4,8 @@ Plotting functions for video streams and frames.
 
 from typing import List
 
-from miniscope_io.models.frames import NamedFrame
 from miniscope_io import init_logger
+from miniscope_io.models.frames import NamedFrame
 
 try:
     import matplotlib.pyplot as plt

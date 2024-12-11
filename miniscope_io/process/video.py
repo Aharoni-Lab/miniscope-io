@@ -109,6 +109,7 @@ class FrameProcessor:
             for split_index in range(noise_patch_config.buffer_split):
                 i = buffer_index * noise_patch_config.buffer_split + split_index
                 mean_error = abs(split_current[i] - split_previous[i]).mean()
+                logger.debug(f"Mean error for buffer {i}: {mean_error}")
                 if mean_error > noise_patch_config.threshold:
                     logger.info(f"Replacing buffer {i} with mean error {mean_error}")
                     buffer_has_noise = True
@@ -212,7 +213,6 @@ class VideoProcessor:
     """
     A class to process video files.
     """
-
     @staticmethod
     def denoise(
         video_path: str,
@@ -261,23 +261,23 @@ class VideoProcessor:
             for index, frame in reader.read_frames():
                 if config.end_frame and index > config.end_frame:
                     break
-                logger.info(f"Processing frame {index}")
 
                 raw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 raw_frames.append(raw_frame)
 
-                previous_frame = raw_frame.copy()
                 output_frame = raw_frame.copy()
 
                 if config.noise_patch.enable:
                     if index == 1:
-                        previous_frame = raw_frame
+                        previous_frame = raw_frame.copy()
+                    logger.debug(f"Processing frame {index}")
 
                     patched_frame, noise_patch = processor.patch_noisy_buffer(
                         raw_frame,
                         previous_frame,
                         config.noise_patch,
                     )
+                    previous_frame = patched_frame
                     patched_frames.append(patched_frame)
                     noise_patchs.append(noise_patch * np.iinfo(np.uint8).max)
 
@@ -298,7 +298,6 @@ class VideoProcessor:
                 output_frames.append(output_frame)
         finally:
             reader.release()
-            logger.info(f"shape of output_frames: {output_frames[0].shape}")
             minimum_projection = VideoProcessor.get_minimum_projection(output_frames)
 
             subtract_minimum = [(frame - minimum_projection) for frame in output_frames]
@@ -306,14 +305,25 @@ class VideoProcessor:
             subtract_minimum = VideoProcessor.normalize_video_stack(subtract_minimum)
 
             raw_video = NamedFrame(name="RAW", video_frame=raw_frames)
-            patched_video = NamedFrame(name="Patched", video_frame=patched_frames)
-            diff_video = NamedFrame(
-                name=f"Diff {config.noise_patch.diff_multiply}x", video_frame=diff_frames
-            )
-            noise_patch = NamedFrame(name="Noisy area", video_frame=noise_patchs)
-            freq_mask_frame = NamedFrame(
-                name="Freq mask", static_frame=freq_mask * np.iinfo(np.uint8).max
-            )
+
+            if config.noise_patch.enable:
+                patched_video = NamedFrame(name="patched", video_frame=patched_frames)
+                if config.noise_patch.output_result:
+                    patched_video.export(
+                        output_dir / f"{pathstem}",
+                        suffix=True,
+                        fps=20,
+                    )
+            if config.noise_patch.output_diff:
+                diff_video = NamedFrame(
+                    name=f"diff_{config.noise_patch.diff_multiply}x", video_frame=diff_frames
+                )
+            if config.noise_patch.output_noise_patch:
+                noise_patch = NamedFrame(name="noise_patch", video_frame=noise_patchs)
+            if config.frequency_masking.output_mask:
+                freq_mask_frame = NamedFrame(
+                    name="freq_mask", static_frame=freq_mask * np.iinfo(np.uint8).max
+                )
 
             if config.frequency_masking.enable:
                 freq_domain_video = NamedFrame(name="freq_domain", video_frame=freq_domain_frames)
@@ -333,9 +343,7 @@ class VideoProcessor:
                         fps=20,
                     )
 
-            normalized_video = NamedFrame(name="Normalized", video_frame=output_frames)
-            min_proj_frame = NamedFrame(name="Min Proj", static_frame=minimum_projection)
-            subtract_video = NamedFrame(name="Subtracted", video_frame=subtract_minimum)
+            min_proj_frame = NamedFrame(name="min_proj", static_frame=minimum_projection)
 
             if config.interactive_display.enable:
                 videos = [
@@ -346,9 +354,6 @@ class VideoProcessor:
                     freq_domain_video,
                     min_proj_frame,
                     freq_mask_frame,
-                    # diff_video,
-                    # normalized_video,
-                    # subtract_video,
                 ]
                 VideoPlotter.show_video_with_controls(
                     videos,

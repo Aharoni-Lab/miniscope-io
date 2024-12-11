@@ -1,17 +1,17 @@
 interactive_display:
-  enable: True
+  enable: False
   start_frame: 40
   end_frame: 140
 noise_patch:
   enable: True
   method: "mean_error"
-  threshold: 10
+  threshold: 30
   buffer_size: 5032
   buffer_split: 10
   diff_multiply: 1
   output_result: True
   output_noise_patch: True
-  output_diff: True
+  output_diff: False
 frequency_masking:
   enable: True
   spatial_LPF_cutoff_radius: 20
@@ -20,7 +20,7 @@ frequency_masking:
   display_mask: False
   output_mask: True
   output_result: True
-  output_freq_domain: True
-end_frame: 100
+  output_freq_domain: False
+end_frame: 140
 output_result: True
 output_dir: 'user_dir/output'
