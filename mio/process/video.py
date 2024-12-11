@@ -8,11 +8,11 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from miniscope_io import init_logger
-from miniscope_io.io import VideoReader
-from miniscope_io.models.frames import NamedFrame
-from miniscope_io.models.process import DenoiseConfig, FreqencyMaskingConfig, NoisePatchConfig
-from miniscope_io.plots.video import VideoPlotter
+from mio import init_logger
+from mio.io import VideoReader
+from mio.models.frames import NamedFrame
+from mio.models.process import DenoiseConfig, FreqencyMaskingConfig, NoisePatchConfig
+from mio.plots.video import VideoPlotter
 
 logger = init_logger("video")
 
