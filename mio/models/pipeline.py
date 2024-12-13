@@ -8,8 +8,8 @@ from typing import ClassVar, Final, Generic, TypeVar, Union, final
 
 from pydantic import Field
 
-from miniscope_io.exceptions import ConfigurationMismatchError
-from miniscope_io.models.models import MiniscopeConfig, PipelineModel
+from mio.exceptions import ConfigurationMismatchError
+from mio.models.models import MiniscopeConfig, PipelineModel
 
 if sys.version_info < (3, 11):
     from typing_extensions import Self

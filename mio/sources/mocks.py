@@ -18,11 +18,7 @@ from mio.exceptions import EndOfRecordingException
 
 class okDevMock:
     """
-<<<<<<<< HEAD:miniscope_io/sources/mocks.py
-    Mock class for :class:`~miniscope_io.sources.opalkelly.okDev`
-========
-    Mock class for :class:`~mio.devices.opalkelly.okDev`
->>>>>>>> main:mio/devices/mocks.py
+    Mock class for :class:`~mio.sources.opalkelly.okDev`
     """
 
     DATA_FILE: Optional[Path] = None

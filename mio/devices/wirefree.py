@@ -10,11 +10,11 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from miniscope_io import init_logger
-from miniscope_io.devices import DeviceConfig, Miniscope, RecordingCameraMixin
-from miniscope_io.exceptions import EndOfRecordingException, ReadHeaderException
-from miniscope_io.models.data import Frame
-from miniscope_io.models.sdcard import SDBufferHeader, SDConfig, SDLayout
+from mio import init_logger
+from mio.devices import DeviceConfig, Miniscope, RecordingCameraMixin
+from mio.exceptions import EndOfRecordingException, ReadHeaderException
+from mio.models.data import Frame
+from mio.models.sdcard import SDBufferHeader, SDConfig, SDLayout
 
 
 class WireFreeConfig(DeviceConfig):
