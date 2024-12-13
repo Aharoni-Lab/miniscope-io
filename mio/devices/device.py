@@ -3,9 +3,10 @@ ABC for
 """
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Union
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from mio.models import MiniscopeConfig, MiniscopeIOModel, Pipeline, PipelineConfig
+from mio.models import MiniscopeConfig, Pipeline, PipelineConfig
 
 if TYPE_CHECKING:
     from mio.models.pipeline import Sink, Source, Transform
@@ -21,15 +22,16 @@ class DeviceConfig(MiniscopeConfig):
     pipeline: PipelineConfig = PipelineConfig()
 
 
-class Device(MiniscopeIOModel):
+@dataclass(kw_only=True)
+class Device:
     """
     Abstract base class for devices.
 
     Currently a placeholder to allow room for expansion/renaming in the future
     """
 
-    pipeline: Pipeline
-    config: DeviceConfig
+    pipeline: Optional[Pipeline] = None
+    # config: Optional[DeviceConfig] = None
 
     @abstractmethod
     def init(self) -> None:

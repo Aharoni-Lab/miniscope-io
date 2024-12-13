@@ -3,8 +3,9 @@ Wire-Free Miniscope that records data to an SD Card
 """
 
 import contextlib
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import BinaryIO, Literal, Optional, Union, overload
+from typing import Any, BinaryIO, Literal, Optional, Union, overload
 
 import cv2
 import numpy as np
@@ -15,6 +16,7 @@ from mio.devices import DeviceConfig, Miniscope, RecordingCameraMixin
 from mio.exceptions import EndOfRecordingException, ReadHeaderException
 from mio.models.data import Frame
 from mio.models.sdcard import SDBufferHeader, SDConfig, SDLayout
+from mio.types import ConfigSource, Resolution
 
 
 class WireFreeConfig(DeviceConfig):
@@ -22,7 +24,7 @@ class WireFreeConfig(DeviceConfig):
 
     pass
 
-
+@dataclass(kw_only=True)
 class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
     """
     I/O for data on an SD Card recorded with a WireFree Miniscope
@@ -39,13 +41,22 @@ class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
 
     drive: Path
     """The path to the SD card drive"""
-    config: WireFreeConfig
-    """Configuration """
-    # layout:
+    # config: WireFreeConfig
+    # """Configuration """
+    layout: Union[SDLayout, ConfigSource] = "wirefree-sd-layout"
+    positions: dict[int, int] = field(default_factory=dict)
+    """
+    A mapping between frame number and byte position in the video that makes for 
+    faster seeking :)
 
-    def __post_init__(self, drive: Union[str, Path], layout: SDLayout):
-        self.drive = drive
-        self.layout = layout
+    As we read, we store the locations of each frame before reading it. Later, 
+    we can assign to `frame` to seek back to those positions. Assigning to `frame` 
+    works without caching position, but has to manually iterate through each frame.
+    """
+
+    def __post_init__(self) -> None:
+        """post-init create private vars"""
+        self.layout = SDLayout.from_any(self.layout)
         self.logger = init_logger("WireFreeMiniscope")
 
         # Private attributes used when the file reading context is entered
@@ -57,15 +68,7 @@ class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
         """
         n_pix x 1 array used to store pixels while reading buffers
         """
-        self.positions = {}
-        """
-        A mapping between frame number and byte position in the video that makes for 
-        faster seeking :)
-        
-        As we read, we store the locations of each frame before reading it. Later, 
-        we can assign to `frame` to seek back to those positions. Assigning to `frame` 
-        works without caching position, but has to manually iterate through each frame.
-        """
+
 
     # --------------------------------------------------
     # Properties
@@ -90,6 +93,13 @@ class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
             )
 
         return self._config
+
+    @classmethod
+    def configure(cls, drive: Union[str, Path], config: WireFreeConfig) -> None:
+        """
+        Configure a WireFreeMiniscope SD card for recording
+        """
+        raise NotImplementedError()
 
     @property
     def position(self) -> Optional[int]:
@@ -606,3 +616,50 @@ class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
                 valid = True
 
         return valid
+
+    # --------------------------------------------------
+    # ABC methods
+    # --------------------------------------------------
+
+    def init(self) -> None:
+        """Do nothing"""
+        pass
+
+    def deinit(self) -> None:
+        """Do nothing"""
+        pass
+
+    def start(self) -> None:
+        """start pipeline"""
+        raise NotImplementedError()
+
+    def stop(self) -> None:
+        """stop pipeline"""
+        raise NotImplementedError()
+
+    def join(self) -> None:
+        """join pipeline"""
+        raise NotImplementedError()
+
+    @property
+    def excitation(self) -> float:
+        """LED Excitation"""
+        raise NotImplementedError()
+
+    @property
+    def fps(self) -> int:
+        """FPS"""
+        return self.config.fs
+
+    @property
+    def resolution(self) -> Resolution:
+        """Resolution of recorded video"""
+        return Resolution(self.config.width, self.config.height)
+
+    def get(self, key:str) -> Any:
+        """get a configuration value by its name"""
+        return getattr(self.config, key)
+
+    def set(self, key:str, value:Any) -> None:
+        """set a configuration value"""
+        raise NotImplementedError()

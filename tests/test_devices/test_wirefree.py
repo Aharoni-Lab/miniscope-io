@@ -7,7 +7,6 @@ import pytest
 
 from mio.devices import WireFreeMiniscope
 from mio.exceptions import EndOfRecordingException
-from mio.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
 from mio.models.data import Frame
 from mio.models.sdcard import SDBufferHeader
 from mio.utils import hash_video, hash_file
@@ -98,7 +97,7 @@ def test_relative_path():
     rel_path = abs_child.relative_to(abs_cwd)
 
     assert not rel_path.is_absolute()
-    sdcard = WireFreeMiniscope(drive=rel_path, layout=WireFreeSDLayout)
+    sdcard = WireFreeMiniscope(drive=rel_path, layout="wirefree-sd-layout")
 
     # check we can do something basic like read config
     assert sdcard.config is not None
@@ -109,7 +108,7 @@ def test_relative_path():
     # now try with an absolute path
     abs_path = rel_path.resolve()
     assert abs_path.is_absolute()
-    sdcard_abs = WireFreeMiniscope(drive=abs_path, layout=WireFreeSDLayout)
+    sdcard_abs = WireFreeMiniscope(drive=abs_path, layout="wirefree-sd-layout")
     assert sdcard_abs.config is not None
     assert sdcard_abs.drive.is_absolute()
 
@@ -141,7 +140,7 @@ def test_to_img(wirefree_battery, n_frames, hash, tmp_path):
 
     assert out_hash == hash
 
-    sd = WireFreeMiniscope(out_file, WireFreeSDLayout_Battery)
+    sd = WireFreeMiniscope(drive=out_file, layout="wirefree-sd-layout")
 
     # we should be able to read all the frames!
     frames = []

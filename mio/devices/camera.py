@@ -68,20 +68,20 @@ class Camera(Device):
         """
 
     @property
-    @abstractmethod
     def exposure(self) -> int:
         """
         Returns:
             int:
         """
+        raise NotImplementedError("exposure getter is not implemented")
 
     @exposure.setter
-    @abstractmethod
     def exposure(self, value: int) -> None:
         """
         Args:
             value (int): Value to set
         """
+        raise NotImplementedError("exposure setter is not implemented")
 
     @property
     @abstractmethod
