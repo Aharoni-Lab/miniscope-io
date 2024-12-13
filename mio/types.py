@@ -6,7 +6,7 @@ import re
 import sys
 from os import PathLike
 from pathlib import Path
-from typing import Annotated, Any, NamedTuple, Tuple, TypeAlias, TypeIs, Union
+from typing import Annotated, Any, NamedTuple, Tuple, TypeAlias, Union
 
 from pydantic import AfterValidator, Field
 
