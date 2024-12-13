@@ -24,6 +24,7 @@ class WireFreeConfig(DeviceConfig):
 
     pass
 
+
 @dataclass(kw_only=True)
 class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
     """
@@ -68,7 +69,6 @@ class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
         """
         n_pix x 1 array used to store pixels while reading buffers
         """
-
 
     # --------------------------------------------------
     # Properties
@@ -656,10 +656,10 @@ class WireFreeMiniscope(Miniscope, RecordingCameraMixin):
         """Resolution of recorded video"""
         return Resolution(self.config.width, self.config.height)
 
-    def get(self, key:str) -> Any:
+    def get(self, key: str) -> Any:
         """get a configuration value by its name"""
         return getattr(self.config, key)
 
-    def set(self, key:str, value:Any) -> None:
+    def set(self, key: str, value: Any) -> None:
         """set a configuration value"""
         raise NotImplementedError()
