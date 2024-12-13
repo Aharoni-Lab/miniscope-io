@@ -5,8 +5,8 @@ ABCs for Camera and Miniscope source classes
 from abc import ABC, abstractmethod
 from typing import Optional, Union
 
-from miniscope_io.devices.device import Device, DeviceConfig
-from miniscope_io.types import BBox, Resolution
+from mio.devices.device import Device, DeviceConfig
+from mio.types import BBox, Resolution
 
 
 class CameraConfig(DeviceConfig):

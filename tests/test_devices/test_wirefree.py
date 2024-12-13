@@ -5,12 +5,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from miniscope_io.devices import WireFreeMiniscope
-from miniscope_io.exceptions import EndOfRecordingException
-from miniscope_io.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
-from miniscope_io.models.data import Frame
-from miniscope_io.models.sdcard import SDBufferHeader
-from miniscope_io.utils import hash_video, hash_file
+from mio.devices import WireFreeMiniscope
+from mio.exceptions import EndOfRecordingException
+from mio.formats import WireFreeSDLayout, WireFreeSDLayout_Battery
+from mio.models.data import Frame
+from mio.models.sdcard import SDBufferHeader
+from mio.utils import hash_video, hash_file
 
 pytestmark = pytest.mark.wirefree
 

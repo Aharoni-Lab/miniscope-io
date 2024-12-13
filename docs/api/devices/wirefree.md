@@ -1,7 +1,7 @@
 # wirefree
 
 ```{eval-rst}
-.. automodule:: miniscope_io.devices.wirefree
+.. automodule:: mio.devices.wirefree
     :members:
     :undoc-members:
 ```

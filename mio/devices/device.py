@@ -5,10 +5,10 @@ ABC for
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Union
 
-from miniscope_io.models import MiniscopeConfig, MiniscopeIOModel, Pipeline, PipelineConfig
+from mio.models import MiniscopeConfig, MiniscopeIOModel, Pipeline, PipelineConfig
 
 if TYPE_CHECKING:
-    from miniscope_io.models.pipeline import Sink, Source, Transform
+    from mio.models.pipeline import Sink, Source, Transform
 
 
 class DeviceConfig(MiniscopeConfig):

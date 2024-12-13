@@ -1,7 +1,7 @@
 # camera
 
 ```{eval-rst}
-.. automodule:: miniscope_io.devices.camera
+.. automodule:: mio.devices.camera
     :members:
     :undoc-members:
 ```

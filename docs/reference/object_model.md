@@ -10,8 +10,8 @@ It encapsulates a {class}`.Pipeline` object that parameterizes one of several
 zero-to-several {class}`.Transform` nodes that transform the source ouput,
 and then one or several {class}`.Sink` nodes for saving data, plotting, and so on.
  
-```{autoclasstree} miniscope_io.devices.Device miniscope_io.devices.Camera miniscope_io.devices.Miniscope 
-:namespace: miniscope_io
+```{autoclasstree} mio.devices.Device mio.devices.Camera mio.devices.Miniscope 
+:namespace: mio
 ```  
 
 ## Pipeline
@@ -33,8 +33,8 @@ their {meth}`.Node.process` method as a "pure"-ish[^pureish] function that takes
 data as input and returns data as output without knowledge of the nodes
 that are connected to it.
 
-```{autoclasstree} miniscope_io.models.PipelineModel miniscope_io.models.Node miniscope_io.models.Source miniscope_io.models.Sink miniscope_io.models.ProcessingNode miniscope_io.models.Pipeline
-:namespace: miniscope_io
+```{autoclasstree} mio.models.PipelineModel mio.models.Node mio.models.Source mio.models.Sink mio.models.ProcessingNode mio.models.Pipeline
+:namespace: mio
 ```  
 
 ## Config

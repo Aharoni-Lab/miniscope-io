@@ -1,7 +1,7 @@
 # pipeline
 
 ```{eval-rst}
-.. automodule:: miniscope_io.models.pipeline
+.. automodule:: mio.models.pipeline
     :members:
     :undoc-members:
 ```

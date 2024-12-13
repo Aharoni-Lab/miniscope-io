@@ -2,7 +2,7 @@
 File-based data sources
 """
 
-from miniscope_io.models.pipeline import Source
+from mio.models.pipeline import Source
 
 
 class FileSource(Source):

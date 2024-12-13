@@ -5,7 +5,7 @@ All the models here should be empty - these are abstract parent classes
 to group child classes in a semantic inheritance hierarchy.
 
 More specific models should either be defined in their own
-module within the `miniscope_io.models` package or in their own
+module within the `mio.models` package or in their own
 package.
 """
 
