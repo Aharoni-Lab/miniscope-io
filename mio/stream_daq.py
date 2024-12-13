@@ -18,7 +18,6 @@ from bitstring import BitArray, Bits
 
 from mio import init_logger
 from mio.bit_operation import BufferFormatter
-from mio.devices.mocks import okDevMock
 from mio.exceptions import EndOfRecordingException, StreamReadError
 from mio.io import BufferedCSVWriter
 from mio.models.stream import (
@@ -27,12 +26,13 @@ from mio.models.stream import (
     StreamDevConfig,
 )
 from mio.plots.headers import StreamPlotter
+from mio.sources.mocks import okDevMock
 from mio.types import ConfigSource
 
 HAVE_OK = False
 ok_error = None
 try:
-    from mio.devices.opalkelly import okDev
+    from mio.sources.opalkelly import okDev
 
     HAVE_OK = True
 except (ImportError, ModuleNotFoundError):
@@ -60,7 +60,7 @@ def exact_iter(f: Callable, sentinel: Any) -> Generator[Any, None, None]:
 class StreamDaq:
     """
     A combined class for configuring and reading frames from a UART and FPGA source.
-    Supported devices and required inputs are described in StreamDevConfig model documentation.
+    Supported sources and required inputs are described in StreamDevConfig model documentation.
     This function's entry point is the main function, which should be used from the
     stream_image_capture command installed with the package.
     Example configuration yaml files are stored in /mio/config/.
@@ -69,7 +69,7 @@ class StreamDaq:
     --------
     $ mio stream capture -c path/to/config.yml -o output_filename.avi
     Connected to XEM7310-A75
-    Succesfully uploaded /mio/mio/devices/selected_bitfile.bit
+    Succesfully uploaded /mio/data/bitfile/selected_bitfile.bit
     FrontPanel is supported
 
     .. todo::

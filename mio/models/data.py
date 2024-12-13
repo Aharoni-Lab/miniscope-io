@@ -15,7 +15,7 @@ class Frame(BaseModel, arbitrary_types_allowed=True):
     """
     An individual frame from a miniscope recording
 
-    Typically returned from :meth:`.SDCard.read`
+    Typically returned from :meth:`.WireFreeMiniscope.read`
     """
 
     frame: np.ndarray

@@ -8,7 +8,7 @@ authors = [
 license = {text = "AGPL-3.0"}
 dynamic = ["version"]
 
-requires-python = "<4.0,>=3.9"
+requires-python = "<4.0,>=3.10"
 dependencies = [
     "opencv-python>=4.7.0.72",
     "numpy>=1.25.0",
@@ -22,7 +22,7 @@ dependencies = [
     "pyyaml>=6.0.1",
     "click>=8.1.7",
     "platformdirs>=4.3.6",
-    'typing-extensions>=4.10.0; python_version<"3.13"',
+    'typing-extensions>=4.12.2; python_version<"3.13"',
 ]
 
 readme = "README.md"
@@ -72,6 +72,7 @@ docs = [
     "autodoc-pydantic>=2.0.1",
     "sphinxcontrib-programoutput>=0.17",
     "sphinx-design>=0.6.1",
+    "sphinxcontrib-mermaid>=1.0.0",
 ]
 dev = [
     "black>=24.1.1",
@@ -121,15 +122,18 @@ testpaths = [
     "tests"
 ]
 timeout = 60
+markers = [
+    "wirefree: tests for the wirefree miniscope"
+]
 
 [tool.coverage.run]
 omit = [
     "mio/vendor/*",
-    "mio/devices/opalkelly.py", # can't test hardware interface directly
+    "mio/sources/opalkelly.py", # can't test hardware interface directly
 ]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 include = ["mio/**/*.py", "pyproject.toml"]
 exclude = ["docs", "tests", "mio/vendor", "noxfile.py"]
 line-length = 100
@@ -193,7 +197,7 @@ follow_imports = "silent"
 warn_unreachable = true
 
 [tool.black]
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = ['py310', 'py311', 'py312', 'py313']
 include = "mio/.*\\.py$"
 extend-exclude = 'mio/vendor/.*'
 line-length = 100

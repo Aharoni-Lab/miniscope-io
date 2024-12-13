@@ -6,18 +6,14 @@ import re
 import sys
 from os import PathLike
 from pathlib import Path
-from typing import Annotated, Any, Tuple, Union
+from typing import Annotated, Any, NamedTuple, Tuple, TypeAlias, Union
 
 from pydantic import AfterValidator, Field
 
-if sys.version_info < (3, 10):
-    from typing_extensions import TypeAlias, TypeIs
-elif sys.version_info < (3, 13):
-    from typing import TypeAlias
-
+if sys.version_info < (3, 13):
     from typing_extensions import TypeIs
 else:
-    from typing import TypeAlias, TypeIs
+    from typing import TypeIs
 
 CONFIG_ID_PATTERN = r"[\w\-\/#]+"
 """
@@ -64,3 +60,30 @@ def valid_config_id(val: Any) -> TypeIs[ConfigID]:
     Checks whether a string is a valid config id.
     """
     return bool(re.fullmatch(CONFIG_ID_PATTERN, val))
+
+
+class BBox(NamedTuple):
+    """
+    Bounding Box
+
+    (for specificying a rectangular ROI within an image frame)
+    """
+
+    x: int
+    """Leftmost x coordinate"""
+    y: int
+    """Topmost y coordinate"""
+    width: int
+    height: int
+
+
+class Resolution(NamedTuple):
+    """
+    Pixel resolution of a frame or camera.
+
+    (i.e. the number of pixels a frame is wide and tall,
+    not e.g. the spatial extent of an individual pixel)
+    """
+
+    width: int
+    height: int

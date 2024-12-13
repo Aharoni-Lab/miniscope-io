@@ -16,11 +16,14 @@ keep what is common common, and what is unique unique.
 ```
 
 ```{toctree}
+:maxdepth: 1
+
 buffer
 config
 data
 mixins
 models
+pipeline
 sdcard
 stream
 ```

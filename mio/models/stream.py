@@ -7,7 +7,7 @@ from typing import Literal, Optional, Union
 
 from pydantic import Field, computed_field, field_validator
 
-from mio import DEVICE_DIR
+from mio import DATA_DIR
 from mio.models import MiniscopeConfig
 from mio.models.buffer import BufferHeader, BufferHeaderFormat
 from mio.models.mixins import ConfigYAMLMixin
@@ -287,13 +287,13 @@ class StreamDevConfig(MiniscopeConfig, ConfigYAMLMixin):
             return value
 
     @field_validator("bitstream", mode="after")
-    def resolve_relative(cls, value: Path) -> Path:
+    def resolve_bitfile(cls, value: Path) -> Path:
         """
         If we are given a relative path to a bitstream, resolve it relative to
-        the device path
+        the bitfiles directory
         """
         if not value.is_absolute():
-            value = DEVICE_DIR / value
+            value = DATA_DIR / "bitfile" / value
         return value
 
     @field_validator("bitstream", mode="after")

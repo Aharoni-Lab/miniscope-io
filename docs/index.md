@@ -8,27 +8,29 @@ Generic I/O interfaces for miniscopes :)
 
 guide/installation
 guide/config
+guide/capture/index
+guide/update/index
 cli/index
 ```
 
 ```{toctree}
-:caption: Device:
+:caption: Reference:
 :maxdepth: 1
 
-device/test_device
-device/update_controller
+reference/object_model
 ```
 
 ```{toctree}
 :maxdepth: 1
 :caption: API:
 
-api/devices
+api/devices/index
 api/io
 api/logging
 api/models/index
 api/exceptions
 api/plots/index
+api/sources
 api/utils
 api/stream_daq
 api/bit_operation
