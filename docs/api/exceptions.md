@@ -1,7 +1,7 @@
 # exceptions
 
 ```{eval-rst}
-.. automodule:: miniscope_io.exceptions
+.. automodule:: mio.exceptions
     :members:
     :undoc-members:
 ```

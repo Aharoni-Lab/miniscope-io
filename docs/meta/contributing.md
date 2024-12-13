@@ -4,7 +4,7 @@ Standard flow:
 - Fork the repository
 - Create a new branch from `main`
 - ~ do work ~
-- Open pull request against `miniscope-io:main`
+- Open pull request against `mio:main`
 - Code review and discussion happens
 - Merge contribution
 
@@ -37,7 +37,7 @@ pip install '.[all]'
 
 ### Linting
 
-`miniscope-io` uses `black` for code formatting and `ruff` for linting.
+`mio` uses `black` for code formatting and `ruff` for linting.
 We recommend you configure your IDE to do both automatically.
 
 There are a few ways you can run linting manually:
@@ -46,7 +46,7 @@ First, just by running the raw commands:
 
 ```shell
 ruff check --fix
-black miniscope_io
+black mio
 ```
 
 Or using pdm scripts

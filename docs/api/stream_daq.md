@@ -2,13 +2,13 @@
 This module is a data acquisition module that captures video streams from Miniscopes based on the `Miniscope-SAMD-Framework` firmware. The firmware repository will be published in future updates but is currently under development and private.
 
 ## Command
-After [installation](../guide/installation.md) and customizing [device configurations](stream-dev-config) and [runtime configuration](models/config.md) if necessary, run the command described in [CLI Usage](../guide/cli).
+After [installation](../guide/installation.md) and customizing [device configurations](stream-dev-config) and [runtime configuration](models/config.md) if necessary, run the command described in [CLI Usage](../cli/index).
 
 One example of this command is the following:
 ```bash
 $ mio stream capture -c .path/to/device/config.yml -o output_filename.avi -m
 ```
-A window displaying the image transferred from the Miniscope and a graph plotting metadata (`-m` option) should pop up. Additionally, the indexes of captured frames and their statuses will be logged in the terminal. The `MINISCOPE_IO_STREAM_HEADER_PLOT_KEY` defines plotted header fields (see `.env.sample`).
+A window displaying the image transferred from the Miniscope and a graph plotting metadata (`-m` option) should pop up. Additionally, the indexes of captured frames and their statuses will be logged in the terminal. The `MIO_STREAM_HEADER_PLOT_KEY` defines plotted header fields (see `.env.sample`).
 
 ## Prerequisites
 - **Data capture hardware:** Opal Kelly XEM7310-A75 FPGA board (connected via USB)
@@ -17,10 +17,10 @@ A window displaying the image transferred from the Miniscope and a graph plottin
 
 (stream-dev-config)=
 ## Device configuration
-A YAML file is used to configure Stream DAQ based on the device configuration. The device configuration needs to match the imaging and data capture hardware for proper operation. This file is used to set up hardware, define data formats, and set data preambles. The contents of this YAML file will be parsed into a model [miniscope_io.models.stream](../api/models/stream.md), which then configures the Stream DAQ.
+A YAML file is used to configure Stream DAQ based on the device configuration. The device configuration needs to match the imaging and data capture hardware for proper operation. This file is used to set up hardware, define data formats, and set data preambles. The contents of this YAML file will be parsed into a model [mio.models.stream](../api/models/stream.md), which then configures the Stream DAQ.
 
 ### FPGA (Opal Kelly) configuration
-The `bitstream` field in the device configuration yaml file specifies the image that will be uploaded to the opal kelly board. This file needs to be placed in `miniscope_io.devices`.
+The `bitstream` field in the device configuration yaml file specifies the image that will be uploaded to the opal kelly board. This file needs to be placed in `mio.devices`.
 
 
 #### Bitstream file nomenclature
@@ -33,7 +33,7 @@ Name format of the bitstream files and directory:
 - **ENCODING_POLARITY**: Manchester encoding convention, which corresponds to bit polarity. The current package supports IEEE convention Manchester encoding.
 
 ### Example device configuration
-Below is an example configuration YAML file. More examples can be found in `miniscope_io.data.config`.
+Below is an example configuration YAML file. More examples can be found in `mio.data.config`.
 
 ```yaml
 # capture device. "OK" (Opal Kelly) or "UART"
@@ -91,7 +91,7 @@ runtime:
 ```
 
 ```{eval-rst}
-.. automodule:: miniscope_io.stream_daq
+.. automodule:: mio.stream_daq
     :members:
     :undoc-members:
 ```

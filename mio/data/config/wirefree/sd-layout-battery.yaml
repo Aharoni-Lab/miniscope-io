@@ -1,0 +1,41 @@
+id: wirefree-sd-layout-battery
+mio_model: mio.models.sdcard.SDLayout
+mio_version: v5.0.0
+sectors:
+  header: 1022
+  config: 1023
+  data: 1024
+  size: 512
+write_key0: 226277911
+write_key1: 226277911
+write_key2: 226277911
+write_key3: 226277911
+word_size: 4
+header:
+  gain: 4
+  led: 5
+  ewl: 6
+  record_length: 7
+  fs: 8
+  delay_start: 9
+  battery_cutoff: 10
+config:
+  width: 0
+  height: 1
+  fs: 2
+  buffer_size: 3
+  n_buffers_recorded: 4
+  n_buffers_dropped: 5
+buffer:
+  linked_list: 1
+  frame_num: 2
+  buffer_count: 3
+  frame_buffer_count: 4
+  write_buffer_count: 5
+  dropped_buffer_count: 6
+  timestamp: 7
+  write_timestamp: 9
+  length: 0
+  data_length: 8
+  battery_voltage: 10
+version: 0.1.1

@@ -6,6 +6,10 @@ from datetime import datetime
 import pytest
 import yaml
 
+from mio.models.mixins import ConfigYAMLMixin
+
+from .fixtures import *
+
 DATA_DIR = Path(__file__).parent / "data"
 CONFIG_DIR = DATA_DIR / "config"
 MOCK_DIR = Path(__file__).parent / "mock"
@@ -25,12 +29,27 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(autouse=True)
 def mock_okdev(monkeypatch):
-    from miniscope_io.sources.mocks import okDevMock
-    from miniscope_io.sources import opalkelly
-    from miniscope_io import stream_daq
+    from mio.sources.mocks import okDevMock
+    from mio.sources import opalkelly
+    from mio import stream_daq
 
     monkeypatch.setattr(opalkelly, "okDev", okDevMock)
     monkeypatch.setattr(stream_daq, "okDev", okDevMock)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_config_source(monkeypatch_session):
+    """
+    Add the `tests/data/config` directory to the config sources for the entire testing session
+    """
+    current_sources = ConfigYAMLMixin.config_sources
+
+    @classmethod
+    @property
+    def _config_sources(cls: type[ConfigYAMLMixin]) -> list[Path]:
+        return [CONFIG_DIR, *current_sources]
+
+    monkeypatch_session.setattr(ConfigYAMLMixin, "config_sources", _config_sources)
 
 
 @pytest.fixture()
@@ -41,7 +60,7 @@ def set_okdev_input(monkeypatch):
     """
 
     def _set_okdev_input(file: Union[str, Path]):
-        from miniscope_io.sources.mocks import okDevMock
+        from mio.sources.mocks import okDevMock
 
         monkeypatch.setattr(okDevMock, "DATA_FILE", file)
         os.environ["PYTEST_OKDEV_DATA_FILE"] = str(file)

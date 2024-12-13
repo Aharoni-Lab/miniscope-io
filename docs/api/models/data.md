@@ -1,7 +1,7 @@
 # data
 
 ```{eval-rst}
-.. automodule:: miniscope_io.data
+.. automodule:: mio.data
     :members:
     :undoc-members:
 ```

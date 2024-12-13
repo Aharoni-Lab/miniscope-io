@@ -1,4 +1,4 @@
-# miniscope-io
+# mio
 
 Generic I/O interfaces for miniscopes :)
 
@@ -7,9 +7,10 @@ Generic I/O interfaces for miniscopes :)
 :maxdepth: 2
 
 guide/installation
-guide/cli
+guide/config
 guide/capture/index
 guide/update/index
+cli/index
 ```
 
 ```{toctree}
@@ -24,7 +25,6 @@ reference/object_model
 :caption: API:
 
 api/devices/index
-api/formats/index
 api/io
 api/logging
 api/models/index

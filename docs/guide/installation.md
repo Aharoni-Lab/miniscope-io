@@ -3,20 +3,20 @@
 From PyPI:
 
 ```bash
-pip install miniscope_io
+pip install mio
 ```
 
 From git repository, using pip:
 ```bash
-git clone https://github.com/Aharoni-Lab/miniscope-io
-cd miniscope-io
+git clone https://github.com/Aharoni-Lab/mio
+cd mio
 pip install .
 ```
 
 Or pdm:
 ```bash
-git clone https://github.com/Aharoni-Lab/miniscope-io
-cd miniscope-io
+git clone https://github.com/Aharoni-Lab/mio
+cd mio
 pdm install
 ```
 
@@ -25,7 +25,7 @@ pdm install
 
 ### OpalKelly
 
-`miniscope_io.vendor.opalkelly` - used for FPGA I/O
+`mio.vendor.opalkelly` - used for FPGA I/O
 
 #### Linux
 
@@ -46,5 +46,5 @@ No special installation should be required.
 
 #### Windows
 
-Currently windows is not implemented - see `miniscope_io/vencor/opalkelly/README.md` for
+Currently windows is not implemented - see `mio/vencor/opalkelly/README.md` for
 what was done to implement Linux and Mac to see what might need to be done here, pull requests welcome :)

@@ -1,7 +1,7 @@
 # headers
 
 ```{eval-rst}
-.. automodule:: miniscope_io.plots.headers
+.. automodule:: mio.plots.headers
     :members:
     :undoc-members:
 ```

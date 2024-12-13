@@ -1,7 +1,7 @@
 # logging
 
 ```{eval-rst}
-.. automodule:: miniscope_io.logging
+.. automodule:: mio.logging
     :members:
     :undoc-members:
 ```

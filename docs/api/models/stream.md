@@ -1,7 +1,7 @@
 # stream
 
 ```{eval-rst}
-.. automodule:: miniscope_io.models.stream
+.. automodule:: mio.models.stream
     :members:
     :undoc-members:
 ```

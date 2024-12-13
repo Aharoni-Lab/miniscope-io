@@ -17,8 +17,8 @@ sys.modules["_ok"] = Mock()
 project = "miniscope-io"
 copyright = "2023, Jonny"
 author = "Jonny, Takuya"
-release = _version("miniscope-io")
-html_title = "miniscope-io"
+release = _version("mio")
+html_title = "mio"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -32,8 +32,10 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx_click",
+    "sphinx_design",
     "sphinxcontrib.autodoc_pydantic",
     "sphinxcontrib.mermaid",
+    "sphinxcontrib.programoutput",
 ]
 
 templates_path = ["_templates"]
@@ -44,7 +46,6 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
-html_static_path = ["_static"]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

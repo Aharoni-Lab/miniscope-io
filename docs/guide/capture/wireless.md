@@ -8,8 +8,8 @@
 
 ## Header Values and Expected Transitions
 See following docs for the basic structure.
-- `miniscope_io.models.buffer.BufferHeaderFormat`
-- `miniscope_io.models.stream.StreamBufferHeaderFormat`
+- `mio.models.buffer.BufferHeaderFormat`
+- `mio.models.stream.StreamBufferHeaderFormat`
 
 Device specific notes are listed below.
 - **`preamble`**: 32-bit preamble for detecting the beginning of each buffer. The [`preamble`](../../api/stream_daq.md) in the device config needs to match the preamble defined in firmware.
