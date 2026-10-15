@@ -2,6 +2,11 @@
 
 ## 0.12
 
+### 0.12.1
+
+- Add a brief [demo page](../guide/demo.md) and README sections on requirements, installation, and demo.
+- Update PyPI classifiers to the tested Python versions.
+
 ### 0.12.0
 
 The biggest change here is that we have overhauled the whole streamdaq to use [noob](https://github.com/miniscope/noob),
